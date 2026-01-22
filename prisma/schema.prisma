@@ -1,0 +1,51 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String       @id @default(cuid())
+  email         String       @unique
+  password      String
+  name          String
+  role          String       @default("EMPLOYEE") // ADMIN or EMPLOYEE
+  department    String?
+  position      String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  attendances   Attendance[]
+}
+
+model Attendance {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime  @default(now())
+  checkIn     DateTime?
+  checkOut    DateTime?
+  status      String    @default("ABSENT") // PRESENT, ABSENT, LATE, HALF_DAY
+  workHours   Float?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+}
+
+model Settings {
+  id              String   @id @default(cuid())
+  workStartTime   String   @default("09:00")
+  workEndTime     String   @default("17:00")
+  lateThreshold   Int      @default(15) // minutes
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
