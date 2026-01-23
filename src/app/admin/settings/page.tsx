@@ -20,13 +20,13 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600">Configure attendance system settings</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+        <p className="text-gray-600 dark:text-gray-400">Configure attendance system settings</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md p-6 max-w-2xl">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 max-w-2xl">
         {saved && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg flex items-center gap-2">
+          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-lg flex items-center gap-2">
             <svg
               className="w-5 h-5"
               fill="none"
@@ -46,12 +46,12 @@ export default function SettingsPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Work Schedule
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Work Start Time
                 </label>
                 <input
@@ -60,11 +60,11 @@ export default function SettingsPage() {
                   onChange={(e) =>
                     setSettings({ ...settings, workStartTime: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Work End Time
                 </label>
                 <input
@@ -73,18 +73,18 @@ export default function SettingsPage() {
                   onChange={(e) =>
                     setSettings({ ...settings, workEndTime: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Attendance Rules
             </h3>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Late Threshold (minutes)
               </label>
               <input
@@ -98,16 +98,16 @@ export default function SettingsPage() {
                     lateThreshold: parseInt(e.target.value) || 0,
                   })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               />
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 Employees arriving within this many minutes after start time are
                 still considered on-time
               </p>
             </div>
           </div>
 
-          <div className="pt-4 border-t border-gray-200">
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="submit"
               className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
@@ -120,11 +120,11 @@ export default function SettingsPage() {
 
       {/* Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
-        <div className="bg-blue-50 rounded-xl p-6">
+        <div className="bg-blue-50 dark:bg-blue-900/30 rounded-xl p-6">
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-800/50 rounded-lg flex items-center justify-center flex-shrink-0">
               <svg
-                className="w-5 h-5 text-blue-600"
+                className="w-5 h-5 text-blue-600 dark:text-blue-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -138,10 +138,10 @@ export default function SettingsPage() {
               </svg>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900 mb-1">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
                 Attendance Status
               </h4>
-              <ul className="text-sm text-gray-600 space-y-1">
+              <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
                 <li>
                   <span className="font-medium">PRESENT:</span> On-time arrival
                 </li>
@@ -161,11 +161,11 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="bg-purple-50 rounded-xl p-6">
+        <div className="bg-purple-50 dark:bg-purple-900/30 rounded-xl p-6">
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-800/50 rounded-lg flex items-center justify-center flex-shrink-0">
               <svg
-                className="w-5 h-5 text-purple-600"
+                className="w-5 h-5 text-purple-600 dark:text-purple-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -179,8 +179,8 @@ export default function SettingsPage() {
               </svg>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900 mb-1">Work Hours</h4>
-              <p className="text-sm text-gray-600">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Work Hours</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
                 Work hours are automatically calculated from check-in to check-out
                 time. Make sure employees check out to record accurate hours.
               </p>

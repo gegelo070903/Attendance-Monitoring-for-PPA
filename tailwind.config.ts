@@ -6,20 +6,34 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  darkMode: "class", // Changed to class-based for manual toggle
   theme: {
     extend: {
       colors: {
+        // PPA Brand Colors
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: '#e6f0f7',
+          100: '#cce1ef',
+          200: '#99c3df',
+          300: '#66a5cf',
+          400: '#3387bf',
+          500: '#1a5f8a',
+          600: '#164e72',
+          700: '#0d3a5c',
+          800: '#0a2d47',
+          900: '#071f33',
+        },
+        // PPA Navy Blue
+        ppa: {
+          navy: '#0d3a5c',
+          blue: '#1a5f8a',
+          light: '#3387bf',
+        },
+        // Accent colors from logo
+        accent: {
+          red: '#c41e3a',
+          gold: '#d4a418',
+          yellow: '#fbbf24',
         },
       },
     },

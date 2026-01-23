@@ -38,30 +38,30 @@ export default function CheckInOutButton({
   const isComplete = hasCheckedIn && hasCheckedOut;
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
         Today&apos;s Attendance
       </h3>
 
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="text-center p-4 bg-green-50 rounded-lg">
-          <p className="text-sm text-gray-600 mb-1">Check In</p>
-          <p className="text-xl font-semibold text-green-700">
+        <div className="text-center p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Check In</p>
+          <p className="text-xl font-semibold text-green-700 dark:text-green-400">
             {formatTime(checkInTime)}
           </p>
         </div>
-        <div className="text-center p-4 bg-red-50 rounded-lg">
-          <p className="text-sm text-gray-600 mb-1">Check Out</p>
-          <p className="text-xl font-semibold text-red-700">
+        <div className="text-center p-4 bg-red-50 dark:bg-red-900/30 rounded-lg">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Check Out</p>
+          <p className="text-xl font-semibold text-red-700 dark:text-red-400">
             {formatTime(checkOutTime)}
           </p>
         </div>
       </div>
 
       {isComplete ? (
-        <div className="text-center py-4 bg-gray-50 rounded-lg">
+        <div className="text-center py-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
           <svg
-            className="w-12 h-12 text-green-500 mx-auto mb-2"
+            className="w-12 h-12 text-green-500 dark:text-green-400 mx-auto mb-2"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -73,7 +73,7 @@ export default function CheckInOutButton({
               d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <p className="text-green-700 font-medium">
+          <p className="text-green-700 dark:text-green-400 font-medium">
             Attendance complete for today!
           </p>
         </div>

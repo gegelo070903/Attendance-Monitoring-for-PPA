@@ -7,10 +7,10 @@ async function main() {
   // Create admin user
   const adminPassword = await bcrypt.hash('admin123', 10);
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@ppa.com' },
+    where: { email: 'admin@ppa.gov.ph' },
     update: {},
     create: {
-      email: 'admin@ppa.com',
+      email: 'admin@ppa.gov.ph',
       name: 'Admin User',
       password: adminPassword,
       role: 'ADMIN',
@@ -19,14 +19,14 @@ async function main() {
     },
   });
 
-  // Create employee user
-  const employeePassword = await bcrypt.hash('employee123', 10);
+  // Create employee user - John Angelo D. Vasquez
+  const employeePassword = await bcrypt.hash('password123', 10);
   const employee = await prisma.user.upsert({
-    where: { email: 'employee@ppa.com' },
+    where: { email: 'vasquezjohnangelod.9@gmail.com' },
     update: {},
     create: {
-      email: 'employee@ppa.com',
-      name: 'John Doe',
+      email: 'vasquezjohnangelod.9@gmail.com',
+      name: 'John Angelo D. Vasquez',
       password: employeePassword,
       role: 'EMPLOYEE',
       department: 'Engineering',
@@ -40,8 +40,10 @@ async function main() {
     update: {},
     create: {
       id: 'default-settings',
-      workStartTime: '09:00',
-      workEndTime: '17:00',
+      amStartTime: '08:00',
+      amEndTime: '12:00',
+      pmStartTime: '13:00',
+      pmEndTime: '17:00',
       lateThreshold: 15,
     },
   });

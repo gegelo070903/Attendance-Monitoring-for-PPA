@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
         where: { role: "EMPLOYEE" },
       });
 
+      // Count only EMPLOYEE attendance (not admins)
       const todayPresentCount = await prisma.attendance.count({
         where: {
           date: {
@@ -67,6 +68,9 @@ export async function GET(request: NextRequest) {
             lte: todayEnd,
           },
           status: { in: ["PRESENT", "LATE"] },
+          user: {
+            role: "EMPLOYEE",
+          },
         },
       });
 
@@ -77,13 +81,19 @@ export async function GET(request: NextRequest) {
             lte: todayEnd,
           },
           status: "LATE",
+          user: {
+            role: "EMPLOYEE",
+          },
         },
       });
+
+      // Ensure absent count is never negative
+      const todayAbsent = Math.max(0, totalEmployees - todayPresentCount);
 
       adminStats = {
         totalEmployees,
         todayPresent: todayPresentCount,
-        todayAbsent: totalEmployees - todayPresentCount,
+        todayAbsent,
         todayLate: todayLateCount,
       };
     }

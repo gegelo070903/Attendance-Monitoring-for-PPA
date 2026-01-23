@@ -18,6 +18,7 @@ model User {
   role          String       @default("EMPLOYEE") // ADMIN or EMPLOYEE
   department    String?
   position      String?
+  profileImage  String?      // Profile picture URL/path
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   attendances   Attendance[]
@@ -28,8 +29,10 @@ model Attendance {
   userId      String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   date        DateTime  @default(now())
-  checkIn     DateTime?
-  checkOut    DateTime?
+  amIn        DateTime?
+  amOut       DateTime?
+  pmIn        DateTime?
+  pmOut       DateTime?
   status      String    @default("ABSENT") // PRESENT, ABSENT, LATE, HALF_DAY
   workHours   Float?
   notes       String?
@@ -43,8 +46,10 @@ model Attendance {
 
 model Settings {
   id              String   @id @default(cuid())
-  workStartTime   String   @default("09:00")
-  workEndTime     String   @default("17:00")
+  amStartTime     String   @default("08:00")
+  amEndTime       String   @default("12:00")
+  pmStartTime     String   @default("13:00")
+  pmEndTime       String   @default("17:00")
   lateThreshold   Int      @default(15) // minutes
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

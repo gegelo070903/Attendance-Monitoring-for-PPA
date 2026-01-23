@@ -50,21 +50,21 @@ export default function AdminAttendancePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">All Attendance</h1>
-        <p className="text-gray-600">View attendance records for all employees</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">All Attendance</h1>
+        <p className="text-gray-600 dark:text-gray-400">View attendance records for all employees</p>
       </div>
 
       {/* Today's Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-green-50 rounded-xl p-6">
+        <div className="bg-green-50 dark:bg-green-900/30 rounded-xl p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">Present Today</p>
-              <p className="text-3xl font-bold text-green-700">{presentToday}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Present Today</p>
+              <p className="text-3xl font-bold text-green-700 dark:text-green-400">{presentToday}</p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+            <div className="w-12 h-12 bg-green-100 dark:bg-green-800/50 rounded-lg flex items-center justify-center">
               <svg
-                className="w-6 h-6 text-green-600"
+                className="w-6 h-6 text-green-600 dark:text-green-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -80,15 +80,15 @@ export default function AdminAttendancePage() {
           </div>
         </div>
 
-        <div className="bg-yellow-50 rounded-xl p-6">
+        <div className="bg-yellow-50 dark:bg-yellow-900/30 rounded-xl p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">Late Today</p>
-              <p className="text-3xl font-bold text-yellow-700">{lateToday}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Late Today</p>
+              <p className="text-3xl font-bold text-yellow-700 dark:text-yellow-400">{lateToday}</p>
             </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+            <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-800/50 rounded-lg flex items-center justify-center">
               <svg
-                className="w-6 h-6 text-yellow-600"
+                className="w-6 h-6 text-yellow-600 dark:text-yellow-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -104,17 +104,17 @@ export default function AdminAttendancePage() {
           </div>
         </div>
 
-        <div className="bg-blue-50 rounded-xl p-6">
+        <div className="bg-blue-50 dark:bg-blue-900/30 rounded-xl p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">Total Records</p>
-              <p className="text-3xl font-bold text-blue-700">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Records</p>
+              <p className="text-3xl font-bold text-blue-700 dark:text-blue-400">
                 {attendances.length}
               </p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-800/50 rounded-lg flex items-center justify-center">
               <svg
-                className="w-6 h-6 text-blue-600"
+                className="w-6 h-6 text-blue-600 dark:text-blue-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -132,10 +132,10 @@ export default function AdminAttendancePage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-md p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Start Date
             </label>
             <input
@@ -144,11 +144,11 @@ export default function AdminAttendancePage() {
               onChange={(e) =>
                 setDateRange({ ...dateRange, startDate: e.target.value })
               }
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               End Date
             </label>
             <input
@@ -157,7 +157,7 @@ export default function AdminAttendancePage() {
               onChange={(e) =>
                 setDateRange({ ...dateRange, endDate: e.target.value })
               }
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
           </div>
           <button
@@ -168,7 +168,7 @@ export default function AdminAttendancePage() {
                 endDate: format(endOfMonth(now), "yyyy-MM-dd"),
               });
             }}
-            className="px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors"
+            className="px-4 py-2 bg-primary-100 dark:bg-ppa-navy/30 text-primary-700 dark:text-blue-300 rounded-lg hover:bg-primary-200 dark:hover:bg-ppa-navy/50 transition-colors"
           >
             This Month
           </button>
@@ -176,7 +176,7 @@ export default function AdminAttendancePage() {
       </div>
 
       {/* Attendance Table */}
-      <div className="bg-white rounded-xl shadow-md p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>

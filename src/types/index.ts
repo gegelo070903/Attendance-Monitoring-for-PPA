@@ -14,8 +14,10 @@ export interface Attendance {
   userId: string;
   user?: User;
   date: Date;
-  checkIn: Date | null;
-  checkOut: Date | null;
+  amIn: Date | null;
+  amOut: Date | null;
+  pmIn: Date | null;
+  pmOut: Date | null;
   status: 'PRESENT' | 'ABSENT' | 'LATE' | 'HALF_DAY';
   workHours: number | null;
   notes?: string;

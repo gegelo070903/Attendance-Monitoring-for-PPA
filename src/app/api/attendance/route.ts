@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { startOfDay, endOfDay } from "date-fns";
 import prisma from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
-import { calculateWorkHours, getAttendanceStatus } from "@/lib/utils";
 
 // GET - Get attendance records
 export async function GET(request: NextRequest) {
@@ -25,7 +24,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     if (!all) {
       where.userId = userId;
@@ -47,6 +46,7 @@ export async function GET(request: NextRequest) {
             name: true,
             email: true,
             department: true,
+            position: true,
           },
         },
       },
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Check in
+// POST - Record attendance (used by QR scanner or manual entry)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -72,57 +72,64 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const body = await request.json();
+    const { action } = body; // 'amIn', 'amOut', 'pmIn', 'pmOut'
+
     const now = new Date();
     const today = startOfDay(now);
-    const todayEnd = endOfDay(now);
 
-    // Check if already checked in today
-    const existingAttendance = await prisma.attendance.findFirst({
-      where: {
-        userId: session.user.id,
-        date: {
-          gte: today,
-          lte: todayEnd,
-        },
-      },
-    });
-
-    if (existingAttendance?.checkIn) {
-      return NextResponse.json(
-        { error: "Already checked in today" },
-        { status: 400 }
-      );
-    }
-
-    // Get settings for late threshold
-    const settings = await prisma.settings.findFirst();
-    const workStartTime = settings?.workStartTime || "09:00";
-    const lateThreshold = settings?.lateThreshold || 15;
-
-    const status = getAttendanceStatus(now, workStartTime, lateThreshold);
-
-    const attendance = await prisma.attendance.upsert({
+    // Find or create today's attendance record
+    let attendance = await prisma.attendance.findUnique({
       where: {
         userId_date: {
           userId: session.user.id,
           date: today,
         },
       },
-      update: {
-        checkIn: now,
-        status,
-      },
-      create: {
-        userId: session.user.id,
-        date: today,
-        checkIn: now,
-        status,
+    });
+
+    if (!attendance) {
+      attendance = await prisma.attendance.create({
+        data: {
+          userId: session.user.id,
+          date: today,
+          status: "PRESENT",
+        },
+      });
+    }
+
+    // Update the appropriate field based on action
+    const updateData: Record<string, Date> = {};
+    
+    if (action === 'amIn' && !attendance.amIn) {
+      updateData.amIn = now;
+    } else if (action === 'amOut' && !attendance.amOut) {
+      updateData.amOut = now;
+    } else if (action === 'pmIn' && !attendance.pmIn) {
+      updateData.pmIn = now;
+    } else if (action === 'pmOut' && !attendance.pmOut) {
+      updateData.pmOut = now;
+    } else {
+      return NextResponse.json(
+        { error: `Already recorded ${action} for today` },
+        { status: 400 }
+      );
+    }
+
+    // Calculate work hours if we have both AM and PM times
+    let workHours = attendance.workHours || 0;
+    
+    const updatedAttendance = await prisma.attendance.update({
+      where: { id: attendance.id },
+      data: {
+        ...updateData,
+        workHours,
       },
     });
 
-    return NextResponse.json(attendance);
+    return NextResponse.json(updatedAttendance);
   } catch (error) {
-    console.error("Check in error:", error);
+    console.error("Attendance error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -130,57 +137,37 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Check out
+// PUT - Update attendance record (admin only)
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user) {
+    if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const now = new Date();
-    const today = startOfDay(now);
-    const todayEnd = endOfDay(now);
+    const body = await request.json();
+    const { id, amIn, amOut, pmIn, pmOut, status, notes } = body;
 
-    // Find today's attendance record
-    const existingAttendance = await prisma.attendance.findFirst({
-      where: {
-        userId: session.user.id,
-        date: {
-          gte: today,
-          lte: todayEnd,
-        },
-      },
-    });
-
-    if (!existingAttendance) {
-      return NextResponse.json(
-        { error: "Please check in first" },
-        { status: 400 }
-      );
+    if (!id) {
+      return NextResponse.json({ error: "Attendance ID required" }, { status: 400 });
     }
-
-    if (existingAttendance.checkOut) {
-      return NextResponse.json(
-        { error: "Already checked out today" },
-        { status: 400 }
-      );
-    }
-
-    const workHours = calculateWorkHours(existingAttendance.checkIn, now);
 
     const attendance = await prisma.attendance.update({
-      where: { id: existingAttendance.id },
+      where: { id },
       data: {
-        checkOut: now,
-        workHours,
+        amIn: amIn ? new Date(amIn) : undefined,
+        amOut: amOut ? new Date(amOut) : undefined,
+        pmIn: pmIn ? new Date(pmIn) : undefined,
+        pmOut: pmOut ? new Date(pmOut) : undefined,
+        status: status || undefined,
+        notes: notes || undefined,
       },
     });
 
     return NextResponse.json(attendance);
   } catch (error) {
-    console.error("Check out error:", error);
+    console.error("Update attendance error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
