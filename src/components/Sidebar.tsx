@@ -28,20 +28,23 @@ export default function Sidebar() {
   const isAdmin = session?.user?.role === "ADMIN";
 
   return (
-    <aside className="w-64 bg-white dark:bg-gray-900 shadow-lg min-h-screen flex flex-col border-r border-gray-200 dark:border-gray-700">
+    <aside className="w-64 min-h-screen flex flex-col relative overflow-hidden border-r border-gray-200 dark:border-gray-700">
+      {/* Watercolor Background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0038A8]/10 via-white to-[#CE1126]/5 dark:from-[#0038A8]/20 dark:via-gray-900 dark:to-[#CE1126]/10"></div>
+      
       {/* Header with Logo */}
-      <div className="p-4 bg-gradient-to-r from-ppa-navy to-ppa-blue">
+      <div className="relative p-4 bg-gradient-to-r from-[#0038A8]/90 to-[#0038A8]/70 border-b border-[#0038A8]/20">
         <div className="flex items-center gap-3">
-          <div className="w-14 h-14 flex-shrink-0">
+          <div className="w-14 h-14 flex-shrink-0 bg-white rounded-full p-1.5 shadow-lg">
             <img
-              src="/images/download-removebg-preview.png"
+              src="/images/ppa-logo-nobg.png"
               alt="PPA Logo"
-              className="w-full h-full object-contain drop-shadow-lg"
+              className="w-full h-full object-contain"
             />
           </div>
           <div className="flex-1 min-w-0">
             <h1 className="text-sm font-bold text-white leading-tight">Philippine Ports Authority</h1>
-            <p className="text-xs text-blue-200">Attendance Monitoring System</p>
+            <p className="text-xs text-blue-200">Attendance Monitoring</p>
           </div>
           {/* Theme Toggle Button */}
           <button
@@ -62,8 +65,8 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
-        <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
+      <nav className="flex-1 p-4 space-y-1 relative z-10">
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
           Main Menu
         </p>
         {navItems.map((item) => {
@@ -134,7 +137,7 @@ export default function Sidebar() {
         )}
       </nav>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <div className="p-4 border-t border-gray-200/50 dark:border-gray-700/50 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm relative z-10">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden bg-gradient-to-br from-ppa-navy to-ppa-blue flex-shrink-0 ring-2 ring-white dark:ring-gray-700 shadow-md">
             {(session?.user as any)?.profileImage ? (

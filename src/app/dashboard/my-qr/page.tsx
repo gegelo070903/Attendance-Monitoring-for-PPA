@@ -2,12 +2,14 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import QRCodeGenerator from "@/components/QRCodeGenerator";
+import IDCardPrinter from "@/components/IDCardPrinter";
 
 export default function MyQRCodePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"qr" | "id">("qr");
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -32,48 +34,104 @@ export default function MyQRCodePage() {
       <div className="max-w-md mx-auto">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">My QR Code</h1>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">My QR Code & ID Card</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Use this QR code to check in and check out
+              Generate your QR code or print your ID card
             </p>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-1 mb-6">
+            <button
+              onClick={() => setActiveTab("qr")}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                activeTab === "qr"
+                  ? "bg-white dark:bg-gray-600 text-ppa-navy dark:text-white shadow"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              }`}
+            >
+              QR Code
+            </button>
+            <button
+              onClick={() => setActiveTab("id")}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                activeTab === "id"
+                  ? "bg-white dark:bg-gray-600 text-ppa-navy dark:text-white shadow"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              }`}
+            >
+              ID Card
+            </button>
           </div>
 
           {/* User Info */}
           <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4 mb-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
-                {session.user.name?.charAt(0).toUpperCase()}
+              <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden bg-blue-600">
+                {(session?.user as any)?.profileImage ? (
+                  <img 
+                    src={(session?.user as any).profileImage} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white text-xl font-bold">
+                    {session?.user?.name?.charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
               <div>
                 <p className="font-semibold text-gray-800 dark:text-white">
-                  {session.user.name}
+                  {session?.user?.name}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{session.user.email}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{session?.user?.email}</p>
+                {((session?.user as any)?.position || (session?.user as any)?.department) && (
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    {(session?.user as any)?.position}
+                    {(session?.user as any)?.position && (session?.user as any)?.department && " • "}
+                    {(session?.user as any)?.department}
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* QR Code */}
-          <div className="flex justify-center mb-6">
-            <QRCodeGenerator
-              userEmail={session.user.email || ""}
-              userName={session.user.name || "Employee"}
-              size={280}
-            />
-          </div>
+          {/* QR Code Tab */}
+          {activeTab === "qr" && (
+            <>
+              <div className="flex justify-center mb-6">
+                <QRCodeGenerator
+                  userEmail={session?.user?.email || ""}
+                  userName={session?.user?.name || "Employee"}
+                  size={280}
+                />
+              </div>
 
-          {/* Instructions */}
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-800 dark:text-white mb-2">
-              📖 How to use:
-            </h3>
-            <ol className="list-decimal list-inside text-sm text-gray-600 dark:text-gray-300 space-y-1">
-              <li>Save or screenshot this QR code to your phone</li>
-              <li>Go to the scanning station</li>
-              <li>Show your QR code to the webcam</li>
-              <li>Wait for confirmation</li>
-            </ol>
-          </div>
+              {/* Instructions */}
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <h3 className="font-semibold text-gray-800 dark:text-white mb-2">
+                  How to use:
+                </h3>
+                <ol className="list-decimal list-inside text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                  <li>Save or screenshot this QR code to your phone</li>
+                  <li>Go to the scanning station</li>
+                  <li>Show your QR code to the webcam</li>
+                  <li>Wait for confirmation</li>
+                </ol>
+              </div>
+            </>
+          )}
+
+          {/* ID Card Tab */}
+          {activeTab === "id" && (
+            <IDCardPrinter
+              userEmail={session?.user?.email || ""}
+              userName={session?.user?.name || "Employee"}
+              userDepartment={(session?.user as any)?.department}
+              userPosition={(session?.user as any)?.position}
+              userProfileImage={(session?.user as any)?.profileImage}
+            />
+          )}
 
           {/* Back Button */}
           <button

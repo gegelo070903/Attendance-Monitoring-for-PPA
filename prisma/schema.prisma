@@ -29,28 +29,41 @@ model Attendance {
   userId      String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   date        DateTime  @default(now())
+  shiftType   String    @default("DAY") // DAY or NIGHT
   amIn        DateTime?
   amOut       DateTime?
   pmIn        DateTime?
   pmOut       DateTime?
+  nightIn     DateTime?
+  nightOut    DateTime?
   status      String    @default("ABSENT") // PRESENT, ABSENT, LATE, HALF_DAY
   workHours   Float?
   notes       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  @@unique([userId, date])
+  @@unique([userId, date, shiftType])
   @@index([userId])
   @@index([date])
+  @@index([shiftType])
 }
 
 model Settings {
-  id              String   @id @default(cuid())
-  amStartTime     String   @default("08:00")
-  amEndTime       String   @default("12:00")
-  pmStartTime     String   @default("13:00")
-  pmEndTime       String   @default("17:00")
-  lateThreshold   Int      @default(15) // minutes
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  // Day Shift Times
+  amStartTime         String   @default("08:00")
+  amEndTime           String   @default("12:00")
+  pmStartTime         String   @default("13:00")
+  pmEndTime           String   @default("17:00")
+  // Night Shift Times
+  nightStartTime      String   @default("22:00")
+  nightEndTime        String   @default("06:00")
+  // Grace Periods (minutes after start time before marked late)
+  amGracePeriod       Int      @default(15)
+  pmGracePeriod       Int      @default(15)
+  nightGracePeriod    Int      @default(15)
+  // Legacy field
+  lateThreshold       Int      @default(15) // minutes
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }

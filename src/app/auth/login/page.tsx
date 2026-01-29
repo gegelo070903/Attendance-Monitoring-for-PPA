@@ -5,10 +5,25 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+// Eye icons as inline SVG components
+const EyeIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+
+const EyeSlashIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+  </svg>
+);
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -38,15 +53,44 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ppa-navy via-ppa-blue to-ppa-light py-12 px-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden py-12 px-4 bg-white">
+      {/* Watercolor gradient background - same as scan page */}
+      <div className="fixed inset-0 pointer-events-none">
+        {/* Blue watercolor at top */}
+        <div 
+          className="absolute top-0 left-0 right-0 h-[35%]"
+          style={{
+            background: 'linear-gradient(to bottom, rgba(0, 56, 168, 0.25) 0%, rgba(100, 149, 237, 0.15) 50%, transparent 100%)',
+          }}
+        />
+        {/* Softer blue blobs */}
+        <div className="absolute top-0 left-0 w-full h-[30%] opacity-30">
+          <div className="absolute top-0 left-[5%] w-48 h-48 bg-[#0038A8]/20 rounded-full blur-3xl"></div>
+          <div className="absolute top-0 right-[10%] w-64 h-64 bg-[#4169E1]/15 rounded-full blur-3xl"></div>
+        </div>
+        
+        {/* Red watercolor at bottom */}
+        <div 
+          className="absolute bottom-0 left-0 right-0 h-[35%]"
+          style={{
+            background: 'linear-gradient(to top, rgba(206, 17, 38, 0.2) 0%, rgba(220, 53, 69, 0.1) 50%, transparent 100%)',
+          }}
+        />
+        {/* Softer red blobs */}
+        <div className="absolute bottom-0 left-0 w-full h-[30%] opacity-30">
+          <div className="absolute bottom-0 right-[5%] w-48 h-48 bg-[#CE1126]/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-[10%] w-64 h-64 bg-[#DC143C]/15 rounded-full blur-3xl"></div>
+        </div>
+      </div>
+      
+      <div className="max-w-md w-full relative z-10">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-white/50">
           {/* Logo and Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <div className="w-20 h-20 bg-white rounded-xl p-2 shadow-lg">
+              <div className="w-24 h-24 bg-white rounded-full p-2 shadow-xl border-4 border-white/50">
                 <img
-                  src="/images/ppa-logo.png"
+                  src="/images/ppa-logo-nobg.png"
                   alt="PPA Logo"
                   className="w-full h-full object-contain"
                 />
@@ -92,15 +136,28 @@ export default function LoginPage() {
               >
                 Password
               </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ppa-blue focus:border-ppa-blue transition-colors bg-white text-gray-900"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ppa-blue focus:border-ppa-blue transition-colors bg-white text-gray-900"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                >
+                  {showPassword ? (
+                    <EyeSlashIcon className="w-5 h-5" />
+                  ) : (
+                    <EyeIcon className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <button
@@ -144,7 +201,7 @@ export default function LoginPage() {
         </div>
         
         {/* Footer */}
-        <p className="text-center text-blue-200 text-xs mt-6">
+        <p className="text-center text-ppa-navy/60 text-xs mt-6">
           © 2026 Philippine Ports Authority. All rights reserved.
         </p>
       </div>

@@ -130,7 +130,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-1">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              📱 My QR Code
+              My QR Code
             </h3>
             
             {/* Today's Status - AM/PM */}
@@ -138,7 +138,7 @@ export default function DashboardPage() {
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">Today&apos;s Attendance:</p>
               <div className="grid grid-cols-2 gap-2">
                 <div className="p-2 bg-green-50 dark:bg-green-900/30 rounded-lg">
-                  <p className="text-xs text-green-600 dark:text-green-400 font-medium">🌅 AM In</p>
+                  <p className="text-xs text-green-600 dark:text-green-400 font-medium">AM In</p>
                   <p className={`text-sm font-semibold ${data?.todayAttendance?.amIn ? 'text-green-700 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
                     {data?.todayAttendance?.amIn 
                       ? new Date(data.todayAttendance.amIn).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
@@ -146,7 +146,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <div className="p-2 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg">
-                  <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">🌤️ AM Out</p>
+                  <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">AM Out</p>
                   <p className={`text-sm font-semibold ${data?.todayAttendance?.amOut ? 'text-yellow-700 dark:text-yellow-400' : 'text-gray-400 dark:text-gray-500'}`}>
                     {data?.todayAttendance?.amOut 
                       ? new Date(data.todayAttendance.amOut).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
@@ -154,7 +154,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">☀️ PM In</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">PM In</p>
                   <p className={`text-sm font-semibold ${data?.todayAttendance?.pmIn ? 'text-blue-700 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>
                     {data?.todayAttendance?.pmIn 
                       ? new Date(data.todayAttendance.pmIn).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
@@ -162,7 +162,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
-                  <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">🌙 PM Out</p>
+                  <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">PM Out</p>
                   <p className={`text-sm font-semibold ${data?.todayAttendance?.pmOut ? 'text-purple-700 dark:text-purple-400' : 'text-gray-400 dark:text-gray-500'}`}>
                     {data?.todayAttendance?.pmOut 
                       ? new Date(data.todayAttendance.pmOut).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})

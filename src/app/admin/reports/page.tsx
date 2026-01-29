@@ -218,12 +218,20 @@ export default function AdminReportsPage() {
             margin: 15mm;
           }
           
+          /* Remove dark class from html when printing */
+          html.dark {
+            color-scheme: light !important;
+          }
+          
+          /* Hide everything except print area */
           body * {
             visibility: hidden;
           }
           
           #print-area, #print-area * {
             visibility: visible;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           
           #print-area {
@@ -232,8 +240,170 @@ export default function AdminReportsPage() {
             top: 0;
             width: 100%;
             background: white !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+            color: black !important;
+          }
+          
+          /* Force white background for main container */
+          #print-area,
+          #print-area > div,
+          #print-area .rounded-md,
+          #print-area .rounded-lg,
+          #print-area .rounded-xl {
+            background-color: white !important;
+          }
+          
+          /* Override dark mode table rows */
+          #print-area tr[class*="dark:bg-gray"] {
+            background-color: white !important;
+          }
+          #print-area tr:nth-child(even) {
+            background-color: #f9fafb !important;
+          }
+          
+          /* Force black text for all elements */
+          #print-area,
+          #print-area div,
+          #print-area p,
+          #print-area span,
+          #print-area td,
+          #print-area h1,
+          #print-area h2,
+          #print-area h3,
+          #print-area .dark\\:text-white,
+          #print-area .dark\\:text-gray-100,
+          #print-area .dark\\:text-gray-200,
+          #print-area .dark\\:text-gray-300,
+          #print-area .dark\\:text-gray-400,
+          #print-area .dark\\:text-ppa-light {
+            color: black !important;
+          }
+          
+          /* Keep table header navy */
+          #print-area thead tr,
+          #print-area thead tr.bg-ppa-navy {
+            background-color: #0d3a5c !important;
+          }
+          
+          #print-area thead th {
+            background-color: #0d3a5c !important;
+            color: white !important;
+          }
+          
+          /* Table rows - force white/light gray */
+          #print-area tbody tr {
+            background-color: white !important;
+            color: black !important;
+          }
+          
+          #print-area tbody tr:nth-child(even) {
+            background-color: #f9fafb !important;
+          }
+          
+          /* Stats cards with colored left border - use attribute selector for dark mode */
+          #print-area div[class*="bg-green-50"],
+          #print-area div[class*="bg-green-900"] {
+            background-color: #dcfce7 !important;
+            border-left: 4px solid #22c55e !important;
+          }
+          #print-area div[class*="bg-red-50"],
+          #print-area div[class*="bg-red-900"] {
+            background-color: #fee2e2 !important;
+            border-left: 4px solid #ef4444 !important;
+          }
+          #print-area div[class*="bg-yellow-50"],
+          #print-area div[class*="bg-yellow-900"] {
+            background-color: #fef9c3 !important;
+            border-left: 4px solid #eab308 !important;
+          }
+          #print-area div[class*="bg-blue-50"],
+          #print-area div[class*="bg-blue-900"] {
+            background-color: #dbeafe !important;
+            border-left: 4px solid #3b82f6 !important;
+          }
+          #print-area div[class*="border-ppa-navy"][class*="bg-ppa"] {
+            background-color: #e0f2fe !important;
+            border-left: 4px solid #0d3a5c !important;
+          }
+          
+          /* Stats card text colors - use attribute selectors */
+          #print-area [class*="text-green-600"],
+          #print-area [class*="text-green-700"],
+          #print-area [class*="text-green-300"],
+          #print-area [class*="text-green-400"] {
+            color: #15803d !important;
+          }
+          #print-area [class*="text-red-600"],
+          #print-area [class*="text-red-700"],
+          #print-area [class*="text-red-300"],
+          #print-area [class*="text-red-400"] {
+            color: #b91c1c !important;
+          }
+          #print-area [class*="text-yellow-600"],
+          #print-area [class*="text-yellow-700"],
+          #print-area [class*="text-yellow-300"],
+          #print-area [class*="text-yellow-400"] {
+            color: #a16207 !important;
+          }
+          #print-area [class*="text-blue-600"],
+          #print-area [class*="text-blue-700"],
+          #print-area [class*="text-blue-300"],
+          #print-area [class*="text-blue-400"] {
+            color: #1d4ed8 !important;
+          }
+          
+          /* All other text should be black */
+          #print-area [class*="text-gray"],
+          #print-area [class*="dark:text-gray"],
+          #print-area [class*="dark:text-white"] {
+            color: #111827 !important;
+          }
+          
+          /* Navy titles */
+          #print-area [class*="text-ppa-navy"],
+          #print-area [class*="text-ppa-light"] {
+            color: #0d3a5c !important;
+          }
+          
+          /* Status badges in table */
+          #print-area span[class*="bg-green-100"] {
+            background-color: #dcfce7 !important;
+            color: #15803d !important;
+          }
+          #print-area span[class*="bg-red-100"] {
+            background-color: #fee2e2 !important;
+            color: #b91c1c !important;
+          }
+          #print-area span[class*="bg-yellow-100"] {
+            background-color: #fef9c3 !important;
+            color: #a16207 !important;
+          }
+          #print-area span[class*="bg-orange-100"] {
+            background-color: #ffedd5 !important;
+            color: #c2410c !important;
+          }
+          
+          /* Table cell borders */
+          #print-area td,
+          #print-area th {
+            border-color: #d1d5db !important;
+          }
+          
+          /* Employee info box */
+          #print-area [class*="bg-gray-50"],
+          #print-area [class*="bg-gray-700"],
+          #print-area [class*="bg-gray-800"] {
+            background-color: #f9fafb !important;
+          }
+          
+          /* Border colors */
+          #print-area [class*="border-gray"],
+          #print-area [class*="border-ppa"] {
+            border-color: #d1d5db !important;
+          }
+          
+          /* Table header border - keep navy bottom */
+          #print-area .border-b-2[class*="border-ppa"] {
+            border-bottom-color: #0d3a5c !important;
           }
           
           .no-print {
@@ -242,6 +412,109 @@ export default function AdminReportsPage() {
           
           .print-break {
             page-break-before: always;
+          }
+          
+          /* Print-specific stat card overrides - these have highest priority */
+          .print-stat-green {
+            background-color: #dcfce7 !important;
+            border-left: 4px solid #22c55e !important;
+          }
+          .print-stat-green p {
+            color: #15803d !important;
+          }
+          
+          .print-stat-red {
+            background-color: #fee2e2 !important;
+            border-left: 4px solid #ef4444 !important;
+          }
+          .print-stat-red p {
+            color: #b91c1c !important;
+          }
+          
+          .print-stat-yellow {
+            background-color: #fef9c3 !important;
+            border-left: 4px solid #eab308 !important;
+          }
+          .print-stat-yellow p {
+            color: #a16207 !important;
+          }
+          
+          .print-stat-blue {
+            background-color: #dbeafe !important;
+            border-left: 4px solid #3b82f6 !important;
+          }
+          .print-stat-blue p {
+            color: #1d4ed8 !important;
+          }
+          
+          .print-stat-navy {
+            background-color: #e0f2fe !important;
+            border-left: 4px solid #0d3a5c !important;
+          }
+          .print-stat-navy span {
+            color: #0d3a5c !important;
+          }
+          
+          /* Table row overrides */
+          #print-area table tbody tr {
+            background-color: white !important;
+          }
+          #print-area table tbody tr:nth-child(even) {
+            background-color: #f9fafb !important;
+          }
+          #print-area table tbody tr td {
+            color: #111827 !important;
+          }
+          
+          /* Weekend rows - light gray */
+          #print-area table tbody tr.bg-gray-100,
+          #print-area table tbody tr[class*="bg-gray-100"] {
+            background-color: #f3f4f6 !important;
+          }
+          #print-area table tbody tr[class*="bg-gray-100"] td {
+            color: #9ca3af !important;
+          }
+          
+          /* Print row classes with highest specificity */
+          #print-area .print-row-even {
+            background-color: white !important;
+          }
+          #print-area .print-row-even td {
+            color: #111827 !important;
+          }
+          #print-area .print-row-odd {
+            background-color: #f9fafb !important;
+          }
+          #print-area .print-row-odd td {
+            color: #111827 !important;
+          }
+          #print-area .print-row-weekend {
+            background-color: #f3f4f6 !important;
+          }
+          #print-area .print-row-weekend td {
+            color: #9ca3af !important;
+          }
+          
+          /* Status badges in print */
+          #print-area span[class*="bg-green-100"],
+          #print-area span[class*="bg-green-900"] {
+            background-color: #dcfce7 !important;
+            color: #15803d !important;
+          }
+          #print-area span[class*="bg-red-100"],
+          #print-area span[class*="bg-red-900"] {
+            background-color: #fee2e2 !important;
+            color: #b91c1c !important;
+          }
+          #print-area span[class*="bg-yellow-100"],
+          #print-area span[class*="bg-yellow-900"] {
+            background-color: #fef9c3 !important;
+            color: #a16207 !important;
+          }
+          #print-area span[class*="bg-orange-100"],
+          #print-area span[class*="bg-orange-900"] {
+            background-color: #ffedd5 !important;
+            color: #c2410c !important;
           }
           
           table {
@@ -324,9 +597,9 @@ export default function AdminReportsPage() {
         </div>
 
         {/* Printable Report Area */}
-        <div id="print-area" ref={printRef} className="bg-white rounded-xl shadow-md p-8">
+        <div id="print-area" ref={printRef} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-8">
           {/* Report Header */}
-          <div className="mb-8 border-b-2 border-ppa-navy pb-6">
+          <div className="mb-8 border-b-2 border-ppa-navy dark:border-ppa-light pb-6">
             <div className="relative">
               {/* Logo on far right */}
               <div className="absolute right-0 top-0">
@@ -338,12 +611,12 @@ export default function AdminReportsPage() {
               </div>
               {/* Centered content */}
               <div className="text-center">
-                <h1 className="text-2xl font-bold text-ppa-navy">PHILIPPINE PORTS AUTHORITY</h1>
-                <p className="text-gray-600 text-sm">Attendance Monitoring System</p>
-                <h2 className="text-xl font-semibold text-gray-800 mt-4">
+                <h1 className="text-2xl font-bold text-ppa-navy dark:text-ppa-light">PHILIPPINE PORTS AUTHORITY</h1>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">Attendance Monitoring System</p>
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-4">
                   Monthly Attendance Sheet
                 </h2>
-                <p className="text-gray-600">For the Month of {monthName}</p>
+                <p className="text-gray-600 dark:text-gray-400">For the Month of {monthName}</p>
               </div>
             </div>
           </div>
@@ -352,28 +625,28 @@ export default function AdminReportsPage() {
             // Organization Report
             <>
               {/* Summary Stats */}
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-ppa-navy mb-4 border-b pb-2">Summary Statistics</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-ppa-navy dark:text-ppa-light mb-3 border-b border-gray-300 dark:border-gray-600 pb-2">Summary Statistics</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 print-stats-grid">
                   {(() => {
                     const stats = calculateOrgStats();
                     return (
                       <>
-                        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                          <p className="text-sm text-green-600 font-medium">Total Present Days</p>
-                          <p className="text-2xl font-bold text-green-700">{stats.presentDays}</p>
+                        <div className="print-stat-green bg-green-50 dark:bg-green-900/30 p-3 rounded-md border-l-4 border-green-500">
+                          <p className="text-xs text-green-600 dark:text-green-400 font-medium">Total Present Days</p>
+                          <p className="text-xl font-bold text-green-700 dark:text-green-300">{stats.presentDays}</p>
                         </div>
-                        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                          <p className="text-sm text-red-600 font-medium">Total Absent Days</p>
-                          <p className="text-2xl font-bold text-red-700">{stats.absentDays}</p>
+                        <div className="print-stat-red bg-red-50 dark:bg-red-900/30 p-3 rounded-md border-l-4 border-red-500">
+                          <p className="text-xs text-red-600 dark:text-red-400 font-medium">Total Absent Days</p>
+                          <p className="text-xl font-bold text-red-700 dark:text-red-300">{stats.absentDays}</p>
                         </div>
-                        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                          <p className="text-sm text-yellow-600 font-medium">Total Late Days</p>
-                          <p className="text-2xl font-bold text-yellow-700">{stats.lateDays}</p>
+                        <div className="print-stat-yellow bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-md border-l-4 border-yellow-500">
+                          <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Total Late Days</p>
+                          <p className="text-xl font-bold text-yellow-700 dark:text-yellow-300">{stats.lateDays}</p>
                         </div>
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                          <p className="text-sm text-blue-600 font-medium">Avg. Attendance Rate</p>
-                          <p className="text-2xl font-bold text-blue-700">{stats.attendanceRate}%</p>
+                        <div className="print-stat-blue bg-blue-50 dark:bg-blue-900/30 p-3 rounded-md border-l-4 border-blue-500">
+                          <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Avg. Attendance Rate</p>
+                          <p className="text-xl font-bold text-blue-700 dark:text-blue-300">{stats.attendanceRate}%</p>
                         </div>
                       </>
                     );
@@ -383,34 +656,34 @@ export default function AdminReportsPage() {
 
               {/* Employee Summary Table */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-ppa-navy mb-4 border-b pb-2">Employee Attendance Summary</h3>
+                <h3 className="text-lg font-semibold text-ppa-navy dark:text-ppa-light mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">Employee Attendance Summary</h3>
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-300">
+                  <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
                     <thead>
                       <tr className="bg-ppa-navy text-white">
-                        <th className="border border-gray-300 px-3 py-2 text-left text-sm">Employee Name</th>
-                        <th className="border border-gray-300 px-3 py-2 text-left text-sm">Department</th>
-                        <th className="border border-gray-300 px-3 py-2 text-center text-sm">Present</th>
-                        <th className="border border-gray-300 px-3 py-2 text-center text-sm">Late</th>
-                        <th className="border border-gray-300 px-3 py-2 text-center text-sm">Half Day</th>
-                        <th className="border border-gray-300 px-3 py-2 text-center text-sm">Absent</th>
-                        <th className="border border-gray-300 px-3 py-2 text-center text-sm">Total Hours</th>
-                        <th className="border border-gray-300 px-3 py-2 text-center text-sm">Rate</th>
+                        <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm">Employee Name</th>
+                        <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm">Department</th>
+                        <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm">Present</th>
+                        <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm">Late</th>
+                        <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm">Half Day</th>
+                        <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm">Absent</th>
+                        <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm">Total Hours</th>
+                        <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm">Rate</th>
                       </tr>
                     </thead>
                     <tbody>
                       {employees.map((emp, idx) => {
                         const stats = calculateEmployeeStats(emp.id);
                         return (
-                          <tr key={emp.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                            <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{emp.name}</td>
-                            <td className="border border-gray-300 px-3 py-2 text-sm">{emp.department || "N/A"}</td>
-                            <td className="border border-gray-300 px-3 py-2 text-center text-sm text-green-600 font-medium">{stats.presentDays}</td>
-                            <td className="border border-gray-300 px-3 py-2 text-center text-sm text-yellow-600 font-medium">{stats.lateDays}</td>
-                            <td className="border border-gray-300 px-3 py-2 text-center text-sm text-orange-600 font-medium">{stats.halfDays}</td>
-                            <td className="border border-gray-300 px-3 py-2 text-center text-sm text-red-600 font-medium">{stats.absentDays}</td>
-                            <td className="border border-gray-300 px-3 py-2 text-center text-sm">{stats.totalWorkHours}h</td>
-                            <td className="border border-gray-300 px-3 py-2 text-center text-sm font-bold">{stats.attendanceRate}%</td>
+                          <tr key={emp.id} className={idx % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50 dark:bg-gray-700"}>
+                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">{emp.name}</td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">{emp.department || "N/A"}</td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-green-600 dark:text-green-400 font-medium">{stats.presentDays}</td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-yellow-600 dark:text-yellow-400 font-medium">{stats.lateDays}</td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-orange-600 dark:text-orange-400 font-medium">{stats.halfDays}</td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-red-600 dark:text-red-400 font-medium">{stats.absentDays}</td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-gray-700 dark:text-gray-300">{stats.totalWorkHours}h</td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm font-bold text-gray-900 dark:text-gray-100">{stats.attendanceRate}%</td>
                           </tr>
                         );
                       })}
@@ -428,60 +701,60 @@ export default function AdminReportsPage() {
                 const monthlyData = getEmployeeMonthlyAttendance(selectedEmployee);
 
                 if (!employee) {
-                  return <p className="text-center text-gray-500">No employee selected</p>;
+                  return <p className="text-center text-gray-500 dark:text-gray-400">No employee selected</p>;
                 }
 
                 return (
                   <>
                     {/* Employee Info */}
-                    <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+                    <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm text-gray-600">Employee Name</p>
-                          <p className="font-semibold text-ppa-navy">{employee.name}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Employee Name</p>
+                          <p className="font-semibold text-ppa-navy dark:text-ppa-light">{employee.name}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Email</p>
-                          <p className="font-semibold text-ppa-navy">{employee.email}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Email</p>
+                          <p className="font-semibold text-ppa-navy dark:text-ppa-light">{employee.email}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Department</p>
-                          <p className="font-semibold text-ppa-navy">{employee.department || "N/A"}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Department</p>
+                          <p className="font-semibold text-ppa-navy dark:text-ppa-light">{employee.department || "N/A"}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Position</p>
-                          <p className="font-semibold text-ppa-navy">{employee.position || "N/A"}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Position</p>
+                          <p className="font-semibold text-ppa-navy dark:text-ppa-light">{employee.position || "N/A"}</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Individual Stats */}
-                    <div className="mb-8">
-                      <h3 className="text-lg font-semibold text-ppa-navy mb-4 border-b pb-2">Monthly Summary</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                          <p className="text-sm text-green-600 font-medium">Present Days</p>
-                          <p className="text-2xl font-bold text-green-700">{stats.presentDays}</p>
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-ppa-navy dark:text-ppa-light mb-3 border-b border-gray-300 dark:border-gray-600 pb-2">Monthly Summary</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 print-stats-grid">
+                        <div className="print-stat-green bg-green-50 dark:bg-green-900/30 p-3 rounded-md border-l-4 border-green-500">
+                          <p className="text-xs text-green-600 dark:text-green-400 font-medium">Present Days</p>
+                          <p className="text-xl font-bold text-green-700 dark:text-green-300">{stats.presentDays}</p>
                         </div>
-                        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                          <p className="text-sm text-red-600 font-medium">Absent Days</p>
-                          <p className="text-2xl font-bold text-red-700">{stats.absentDays}</p>
+                        <div className="print-stat-red bg-red-50 dark:bg-red-900/30 p-3 rounded-md border-l-4 border-red-500">
+                          <p className="text-xs text-red-600 dark:text-red-400 font-medium">Absent Days</p>
+                          <p className="text-xl font-bold text-red-700 dark:text-red-300">{stats.absentDays}</p>
                         </div>
-                        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                          <p className="text-sm text-yellow-600 font-medium">Late Days</p>
-                          <p className="text-2xl font-bold text-yellow-700">{stats.lateDays}</p>
+                        <div className="print-stat-yellow bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-md border-l-4 border-yellow-500">
+                          <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Late Days</p>
+                          <p className="text-xl font-bold text-yellow-700 dark:text-yellow-300">{stats.lateDays}</p>
                         </div>
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                          <p className="text-sm text-blue-600 font-medium">Total Work Hours</p>
-                          <p className="text-2xl font-bold text-blue-700">{stats.totalWorkHours}h</p>
+                        <div className="print-stat-blue bg-blue-50 dark:bg-blue-900/30 p-3 rounded-md border-l-4 border-blue-500">
+                          <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Total Work Hours</p>
+                          <p className="text-xl font-bold text-blue-700 dark:text-blue-300">{stats.totalWorkHours}h</p>
                         </div>
                       </div>
-                      <div className="mt-4 p-4 bg-ppa-light/30 rounded-lg border border-ppa-blue/30">
+                      <div className="mt-3 p-3 print-stat-navy bg-ppa-light/30 dark:bg-ppa-navy/30 rounded-md border-l-4 border-ppa-navy">
                         <div className="flex justify-between items-center">
-                          <span className="font-medium text-ppa-navy">Attendance Rate:</span>
-                          <span className="text-2xl font-bold text-ppa-navy">{stats.attendanceRate}%</span>
+                          <span className="text-sm font-medium text-ppa-navy dark:text-ppa-light">Attendance Rate:</span>
+                          <span className="text-xl font-bold text-ppa-navy dark:text-ppa-light">{stats.attendanceRate}%</span>
                         </div>
-                        <div className="mt-2 h-3 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="mt-2 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-gradient-to-r from-ppa-navy to-ppa-blue rounded-full transition-all duration-500"
                             style={{ width: `${stats.attendanceRate}%` }}
@@ -492,19 +765,19 @@ export default function AdminReportsPage() {
 
                     {/* Daily Attendance Table */}
                     <div>
-                      <h3 className="text-lg font-semibold text-ppa-navy mb-4 border-b pb-2">Daily Attendance Record</h3>
+                      <h3 className="text-lg font-semibold text-ppa-navy dark:text-ppa-light mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">Daily Attendance Record</h3>
                       <div className="overflow-x-auto">
-                        <table className="w-full border-collapse border border-gray-300 text-sm">
+                        <table className="w-full border-collapse border border-gray-300 dark:border-gray-600 text-sm">
                           <thead>
                             <tr className="bg-ppa-navy text-white">
-                              <th className="border border-gray-300 px-2 py-2 text-left">Date</th>
-                              <th className="border border-gray-300 px-2 py-2 text-left">Day</th>
-                              <th className="border border-gray-300 px-2 py-2 text-center">AM In</th>
-                              <th className="border border-gray-300 px-2 py-2 text-center">AM Out</th>
-                              <th className="border border-gray-300 px-2 py-2 text-center">PM In</th>
-                              <th className="border border-gray-300 px-2 py-2 text-center">PM Out</th>
-                              <th className="border border-gray-300 px-2 py-2 text-center">Status</th>
-                              <th className="border border-gray-300 px-2 py-2 text-center">Hours</th>
+                              <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-left">Date</th>
+                              <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-left">Day</th>
+                              <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">AM In</th>
+                              <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">AM Out</th>
+                              <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">PM In</th>
+                              <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">PM Out</th>
+                              <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">Status</th>
+                              <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">Hours</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -513,45 +786,45 @@ export default function AdminReportsPage() {
                                 key={day.dateStr} 
                                 className={
                                   day.isWeekend 
-                                    ? "bg-gray-100 text-gray-400" 
+                                    ? "print-row-weekend bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500" 
                                     : idx % 2 === 0 
-                                      ? "bg-white" 
-                                      : "bg-gray-50"
+                                      ? "print-row-even bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" 
+                                      : "print-row-odd bg-gray-50 dark:bg-gray-750 text-gray-900 dark:text-gray-100"
                                 }
                               >
-                                <td className="border border-gray-300 px-2 py-1">
+                                <td className="border border-gray-300 dark:border-gray-600 px-2 py-1">
                                   {format(day.date, "MMM dd, yyyy")}
                                 </td>
-                                <td className="border border-gray-300 px-2 py-1">
+                                <td className="border border-gray-300 dark:border-gray-600 px-2 py-1">
                                   {format(day.date, "EEEE")}
                                 </td>
-                                <td className="border border-gray-300 px-2 py-1 text-center">
+                                <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
                                   {day.isWeekend ? "-" : formatTime(day.attendance?.amIn || null)}
                                 </td>
-                                <td className="border border-gray-300 px-2 py-1 text-center">
+                                <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
                                   {day.isWeekend ? "-" : formatTime(day.attendance?.amOut || null)}
                                 </td>
-                                <td className="border border-gray-300 px-2 py-1 text-center">
+                                <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
                                   {day.isWeekend ? "-" : formatTime(day.attendance?.pmIn || null)}
                                 </td>
-                                <td className="border border-gray-300 px-2 py-1 text-center">
+                                <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
                                   {day.isWeekend ? "-" : formatTime(day.attendance?.pmOut || null)}
                                 </td>
-                                <td className="border border-gray-300 px-2 py-1 text-center">
+                                <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
                                   {day.isWeekend ? (
-                                    <span className="text-gray-400">Weekend</span>
+                                    <span className="text-gray-400 dark:text-gray-500">Weekend</span>
                                   ) : (
                                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                      day.attendance?.status === "PRESENT" ? "bg-green-100 text-green-700" :
-                                      day.attendance?.status === "LATE" ? "bg-yellow-100 text-yellow-700" :
-                                      day.attendance?.status === "HALF_DAY" ? "bg-orange-100 text-orange-700" :
-                                      "bg-red-100 text-red-700"
+                                      day.attendance?.status === "PRESENT" ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400" :
+                                      day.attendance?.status === "LATE" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400" :
+                                      day.attendance?.status === "HALF_DAY" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400" :
+                                      "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400"
                                     }`}>
                                       {day.attendance?.status || "ABSENT"}
                                     </span>
                                   )}
                                 </td>
-                                <td className="border border-gray-300 px-2 py-1 text-center">
+                                <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
                                   {day.isWeekend ? "-" : (day.attendance?.workHours?.toFixed(1) || "0") + "h"}
                                 </td>
                               </tr>
@@ -567,19 +840,19 @@ export default function AdminReportsPage() {
           )}
 
           {/* Report Footer */}
-          <div className="mt-8 pt-6 border-t border-gray-300">
+          <div className="mt-8 pt-6 border-t border-gray-300 dark:border-gray-600">
             <div className="grid grid-cols-2 gap-8">
               <div>
-                <p className="text-sm text-gray-600">Generated on: {currentDate}</p>
-                <p className="text-sm text-gray-600">Report Period: {monthName}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Generated on: {currentDate}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Report Period: {monthName}</p>
               </div>
               <div className="text-right">
-                <div className="mt-8 pt-4 border-t border-gray-400 inline-block min-w-[200px]">
-                  <p className="text-sm text-gray-600">Authorized Signature</p>
+                <div className="mt-8 pt-4 border-t border-gray-400 dark:border-gray-500 inline-block min-w-[200px]">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Authorized Signature</p>
                 </div>
               </div>
             </div>
-            <div className="text-center mt-6 text-xs text-gray-400">
+            <div className="text-center mt-6 text-xs text-gray-400 dark:text-gray-500">
               <p>Philippine Ports Authority - Attendance Monitoring System</p>
               <p>This is a computer-generated report.</p>
             </div>

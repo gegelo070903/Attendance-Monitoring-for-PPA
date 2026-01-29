@@ -31,6 +31,11 @@ export default function AttendanceTable({
     );
   }
 
+  // Check if any attendance has night shift data
+  const hasNightShift = attendances.some(
+    (a) => a.shiftType === 'NIGHT' || a.nightIn || a.nightOut
+  );
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -45,17 +50,30 @@ export default function AttendanceTable({
               </th>
             )}
             <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">
-              <span className="text-green-600 dark:text-green-400">🌅 AM In</span>
+              Shift
             </th>
-            <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">
-              <span className="text-yellow-600 dark:text-yellow-400">🌤️ AM Out</span>
+            <th className="text-center py-3 px-4 text-sm font-semibold text-green-600 dark:text-green-400">
+              AM In
             </th>
-            <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">
-              <span className="text-blue-600 dark:text-blue-400">☀️ PM In</span>
+            <th className="text-center py-3 px-4 text-sm font-semibold text-yellow-600 dark:text-yellow-400">
+              AM Out
             </th>
-            <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">
-              <span className="text-purple-600 dark:text-purple-400">🌙 PM Out</span>
+            <th className="text-center py-3 px-4 text-sm font-semibold text-blue-600 dark:text-blue-400">
+              PM In
             </th>
+            <th className="text-center py-3 px-4 text-sm font-semibold text-purple-600 dark:text-purple-400">
+              PM Out
+            </th>
+            {hasNightShift && (
+              <>
+                <th className="text-center py-3 px-4 text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                  Night In
+                </th>
+                <th className="text-center py-3 px-4 text-sm font-semibold text-slate-600 dark:text-slate-400">
+                  Night Out
+                </th>
+              </>
+            )}
             <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">
               Hours
             </th>
@@ -78,6 +96,15 @@ export default function AttendanceTable({
                   {attendance.user?.name || "Unknown"}
                 </td>
               )}
+              <td className="py-3 px-4 text-sm text-center">
+                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                  attendance.shiftType === 'NIGHT' 
+                    ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' 
+                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                }`}>
+                  {attendance.shiftType || 'DAY'}
+                </span>
+              </td>
               <td className="py-3 px-4 text-sm text-center text-green-600 dark:text-green-400 font-medium">
                 {formatTime(attendance.amIn)}
               </td>
@@ -90,6 +117,16 @@ export default function AttendanceTable({
               <td className="py-3 px-4 text-sm text-center text-purple-600 dark:text-purple-400 font-medium">
                 {formatTime(attendance.pmOut)}
               </td>
+              {hasNightShift && (
+                <>
+                  <td className="py-3 px-4 text-sm text-center text-indigo-600 dark:text-indigo-400 font-medium">
+                    {formatTime(attendance.nightIn)}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-center text-slate-600 dark:text-slate-400 font-medium">
+                    {formatTime(attendance.nightOut)}
+                  </td>
+                </>
+              )}
               <td className="py-3 px-4 text-sm text-center text-gray-600 dark:text-gray-300">
                 {attendance.workHours ? `${attendance.workHours.toFixed(2)}h` : "-"}
               </td>

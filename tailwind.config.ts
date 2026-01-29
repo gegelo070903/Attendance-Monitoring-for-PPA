@@ -29,12 +29,23 @@ const config: Config = {
           blue: '#1a5f8a',
           light: '#3387bf',
         },
+        // Philippine Flag Colors
+        flag: {
+          blue: '#0038A8',
+          red: '#CE1126',
+          yellow: '#FCD116',
+          white: '#FFFFFF',
+        },
         // Accent colors from logo
         accent: {
-          red: '#c41e3a',
-          gold: '#d4a418',
+          red: '#CE1126',
+          gold: '#FCD116',
           yellow: '#fbbf24',
         },
+      },
+      backgroundImage: {
+        'flag-gradient': 'linear-gradient(to bottom, #0038A8 0%, #1a5f8a 40%, #8B1538 70%, #CE1126 100%)',
+        'flag-gradient-subtle': 'linear-gradient(to bottom, #0038A8 0%, #164e72 50%, #8B1538 100%)',
       },
     },
   },
