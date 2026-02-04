@@ -75,17 +75,17 @@ export default function StatsCard({
           <p className={`text-3xl font-bold ${colors.text}`}>{value}</p>
           {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>}
         </div>
-        <div className={`w-12 h-12 ${colors.icon} rounded-lg flex items-center justify-center shadow-md`}>
+        <div className={`w-12 h-12 ${colors.icon} rounded-xl flex items-center justify-center shadow-md`}>
           <svg
             className="w-6 h-6"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            strokeWidth={1.5}
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth={2}
               d={icon}
             />
           </svg>

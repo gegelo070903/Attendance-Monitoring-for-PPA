@@ -88,6 +88,216 @@ export default function IDCardPrinter({
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
+    // Use consistent styles for both preview and print
+    const cardStyles = `
+      .card {
+        width: 2.125in;
+        height: 3.375in;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        position: relative;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        border: 1px solid #e2e8f0;
+      }
+      
+      /* Corner Decorations */
+      .corner-top-left {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0;
+        height: 0;
+        border-left: 50px solid #0038A8;
+        border-bottom: 50px solid transparent;
+      }
+      .corner-bottom-right {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 0;
+        height: 0;
+        border-right: 50px solid #CE1126;
+        border-top: 50px solid transparent;
+      }
+      
+      /* Header */
+      .card-header {
+        padding: 16px 12px 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        position: relative;
+        z-index: 1;
+      }
+      .logo {
+        width: 36px;
+        height: 36px;
+        object-fit: contain;
+      }
+      .company-name {
+        font-size: 9px;
+        font-weight: 700;
+        color: #0038A8;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        line-height: 1.3;
+        text-align: left;
+      }
+      
+      /* Profile Section */
+      .profile-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 8px 12px;
+        position: relative;
+        z-index: 1;
+      }
+      .profile-image-container {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border: 3px solid #0038A8;
+        overflow: hidden;
+        background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      }
+      .profile-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .profile-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        font-weight: bold;
+        color: #64748b;
+        background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+      }
+      
+      /* User Info */
+      .user-info {
+        text-align: center;
+        margin-top: 10px;
+        padding: 0 8px;
+      }
+      .user-name {
+        font-size: 13px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 4px;
+        line-height: 1.2;
+      }
+      .user-department {
+        font-size: 9px;
+        color: #64748b;
+        margin-bottom: 2px;
+      }
+      .user-position {
+        font-size: 9px;
+        color: #CE1126;
+        font-weight: 600;
+      }
+      
+      /* ID Badge */
+      .id-badge {
+        margin-top: 12px;
+        display: inline-block;
+        background: linear-gradient(135deg, #0038A8, #1e4d8c);
+        color: #fff;
+        padding: 5px 16px;
+        border-radius: 12px;
+        font-size: 8px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+      
+      /* Yellow Accent Line */
+      .accent-line {
+        width: 40px;
+        height: 3px;
+        background: #FCD116;
+        margin: 12px auto 0;
+        border-radius: 2px;
+      }
+      
+      /* Back Card */
+      .card-back {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        padding: 16px;
+      }
+      .back-corner-top-right {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 0;
+        height: 0;
+        border-right: 50px solid #CE1126;
+        border-bottom: 50px solid transparent;
+      }
+      .back-corner-bottom-left {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 0;
+        border-left: 50px solid #0038A8;
+        border-top: 50px solid transparent;
+      }
+      .back-title {
+        font-size: 9px;
+        color: #0038A8;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+        position: relative;
+        z-index: 1;
+      }
+      .qr-container {
+        background: #fff;
+        padding: 10px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border: 2px solid #0038A8;
+        position: relative;
+        z-index: 1;
+      }
+      .qr-code {
+        width: 110px;
+        height: 110px;
+        display: block;
+      }
+      .scan-instruction {
+        margin-top: 14px;
+        font-size: 8px;
+        color: #64748b;
+        text-align: center;
+        line-height: 1.5;
+        position: relative;
+        z-index: 1;
+      }
+      .back-footer {
+        margin-top: auto;
+        text-align: center;
+        font-size: 7px;
+        color: #94a3b8;
+        position: relative;
+        z-index: 1;
+      }
+    `;
+
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -100,14 +310,14 @@ export default function IDCardPrinter({
             box-sizing: border-box;
           }
           body {
-            font-family: 'Segoe UI', Arial, sans-serif;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             padding: 20px;
-            background: #f5f5f5;
+            background: #f1f5f9;
           }
           .cards-container {
             display: flex;
@@ -122,264 +332,12 @@ export default function IDCardPrinter({
           }
           .card-label {
             text-align: center;
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 10px;
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 8px;
             font-weight: 500;
           }
-          .card {
-            width: 2.125in;
-            height: 3.375in;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-            position: relative;
-            background: #fff;
-          }
-          
-          /* FRONT CARD */
-          .card-front {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-          }
-          
-          /* Diagonal corner decorations - Front */
-          .front-corner-top {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 70px;
-            height: 70px;
-            overflow: hidden;
-          }
-          .front-corner-top::before {
-            content: '';
-            position: absolute;
-            top: -35px;
-            left: -35px;
-            width: 70px;
-            height: 70px;
-            background: linear-gradient(135deg, #0038A8 50%, transparent 50%);
-            transform: rotate(0deg);
-          }
-          .front-corner-bottom {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 70px;
-            height: 70px;
-            overflow: hidden;
-          }
-          .front-corner-bottom::before {
-            content: '';
-            position: absolute;
-            bottom: -35px;
-            right: -35px;
-            width: 70px;
-            height: 70px;
-            background: linear-gradient(315deg, #CE1126 50%, transparent 50%);
-          }
-          
-          /* Header section - Logo beside company name */
-          .front-header {
-            padding: 18px 12px 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            z-index: 1;
-          }
-          .front-logo {
-            width: 35px;
-            height: 35px;
-            flex-shrink: 0;
-          }
-          .front-logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-          }
-          .company-name {
-            font-size: 8px;
-            font-weight: 700;
-            color: #0038A8;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            line-height: 1.3;
-            text-align: left;
-          }
-          
-          /* Profile section */
-          .profile-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            padding: 8px 10px;
-            z-index: 1;
-          }
-          .profile-image {
-            width: 85px;
-            height: 85px;
-            border-radius: 50%;
-            border: 3px solid #0038A8;
-            overflow: hidden;
-            background: #f0f0f0;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-          }
-          .profile-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-          }
-          .profile-placeholder {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #e8e8e8, #d0d0d0);
-            color: #666;
-            font-size: 32px;
-            font-weight: bold;
-          }
-          
-          /* User info */
-          .user-info {
-            text-align: center;
-            margin-top: 10px;
-            padding: 0 8px;
-          }
-          .user-name {
-            font-size: 12px;
-            font-weight: 700;
-            color: #1a1a1a;
-            margin-bottom: 4px;
-            line-height: 1.2;
-          }
-          .user-department {
-            font-size: 8px;
-            color: #666;
-            margin-bottom: 2px;
-          }
-          .user-position {
-            font-size: 8px;
-            color: #CE1126;
-            font-weight: 600;
-          }
-          
-          /* ID Badge - moved up */
-          .id-badge-container {
-            margin-top: 10px;
-            z-index: 1;
-          }
-          .id-badge {
-            display: inline-block;
-            background: linear-gradient(135deg, #0038A8, #1e4d8c);
-            color: #fff;
-            padding: 4px 14px;
-            border-radius: 10px;
-            font-size: 7px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-          }
-          
-          /* Footer spacer */
-          .front-footer {
-            padding: 10px;
-            z-index: 1;
-          }
-          
-          /* BACK CARD */
-          .card-back {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 15px;
-            height: 100%;
-          }
-          
-          /* Diagonal corner decorations - Back */
-          .back-corner-top {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 70px;
-            height: 70px;
-            overflow: hidden;
-          }
-          .back-corner-top::before {
-            content: '';
-            position: absolute;
-            top: -35px;
-            right: -35px;
-            width: 70px;
-            height: 70px;
-            background: linear-gradient(225deg, #CE1126 50%, transparent 50%);
-          }
-          .back-corner-bottom {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 70px;
-            height: 70px;
-            overflow: hidden;
-          }
-          .back-corner-bottom::before {
-            content: '';
-            position: absolute;
-            bottom: -35px;
-            left: -35px;
-            width: 70px;
-            height: 70px;
-            background: linear-gradient(45deg, #0038A8 50%, transparent 50%);
-          }
-          
-          .back-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            flex: 1;
-            z-index: 1;
-          }
-          .back-title {
-            font-size: 8px;
-            color: #0038A8;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 600;
-          }
-          .qr-container {
-            background: #fff;
-            padding: 8px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            border: 2px solid #0038A8;
-          }
-          .qr-code {
-            width: 120px;
-            height: 120px;
-            display: block;
-          }
-          .scan-instruction {
-            margin-top: 12px;
-            font-size: 7px;
-            color: #666;
-            text-align: center;
-            line-height: 1.4;
-          }
-          .back-footer {
-            margin-top: 15px;
-            text-align: center;
-            font-size: 6px;
-            color: #999;
-            z-index: 1;
-          }
+          ${cardStyles}
           
           @media print {
             body {
@@ -387,11 +345,11 @@ export default function IDCardPrinter({
               padding: 0;
             }
             .cards-container {
-              gap: 30px;
+              gap: 20px;
             }
             .card {
               box-shadow: none;
-              border: 1px solid #ddd;
+              border: 1px solid #ccc;
             }
             .card-label {
               display: none;
@@ -404,23 +362,21 @@ export default function IDCardPrinter({
           <!-- FRONT CARD -->
           <div class="card-wrapper">
             <div class="card-label">Front</div>
-            <div class="card card-front">
-              <div class="front-corner-top"></div>
-              <div class="front-corner-bottom"></div>
+            <div class="card">
+              <div class="corner-top-left"></div>
+              <div class="corner-bottom-right"></div>
               
-              <div class="front-header">
-                <div class="front-logo">
-                  <img src="/images/ppa-logo-nobg.png" alt="PPA Logo" />
-                </div>
+              <div class="card-header">
+                <img src="/images/ppa-logo-nobg.png" alt="PPA Logo" class="logo" />
                 <div class="company-name">
                   Philippine<br/>Ports Authority
                 </div>
               </div>
               
               <div class="profile-section">
-                <div class="profile-image">
+                <div class="profile-image-container">
                   ${userProfileImage 
-                    ? `<img src="${userProfileImage}" alt="Profile" />`
+                    ? `<img src="${userProfileImage}" alt="Profile" class="profile-image" />`
                     : `<div class="profile-placeholder">${userName.charAt(0).toUpperCase()}</div>`
                   }
                 </div>
@@ -429,12 +385,9 @@ export default function IDCardPrinter({
                   ${userDepartment ? `<div class="user-department">${userDepartment}</div>` : ''}
                   ${userPosition ? `<div class="user-position">${userPosition}</div>` : ''}
                 </div>
-                <div class="id-badge-container">
-                  <span class="id-badge">EMPLOYEE ID</span>
-                </div>
+                <span class="id-badge">Employee ID</span>
+                <div class="accent-line"></div>
               </div>
-              
-              <div class="front-footer"></div>
             </div>
           </div>
           
@@ -442,17 +395,15 @@ export default function IDCardPrinter({
           <div class="card-wrapper">
             <div class="card-label">Back</div>
             <div class="card card-back">
-              <div class="back-corner-top"></div>
-              <div class="back-corner-bottom"></div>
+              <div class="back-corner-top-right"></div>
+              <div class="back-corner-bottom-left"></div>
               
-              <div class="back-content">
-                <div class="back-title">Scan for Attendance</div>
-                <div class="qr-container">
-                  <img src="${qrDataUrl}" class="qr-code" alt="QR Code" />
-                </div>
-                <div class="scan-instruction">
-                  Present this QR code at the<br/>attendance station to check in or check out
-                </div>
+              <div class="back-title">Scan for Attendance</div>
+              <div class="qr-container">
+                <img src="${qrDataUrl}" class="qr-code" alt="QR Code" />
+              </div>
+              <div class="scan-instruction">
+                Present this QR code at the<br/>attendance station to check in/out
               </div>
               <div class="back-footer">
                 Philippine Ports Authority<br/>Attendance Monitoring System
@@ -474,76 +425,107 @@ export default function IDCardPrinter({
   };
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-6">
       {/* Hidden canvas for QR code generation */}
       <canvas ref={qrCanvasRef} className="hidden" />
       
-      {/* ID Card Preview - Vertical */}
-      <div className="bg-gray-100 dark:bg-gray-700 rounded-xl p-4 w-full max-w-sm">
-        <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 text-center">ID Card Preview (Front)</h3>
+      {/* ID Card Preview - Matching Print Design */}
+      <div className="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-xl p-6 w-full max-w-md">
+        <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4 text-center">ID Card Preview</h3>
         
-        {/* Front Preview - Vertical */}
-        <div 
-          className="bg-white rounded-xl overflow-hidden shadow-lg mx-auto relative"
-          style={{ width: '170px', height: '270px' }}
-        >
-          {/* Corner decorations */}
-          <div className="absolute top-0 left-0 w-12 h-12 overflow-hidden">
-            <div className="absolute -top-6 -left-6 w-12 h-12 bg-[#0038A8] rotate-45 transform origin-center"></div>
-          </div>
-          <div className="absolute bottom-0 right-0 w-12 h-12 overflow-hidden">
-            <div className="absolute -bottom-6 -right-6 w-12 h-12 bg-[#CE1126] rotate-45 transform origin-center"></div>
-          </div>
-          
-          {/* Content */}
-          <div className="flex flex-col items-center h-full relative z-10 pt-4">
-            {/* Logo & Company - Side by side */}
-            <div className="flex items-center justify-center gap-2 px-3">
-              <img src="/images/ppa-logo-nobg.png" alt="PPA" className="w-8 h-8 object-contain flex-shrink-0" />
-              <p className="text-[7px] font-bold text-[#0038A8] leading-tight">PHILIPPINE<br/>PORTS AUTHORITY</p>
-            </div>
-            
-            {/* Profile */}
-            <div className="flex-1 flex flex-col items-center justify-start pt-3">
-              <div className="w-16 h-16 rounded-full border-2 border-[#0038A8] overflow-hidden bg-gray-100 shadow">
-                {userProfileImage ? (
-                  <img src={userProfileImage} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 font-bold text-xl">
-                    {userName.charAt(0).toUpperCase()}
-                  </div>
-                )}
-              </div>
-              <div className="text-center mt-2 px-2">
-                <p className="text-[10px] font-bold text-gray-800 leading-tight">{userName}</p>
-                {userDepartment && <p className="text-[6px] text-gray-500 mt-1">{userDepartment}</p>}
-                {userPosition && <p className="text-[7px] text-[#CE1126] font-semibold">{userPosition}</p>}
+        <div className="flex flex-col md:flex-row gap-6 justify-center items-center">
+          {/* Front Card Preview */}
+          <div className="flex flex-col items-center">
+            <span className="text-xs text-gray-500 dark:text-gray-400 mb-2">Front</span>
+            <div 
+              className="bg-gradient-to-b from-white to-slate-50 rounded-xl overflow-hidden shadow-xl relative border border-slate-200"
+              style={{ width: '170px', height: '270px' }}
+            >
+              {/* Corner decorations */}
+              <div className="absolute top-0 left-0 w-0 h-0 border-l-[40px] border-l-[#0038A8] border-b-[40px] border-b-transparent"></div>
+              <div className="absolute bottom-0 right-0 w-0 h-0 border-r-[40px] border-r-[#CE1126] border-t-[40px] border-t-transparent"></div>
+              
+              {/* Header */}
+              <div className="flex items-center justify-center gap-2 pt-4 px-3 relative z-10">
+                <img src="/images/ppa-logo-nobg.png" alt="PPA" className="w-9 h-9 object-contain" />
+                <p className="text-[8px] font-bold text-[#0038A8] leading-tight uppercase">Philippine<br/>Ports Authority</p>
               </div>
               
-              {/* Badge - moved up under info */}
-              <div className="mt-3">
-                <span className="text-[6px] bg-[#0038A8] text-white px-2 py-1 rounded-full font-semibold">EMPLOYEE ID</span>
+              {/* Profile Section */}
+              <div className="flex flex-col items-center pt-2 relative z-10">
+                <div className="w-[72px] h-[72px] rounded-full border-[3px] border-[#0038A8] overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 shadow-lg">
+                  {userProfileImage ? (
+                    <img src={userProfileImage} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-500 font-bold text-2xl bg-gradient-to-br from-slate-200 to-slate-300">
+                      {userName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="text-center mt-2 px-3">
+                  <p className="text-[11px] font-bold text-slate-800 leading-tight">{userName}</p>
+                  {userDepartment && <p className="text-[7px] text-slate-500 mt-1">{userDepartment}</p>}
+                  {userPosition && <p className="text-[8px] text-[#CE1126] font-semibold">{userPosition}</p>}
+                </div>
+                
+                <span className="mt-3 text-[7px] bg-gradient-to-r from-[#0038A8] to-[#1e4d8c] text-white px-4 py-1.5 rounded-xl font-semibold uppercase tracking-wide">
+                  Employee ID
+                </span>
+                
+                {/* Yellow accent line */}
+                <div className="w-10 h-1 bg-[#FCD116] rounded-full mt-3"></div>
               </div>
+            </div>
+          </div>
+
+          {/* Back Card Preview */}
+          <div className="flex flex-col items-center">
+            <span className="text-xs text-gray-500 dark:text-gray-400 mb-2">Back</span>
+            <div 
+              className="bg-gradient-to-b from-white to-slate-50 rounded-xl overflow-hidden shadow-xl relative border border-slate-200 flex flex-col items-center justify-center"
+              style={{ width: '170px', height: '270px' }}
+            >
+              {/* Corner decorations - inverted */}
+              <div className="absolute top-0 right-0 w-0 h-0 border-r-[40px] border-r-[#CE1126] border-b-[40px] border-b-transparent"></div>
+              <div className="absolute bottom-0 left-0 w-0 h-0 border-l-[40px] border-l-[#0038A8] border-t-[40px] border-t-transparent"></div>
+              
+              <p className="text-[8px] text-[#0038A8] uppercase tracking-wider font-semibold mb-3 relative z-10">Scan for Attendance</p>
+              
+              <div className="bg-white p-2 rounded-xl shadow-md border-2 border-[#0038A8] relative z-10">
+                {qrDataUrl ? (
+                  <img src={qrDataUrl} alt="QR Code" className="w-[100px] h-[100px]" />
+                ) : (
+                  <div className="w-[100px] h-[100px] bg-slate-100 animate-pulse rounded-lg"></div>
+                )}
+              </div>
+              
+              <p className="text-[7px] text-slate-500 text-center mt-3 px-4 leading-relaxed relative z-10">
+                Present this QR code at the<br/>attendance station to check in/out
+              </p>
+              
+              <p className="text-[6px] text-slate-400 text-center mt-auto pb-3 relative z-10">
+                Philippine Ports Authority<br/>Attendance Monitoring System
+              </p>
             </div>
           </div>
         </div>
-        
-        <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3">Back side contains QR code with logo</p>
       </div>
 
       {/* Print Button */}
       <button
         onClick={printIDCard}
-        className="px-6 py-3 bg-gradient-to-r from-[#0038A8] to-[#1e4d8c] text-white rounded-lg hover:from-[#1e4d8c] hover:to-[#0038A8] transition-all duration-300 flex items-center gap-2 font-medium shadow-lg hover:shadow-xl"
+        disabled={!qrDataUrl}
+        className="px-6 py-3 bg-gradient-to-r from-[#0038A8] to-[#1e4d8c] text-white rounded-lg hover:from-[#1e4d8c] hover:to-[#0038A8] transition-all duration-300 flex items-center gap-2 font-medium shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
         </svg>
         Print ID Card
       </button>
       
       <p className="text-xs text-gray-500 dark:text-gray-400 text-center max-w-xs">
-        Standard vertical ID card: 2.125" × 3.375" (54mm × 86mm)
+        Standard ID card size: 2.125&quot; × 3.375&quot; (CR80)
       </p>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { format, startOfMonth, endOfMonth, getDaysInMonth, eachDayOfInterval, isWeekend } from "date-fns";
 
 interface Employee {
@@ -46,8 +46,46 @@ export default function AdminReportsPage() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
   const [reportType, setReportType] = useState<"organization" | "individual">("organization");
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [generating, setGenerating] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Get unique departments from employees
+  const departments = useMemo(() => {
+    const deptSet = new Set<string>();
+    employees.forEach(emp => {
+      if (emp.department) {
+        deptSet.add(emp.department);
+      }
+    });
+    return Array.from(deptSet).sort();
+  }, [employees]);
+
+  // Filter employees by selected department
+  const filteredEmployees = useMemo(() => {
+    if (selectedDepartment === "all") {
+      // Sort by department name for grouping
+      return [...employees].sort((a, b) => {
+        const deptA = a.department || "Unassigned";
+        const deptB = b.department || "Unassigned";
+        return deptA.localeCompare(deptB);
+      });
+    }
+    return employees.filter(emp => emp.department === selectedDepartment);
+  }, [employees, selectedDepartment]);
+
+  // Group employees by department
+  const employeesByDepartment = useMemo(() => {
+    const grouped: { [key: string]: Employee[] } = {};
+    filteredEmployees.forEach(emp => {
+      const dept = emp.department || "Unassigned";
+      if (!grouped[dept]) {
+        grouped[dept] = [];
+      }
+      grouped[dept].push(emp);
+    });
+    return grouped;
+  }, [filteredEmployees]);
 
   // Fetch employees
   useEffect(() => {
@@ -129,9 +167,36 @@ export default function AdminReportsPage() {
     };
   };
 
-  // Calculate organization stats
+  // Calculate organization stats (based on filtered employees)
   const calculateOrgStats = (): MonthlyStats => {
-    const allStats = employees.map(emp => calculateEmployeeStats(emp.id));
+    const allStats = filteredEmployees.map(emp => calculateEmployeeStats(emp.id));
+    
+    if (allStats.length === 0) {
+      return {
+        totalWorkDays: 0,
+        presentDays: 0,
+        absentDays: 0,
+        lateDays: 0,
+        halfDays: 0,
+        totalWorkHours: 0,
+        attendanceRate: 0,
+      };
+    }
+
+    return {
+      totalWorkDays: allStats[0]?.totalWorkDays || 0,
+      presentDays: allStats.reduce((sum, s) => sum + s.presentDays, 0),
+      absentDays: allStats.reduce((sum, s) => sum + s.absentDays, 0),
+      lateDays: allStats.reduce((sum, s) => sum + s.lateDays, 0),
+      halfDays: allStats.reduce((sum, s) => sum + s.halfDays, 0),
+      totalWorkHours: Math.round(allStats.reduce((sum, s) => sum + s.totalWorkHours, 0) * 100) / 100,
+      attendanceRate: Math.round(allStats.reduce((sum, s) => sum + s.attendanceRate, 0) / allStats.length),
+    };
+  };
+
+  // Calculate department stats
+  const calculateDepartmentStats = (deptEmployees: Employee[]): MonthlyStats => {
+    const allStats = deptEmployees.map(emp => calculateEmployeeStats(emp.id));
     
     if (allStats.length === 0) {
       return {
@@ -540,8 +605,8 @@ export default function AdminReportsPage() {
               disabled={generating}
               className="flex items-center gap-2 px-6 py-3 bg-ppa-navy text-white rounded-lg hover:bg-ppa-blue transition-colors disabled:opacity-50"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
               </svg>
               {generating ? "Preparing..." : "Print Report"}
             </button>
@@ -549,7 +614,7 @@ export default function AdminReportsPage() {
 
           {/* Filters */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Select Month
@@ -574,6 +639,25 @@ export default function AdminReportsPage() {
                   <option value="individual">Individual Employee</option>
                 </select>
               </div>
+              {reportType === "organization" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Filter by Department
+                  </label>
+                  <select
+                    value={selectedDepartment}
+                    onChange={(e) => setSelectedDepartment(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ppa-navy focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  >
+                    <option value="all">All Departments</option>
+                    {departments.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {reportType === "individual" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -626,7 +710,9 @@ export default function AdminReportsPage() {
             <>
               {/* Summary Stats */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-ppa-navy dark:text-ppa-light mb-3 border-b border-gray-300 dark:border-gray-600 pb-2">Summary Statistics</h3>
+                <h3 className="text-lg font-semibold text-ppa-navy dark:text-ppa-light mb-3 border-b border-gray-300 dark:border-gray-600 pb-2">
+                  Summary Statistics {selectedDepartment !== "all" && `- ${selectedDepartment}`}
+                </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 print-stats-grid">
                   {(() => {
                     const stats = calculateOrgStats();
@@ -654,15 +740,20 @@ export default function AdminReportsPage() {
                 </div>
               </div>
 
-              {/* Employee Summary Table */}
+              {/* Employee Summary Table - Grouped by Department */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-ppa-navy dark:text-ppa-light mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">Employee Attendance Summary</h3>
+                <h3 className="text-lg font-semibold text-ppa-navy dark:text-ppa-light mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
+                  Employee Attendance Summary
+                  {selectedDepartment === "all" ? " (Grouped by Department)" : ` - ${selectedDepartment}`}
+                </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
                     <thead>
                       <tr className="bg-ppa-navy text-white">
                         <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm">Employee Name</th>
-                        <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm">Department</th>
+                        {selectedDepartment === "all" && (
+                          <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm">Position</th>
+                        )}
                         <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm">Present</th>
                         <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm">Late</th>
                         <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm">Half Day</th>
@@ -672,21 +763,65 @@ export default function AdminReportsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {employees.map((emp, idx) => {
-                        const stats = calculateEmployeeStats(emp.id);
-                        return (
-                          <tr key={emp.id} className={idx % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50 dark:bg-gray-700"}>
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">{emp.name}</td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">{emp.department || "N/A"}</td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-green-600 dark:text-green-400 font-medium">{stats.presentDays}</td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-yellow-600 dark:text-yellow-400 font-medium">{stats.lateDays}</td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-orange-600 dark:text-orange-400 font-medium">{stats.halfDays}</td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-red-600 dark:text-red-400 font-medium">{stats.absentDays}</td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-gray-700 dark:text-gray-300">{stats.totalWorkHours}h</td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm font-bold text-gray-900 dark:text-gray-100">{stats.attendanceRate}%</td>
-                          </tr>
-                        );
-                      })}
+                      {selectedDepartment === "all" ? (
+                        // Grouped by department view
+                        Object.entries(employeesByDepartment).map(([dept, deptEmployees]) => {
+                          const deptStats = calculateDepartmentStats(deptEmployees);
+                          return (
+                            <React.Fragment key={dept}>
+                              {/* Department Header Row */}
+                              <tr className="bg-ppa-blue/10 dark:bg-ppa-blue/20">
+                                <td colSpan={8} className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-ppa-navy dark:text-ppa-light">
+                                  📁 {dept} ({deptEmployees.length} employee{deptEmployees.length !== 1 ? "s" : ""})
+                                </td>
+                              </tr>
+                              {/* Department Employees */}
+                              {deptEmployees.map((emp, idx) => {
+                                const stats = calculateEmployeeStats(emp.id);
+                                return (
+                                  <tr key={emp.id} className={idx % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50 dark:bg-gray-700"}>
+                                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 pl-6">{emp.name}</td>
+                                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">{emp.position || "N/A"}</td>
+                                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-green-600 dark:text-green-400 font-medium">{stats.presentDays}</td>
+                                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-yellow-600 dark:text-yellow-400 font-medium">{stats.lateDays}</td>
+                                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-orange-600 dark:text-orange-400 font-medium">{stats.halfDays}</td>
+                                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-red-600 dark:text-red-400 font-medium">{stats.absentDays}</td>
+                                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-gray-700 dark:text-gray-300">{stats.totalWorkHours}h</td>
+                                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm font-bold text-gray-900 dark:text-gray-100">{stats.attendanceRate}%</td>
+                                  </tr>
+                                );
+                              })}
+                              {/* Department Subtotal Row */}
+                              <tr className="bg-gray-100 dark:bg-gray-600 font-semibold">
+                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 pl-6 italic">Subtotal</td>
+                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">—</td>
+                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-green-700 dark:text-green-400">{deptStats.presentDays}</td>
+                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-yellow-700 dark:text-yellow-400">{deptStats.lateDays}</td>
+                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-orange-700 dark:text-orange-400">{deptStats.halfDays}</td>
+                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-red-700 dark:text-red-400">{deptStats.absentDays}</td>
+                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-gray-700 dark:text-gray-300">{deptStats.totalWorkHours}h</td>
+                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm font-bold text-gray-900 dark:text-gray-100">{deptStats.attendanceRate}%</td>
+                              </tr>
+                            </React.Fragment>
+                          );
+                        })
+                      ) : (
+                        // Filtered single department view
+                        filteredEmployees.map((emp, idx) => {
+                          const stats = calculateEmployeeStats(emp.id);
+                          return (
+                            <tr key={emp.id} className={idx % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50 dark:bg-gray-700"}>
+                              <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">{emp.name}</td>
+                              <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-green-600 dark:text-green-400 font-medium">{stats.presentDays}</td>
+                              <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-yellow-600 dark:text-yellow-400 font-medium">{stats.lateDays}</td>
+                              <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-orange-600 dark:text-orange-400 font-medium">{stats.halfDays}</td>
+                              <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-red-600 dark:text-red-400 font-medium">{stats.absentDays}</td>
+                              <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-gray-700 dark:text-gray-300">{stats.totalWorkHours}h</td>
+                              <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm font-bold text-gray-900 dark:text-gray-100">{stats.attendanceRate}%</td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>

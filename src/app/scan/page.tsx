@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import QRScanner from "@/components/QRScanner";
 
 interface UserInfo {
@@ -34,6 +35,7 @@ const DAY_SHIFT_ACTIONS = ["AM In", "AM Out", "PM In", "PM Out"];
 const NIGHT_SHIFT_ACTIONS = ["Night In", "Night Out"];
 
 export default function ScanStationPage() {
+  const router = useRouter();
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
@@ -170,17 +172,17 @@ export default function ScanStationPage() {
       : "bg-amber-100 text-amber-800 border-amber-300";
   };
 
-  // Define mode tiles
+  // Define mode tiles with icons
   const dayShiftTiles = [
-    { action: "AM In", label: "Morning Arrival", description: "Start of work day", time: "6:00 AM - 11:59 AM" },
-    { action: "AM Out", label: "Lunch Break", description: "Break time out", time: "11:00 AM - 1:59 PM" },
-    { action: "PM In", label: "After Lunch", description: "Return from break", time: "12:00 PM - 5:59 PM" },
-    { action: "PM Out", label: "End of Day", description: "Work day complete", time: "4:00 PM - 11:59 PM" },
+    { action: "AM In", label: "Morning Arrival", description: "Start of work day", time: "6:00 AM - 11:59 AM", icon: "M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" },
+    { action: "AM Out", label: "Lunch Break", description: "Break time out", time: "11:00 AM - 1:59 PM", icon: "M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" },
+    { action: "PM In", label: "After Lunch", description: "Return from break", time: "12:00 PM - 5:59 PM", icon: "M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" },
+    { action: "PM Out", label: "End of Day", description: "Work day complete", time: "4:00 PM - 11:59 PM", icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
   ];
 
   const nightShiftTiles = [
-    { action: "Night In", label: "Night Arrival", description: "Start of night shift", time: "10:00 PM - 2:00 AM" },
-    { action: "Night Out", label: "Night End", description: "Night shift complete", time: "4:00 AM - 8:00 AM" },
+    { action: "Night In", label: "Night Arrival", description: "Start of night shift", time: "10:00 PM - 2:00 AM", icon: "M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" },
+    { action: "Night Out", label: "Night End", description: "Night shift complete", time: "4:00 AM - 8:00 AM", icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
   ];
 
   const activeTiles = selectedShift === "DAY" ? dayShiftTiles : nightShiftTiles;
@@ -217,8 +219,21 @@ export default function ScanStationPage() {
       </div>
 
       <div className="max-w-5xl mx-auto relative z-10">
+        {/* Back Button */}
+        <div className="absolute top-0 left-0 z-20">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 bg-white/90 hover:bg-white text-gray-700 hover:text-gray-900 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 backdrop-blur-sm border border-gray-200"
+          >
+            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+            </svg>
+            <span className="text-sm sm:text-base font-medium">Back</span>
+          </button>
+        </div>
+
         {/* Header */}
-        <div className="text-center mb-4 sm:mb-6">
+        <div className="text-center mb-4 sm:mb-6 pt-12 sm:pt-0">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-3 sm:mb-4">
             <img
               src="/images/ppa-logo-nobg.png"
@@ -321,6 +336,9 @@ export default function ScanStationPage() {
                   <div className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-md sm:rounded-lg mb-2 sm:mb-3 flex items-center justify-center ${
                     isActive ? "bg-white/20" : "bg-gray-300/30"
                   }`}>
+                    <svg className={`w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 ${isActive ? "text-white" : "text-gray-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d={tile.icon} />
+                    </svg>
                   </div>
                   
                   <h3 className={`font-bold text-xs sm:text-sm md:text-base ${isActive ? "text-white" : "text-gray-500"}`}>
@@ -350,7 +368,11 @@ export default function ScanStationPage() {
           {/* Scanner Section */}
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl p-3 sm:p-4 md:p-6 border border-gray-200">
             <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-gradient-to-br from-[#0038A8] to-[#1a5f8a]"></div>
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-gradient-to-br from-[#0038A8] to-[#1a5f8a] flex items-center justify-center">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                </svg>
+              </div>
               QR Code Scanner
             </h2>
             
@@ -434,14 +456,20 @@ export default function ScanStationPage() {
           {/* Recent Activity */}
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl p-3 sm:p-4 md:p-6 border border-gray-200">
             <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-gradient-to-br from-[#FCD116] to-[#d4a418]"></div>
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-gradient-to-br from-[#FCD116] to-[#d4a418] flex items-center justify-center">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
               Recent Activity
             </h2>
             
             {recentScans.length === 0 ? (
               <div className="text-center text-gray-500 py-8 sm:py-12">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                  <span className="text-2xl sm:text-3xl">🕐</span>
+                  <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                 </div>
                 <p className="font-medium text-sm sm:text-base">No scans yet today</p>
                 <p className="text-xs sm:text-sm text-gray-400 mt-1">Scanned attendance will appear here</p>

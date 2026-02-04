@@ -38,6 +38,9 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
+          department: user.department,
+          position: user.position,
+          shiftType: user.shiftType,
           profileImage: user.profileImage,
         };
       },
@@ -48,16 +51,27 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.department = user.department;
+        token.position = user.position;
+        token.shiftType = user.shiftType;
         token.profileImage = user.profileImage;
       }
-      // Refresh profile image on session update
+      // Refresh user data on session update
       if (trigger === 'update') {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { profileImage: true },
+          select: { 
+            profileImage: true, 
+            department: true, 
+            position: true,
+            shiftType: true,
+          },
         });
         if (dbUser) {
           token.profileImage = dbUser.profileImage;
+          token.department = dbUser.department;
+          token.position = dbUser.position;
+          token.shiftType = dbUser.shiftType;
         }
       }
       return token;
@@ -66,6 +80,9 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.department = token.department as string | null;
+        session.user.position = token.position as string | null;
+        session.user.shiftType = token.shiftType as string;
         session.user.profileImage = token.profileImage as string | null;
       }
       return session;

@@ -32,6 +32,7 @@ export default function EmployeesPage() {
     role: "EMPLOYEE",
     department: "",
     position: "",
+    shiftType: "DAY",
   });
   const [editFormData, setEditFormData] = useState({
     id: "",
@@ -41,6 +42,7 @@ export default function EmployeesPage() {
     role: "EMPLOYEE",
     department: "",
     position: "",
+    shiftType: "DAY",
   });
   const [error, setError] = useState("");
   const [editError, setEditError] = useState("");
@@ -48,11 +50,37 @@ export default function EmployeesPage() {
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch("/api/employees");
+      const response = await fetch("/api/employees", {
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'application/json',
+        },
+      });
       const data = await response.json();
-      setEmployees(data);
+      
+      console.log("Fetch response:", response.status, data);
+      
+      // Check if response was successful
+      if (!response.ok) {
+        console.error("API Error:", response.status, data);
+        setEmployees([]);
+        return;
+      }
+      
+      // Ensure data is an array before setting state
+      if (Array.isArray(data)) {
+        console.log("Setting employees:", data.length);
+        setEmployees(data);
+      } else {
+        console.error("Invalid employees data:", data);
+        setEmployees([]);
+      }
     } catch (error) {
       console.error("Failed to fetch employees:", error);
+      setEmployees([]);
     } finally {
       setLoading(false);
     }
@@ -87,6 +115,7 @@ export default function EmployeesPage() {
           role: "EMPLOYEE",
           department: "",
           position: "",
+          shiftType: "DAY",
         });
         fetchEmployees();
       }
@@ -110,6 +139,7 @@ export default function EmployeesPage() {
         department: editFormData.department,
         position: editFormData.position,
         role: editFormData.role,
+        shiftType: editFormData.shiftType,
       };
 
       if (editFormData.password) {
@@ -148,6 +178,7 @@ export default function EmployeesPage() {
       role: employee.role,
       department: employee.department || "",
       position: employee.position || "",
+      shiftType: (employee as any).shiftType || "DAY",
     });
     setEditError("");
     setShowEditModal(true);
@@ -186,19 +217,19 @@ export default function EmployeesPage() {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2 shadow-md"
         >
           <svg
             className="w-5 h-5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            strokeWidth={1.5}
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
+              d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"
             />
           </svg>
           Add Employee
@@ -222,6 +253,9 @@ export default function EmployeesPage() {
                 </th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-300">
                   Position
+                </th>
+                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-300">
+                  Shift
                 </th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-300">
                   Role
@@ -258,6 +292,31 @@ export default function EmployeesPage() {
                   </td>
                   <td className="py-4 px-6">
                     <span
+                      className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${
+                        (employee as any).shiftType === "NIGHT"
+                          ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300"
+                          : "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300"
+                      }`}
+                    >
+                      {(employee as any).shiftType === "NIGHT" ? (
+                        <>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+                          </svg>
+                          Night
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                          </svg>
+                          Day
+                        </>
+                      )}
+                    </span>
+                  </td>
+                  <td className="py-4 px-6">
+                    <span
                       className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                         employee.role === "ADMIN"
                           ? "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
@@ -271,39 +330,39 @@ export default function EmployeesPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleEdit(employee)}
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                        title="Edit"
+                        className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        title="Edit Employee"
                       >
                         <svg
                           className="w-5 h-5"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
+                          strokeWidth={1.5}
                         >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
                           />
                         </svg>
                       </button>
                       <button
                         onClick={() => handleDelete(employee.id)}
-                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-                        title="Delete"
+                        className="p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Delete Employee"
                       >
                         <svg
                           className="w-5 h-5"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
+                          strokeWidth={1.5}
                         >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
                           />
                         </svg>
                       </button>
@@ -318,7 +377,7 @@ export default function EmployeesPage() {
 
       {/* Add Employee Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Add Employee</h2>
@@ -331,11 +390,11 @@ export default function EmployeesPage() {
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  strokeWidth={1.5}
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
                     d="M6 18L18 6M6 6l12 12"
                   />
                 </svg>
@@ -348,7 +407,7 @@ export default function EmployeesPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Full Name *
@@ -360,6 +419,9 @@ export default function EmployeesPage() {
                     setFormData({ ...formData, name: e.target.value })
                   }
                   required
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-form-type="other"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
@@ -369,12 +431,16 @@ export default function EmployeesPage() {
                   Email *
                 </label>
                 <input
-                  type="email"
+                  type="text"
+                  inputMode="email"
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
                   required
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-form-type="other"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
@@ -391,6 +457,9 @@ export default function EmployeesPage() {
                       setFormData({ ...formData, password: e.target.value })
                     }
                     required
+                    autoComplete="new-password"
+                    data-lpignore="true"
+                    data-form-type="other"
                     className="w-full px-4 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                   <button
@@ -453,6 +522,25 @@ export default function EmployeesPage() {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Default Shift Type
+                </label>
+                <select
+                  value={formData.shiftType}
+                  onChange={(e) =>
+                    setFormData({ ...formData, shiftType: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                >
+                  <option value="DAY">Day Shift</option>
+                  <option value="NIGHT">Night Shift</option>
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  This sets the default shift for the employee&apos;s attendance
+                </p>
+              </div>
+
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
@@ -476,7 +564,7 @@ export default function EmployeesPage() {
 
       {/* Edit Employee Modal */}
       {showEditModal && editingEmployee && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Edit Employee</h2>
@@ -492,11 +580,11 @@ export default function EmployeesPage() {
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  strokeWidth={1.5}
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
                     d="M6 18L18 6M6 6l12 12"
                   />
                 </svg>
@@ -509,7 +597,7 @@ export default function EmployeesPage() {
               </div>
             )}
 
-            <form onSubmit={handleEditSubmit} className="space-y-4">
+            <form onSubmit={handleEditSubmit} className="space-y-4" autoComplete="off">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Full Name *
@@ -521,6 +609,9 @@ export default function EmployeesPage() {
                     setEditFormData({ ...editFormData, name: e.target.value })
                   }
                   required
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-form-type="other"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
@@ -530,12 +621,16 @@ export default function EmployeesPage() {
                   Email *
                 </label>
                 <input
-                  type="email"
+                  type="text"
+                  inputMode="email"
                   value={editFormData.email}
                   onChange={(e) =>
                     setEditFormData({ ...editFormData, email: e.target.value })
                   }
                   required
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-form-type="other"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
@@ -552,6 +647,9 @@ export default function EmployeesPage() {
                       setEditFormData({ ...editFormData, password: e.target.value })
                     }
                     placeholder="••••••••"
+                    autoComplete="new-password"
+                    data-lpignore="true"
+                    data-form-type="other"
                     className="w-full px-4 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                   <button
@@ -612,6 +710,25 @@ export default function EmployeesPage() {
                   <option value="EMPLOYEE">Employee</option>
                   <option value="ADMIN">Admin</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Default Shift Type
+                </label>
+                <select
+                  value={editFormData.shiftType}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, shiftType: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                >
+                  <option value="DAY">Day Shift</option>
+                  <option value="NIGHT">Night Shift</option>
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  This sets the default shift for the employee&apos;s attendance
+                </p>
               </div>
 
               <div className="flex gap-3 pt-4">

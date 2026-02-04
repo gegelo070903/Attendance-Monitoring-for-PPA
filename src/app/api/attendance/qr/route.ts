@@ -5,6 +5,9 @@ import { startOfDay, endOfDay, subDays } from "date-fns";
 // Minimum seconds between scans for the same user (cooldown)
 const SCAN_COOLDOWN_SECONDS = 3;
 
+// Half-day threshold in minutes (arrives more than this many minutes late = half day)
+const HALF_DAY_THRESHOLD_MINUTES = 120; // 2 hours
+
 // Extended types for new schema fields (will be properly typed after Prisma regeneration)
 interface ExtendedAttendance {
   id: string;
@@ -41,17 +44,36 @@ function parseTimeString(timeStr: string): { hour: number; minute: number } {
   return { hour, minute };
 }
 
+// Helper to get the scheduled start time as a Date object for the given arrival date
+function getScheduledStartTime(arrivalTime: Date, startTimeStr: string): Date {
+  const { hour: startHour, minute: startMinute } = parseTimeString(startTimeStr);
+  const scheduledStart = new Date(arrivalTime);
+  scheduledStart.setHours(startHour, startMinute, 0, 0);
+  return scheduledStart;
+}
+
 // Helper to check if arrival is late based on start time and grace period
-function isLate(
+// Returns: { isLate: boolean, isHalfDay: boolean, minutesLate: number }
+function checkLateStatus(
   arrivalTime: Date,
   startTimeStr: string,
   gracePeriodMinutes: number
-): boolean {
-  const { hour: startHour, minute: startMinute } = parseTimeString(startTimeStr);
-  const graceDeadline = new Date(arrivalTime);
-  graceDeadline.setHours(startHour, startMinute + gracePeriodMinutes, 0, 0);
+): { isLate: boolean; isHalfDay: boolean; minutesLate: number } {
+  const scheduledStart = getScheduledStartTime(arrivalTime, startTimeStr);
+  const graceDeadline = new Date(scheduledStart);
+  graceDeadline.setMinutes(graceDeadline.getMinutes() + gracePeriodMinutes);
   
-  return arrivalTime > graceDeadline;
+  const minutesLate = Math.floor((arrivalTime.getTime() - scheduledStart.getTime()) / (1000 * 60));
+  
+  // If arrived before scheduled start or within grace period, not late
+  if (arrivalTime <= graceDeadline) {
+    return { isLate: false, isHalfDay: false, minutesLate: Math.max(0, minutesLate) };
+  }
+  
+  // Check if half-day (more than HALF_DAY_THRESHOLD_MINUTES late)
+  const isHalfDay = minutesLate >= HALF_DAY_THRESHOLD_MINUTES;
+  
+  return { isLate: true, isHalfDay, minutesLate };
 }
 
 // GET - Check attendance status for a user
@@ -256,7 +278,10 @@ export async function POST(request: NextRequest) {
         action = "night-in";
         
         // Check if late for night shift
-        if (isLate(now, settings.nightStartTime || "22:00", (settings as { nightGracePeriod?: number }).nightGracePeriod || 15)) {
+        const lateCheck = checkLateStatus(now, settings.nightStartTime || "22:00", (settings as { nightGracePeriod?: number }).nightGracePeriod || 15);
+        if (lateCheck.isHalfDay) {
+          status = "HALF_DAY";
+        } else if (lateCheck.isLate) {
           status = "LATE";
         }
         
@@ -288,7 +313,10 @@ export async function POST(request: NextRequest) {
 
       if (!attendance.nightIn) {
         action = "night-in";
-        if (isLate(now, settings.nightStartTime || "22:00", (settings as { nightGracePeriod?: number }).nightGracePeriod || 15)) {
+        const lateCheck = checkLateStatus(now, settings.nightStartTime || "22:00", (settings as { nightGracePeriod?: number }).nightGracePeriod || 15);
+        if (lateCheck.isHalfDay) {
+          updateData.status = "HALF_DAY";
+        } else if (lateCheck.isLate) {
           updateData.status = "LATE";
         } else {
           updateData.status = "PRESENT";
@@ -318,7 +346,10 @@ export async function POST(request: NextRequest) {
         const pmStart = parseTimeString(settings.pmStartTime);
         if (currentHour >= pmStart.hour || (currentHour === pmStart.hour - 1 && currentMinute >= 30)) {
           // It's afternoon - employee missed AM, record as PM In instead
-          if (isLate(now, settings.pmStartTime, (settings as { pmGracePeriod?: number }).pmGracePeriod || 15)) {
+          const lateCheck = checkLateStatus(now, settings.pmStartTime, (settings as { pmGracePeriod?: number }).pmGracePeriod || 15);
+          if (lateCheck.isHalfDay) {
+            status = "HALF_DAY";
+          } else if (lateCheck.isLate) {
             status = "LATE";
           }
           
@@ -328,7 +359,7 @@ export async function POST(request: NextRequest) {
               date: attendanceDate,
               shiftType: "DAY",
               pmIn: now,
-              status,
+              status: "HALF_DAY", // Missing AM session = half day
             },
           });
 
@@ -336,8 +367,8 @@ export async function POST(request: NextRequest) {
             success: true,
             action: "PM In",
             time: now,
-            status,
-            message: `Good afternoon, ${user.name}! PM In recorded at ${now.toLocaleTimeString()}. (Morning session missed)`,
+            status: "HALF_DAY",
+            message: `Good afternoon, ${user.name}! PM In recorded at ${now.toLocaleTimeString()}. (Morning session missed - Half Day)`,
             nextAction: "pm-out",
             user: {
               name: user.name,
@@ -349,7 +380,10 @@ export async function POST(request: NextRequest) {
         }
         
         // Morning arrival - check if late
-        if (isLate(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15)) {
+        const lateCheck = checkLateStatus(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15);
+        if (lateCheck.isHalfDay) {
+          status = "HALF_DAY";
+        } else if (lateCheck.isLate) {
           status = "LATE";
         }
         
@@ -368,7 +402,7 @@ export async function POST(request: NextRequest) {
           action: "AM In",
           time: now,
           status,
-          message: `Good morning, ${user.name}! AM In recorded at ${now.toLocaleTimeString()}.`,
+          message: `Good morning, ${user.name}! AM In recorded at ${now.toLocaleTimeString()}.${status === "LATE" ? " (Late)" : status === "HALF_DAY" ? " (Half Day)" : ""}`,
           nextAction: "am-out",
           user: {
             name: user.name,
@@ -384,18 +418,17 @@ export async function POST(request: NextRequest) {
         // No check-in yet
         const pmStart = parseTimeString(settings.pmStartTime);
         if (currentHour >= pmStart.hour || (currentHour === pmStart.hour - 1 && currentMinute >= 30)) {
-          // Afternoon - record as PM In
+          // Afternoon - record as PM In (missed AM = half day)
           action = "pm-in";
-          if (isLate(now, settings.pmStartTime, (settings as { pmGracePeriod?: number }).pmGracePeriod || 15)) {
-            updateData.status = "LATE";
-          } else if (attendance.status === "ABSENT") {
-            updateData.status = "PRESENT";
-          }
+          updateData.status = "HALF_DAY"; // Missing AM session
           updateData.pmIn = now;
         } else {
           // Morning - record as AM In
           action = "am-in";
-          if (isLate(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15)) {
+          const lateCheck = checkLateStatus(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15);
+          if (lateCheck.isHalfDay) {
+            updateData.status = "HALF_DAY";
+          } else if (lateCheck.isLate) {
             updateData.status = "LATE";
           } else if (attendance.status === "ABSENT") {
             updateData.status = "PRESENT";
@@ -409,9 +442,7 @@ export async function POST(request: NextRequest) {
         // If it's past PM start time, skip AM Out and go to PM In
         if (currentHour >= pmStart.hour) {
           action = "pm-in";
-          if (isLate(now, settings.pmStartTime, (settings as { pmGracePeriod?: number }).pmGracePeriod || 15)) {
-            updateData.status = "LATE";
-          }
+          // Don't change status to late if already present/late from AM - PM In after lunch is normal
           updateData.pmIn = now;
         } else {
           action = "am-out";
@@ -420,7 +451,9 @@ export async function POST(request: NextRequest) {
       } else if (attendance.amIn && attendance.amOut && !attendance.pmIn) {
         // Has AM In and Out, needs PM In
         action = "pm-in";
-        if (isLate(now, settings.pmStartTime, (settings as { pmGracePeriod?: number }).pmGracePeriod || 15)) {
+        const lateCheck = checkLateStatus(now, settings.pmStartTime, (settings as { pmGracePeriod?: number }).pmGracePeriod || 15);
+        // Only mark late for PM if they were on time for AM but late returning from lunch
+        if (lateCheck.isLate && attendance.status === "PRESENT") {
           updateData.status = "LATE";
         }
         updateData.pmIn = now;

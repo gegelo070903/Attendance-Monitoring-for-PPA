@@ -5,6 +5,8 @@ export interface User {
   role: 'ADMIN' | 'EMPLOYEE';
   department?: string;
   position?: string;
+  shiftType?: 'DAY' | 'NIGHT';
+  profileImage?: string;
   createdAt: Date;
   updatedAt: Date;
 }

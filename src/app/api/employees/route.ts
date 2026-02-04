@@ -9,7 +9,10 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
+    console.log("Employees API - Session:", session?.user?.email, "Role:", session?.user?.role);
+
     if (!session?.user || session.user.role !== "ADMIN") {
+      console.log("Employees API - Access denied. Role:", session?.user?.role);
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -21,11 +24,14 @@ export async function GET(request: NextRequest) {
         role: true,
         department: true,
         position: true,
+        shiftType: true,
+        profileImage: true,
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },
     });
 
+    console.log("Employees API - Found", users.length, "users");
     return NextResponse.json(users);
   } catch (error) {
     console.error("Get employees error:", error);
@@ -45,7 +51,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { email, password, name, role, department, position } =
+    const { email, password, name, role, department, position, shiftType } =
       await request.json();
 
     if (!email || !password || !name) {
@@ -76,6 +82,7 @@ export async function POST(request: NextRequest) {
         role: role || "EMPLOYEE",
         department,
         position,
+        shiftType: shiftType || "DAY",
       },
       select: {
         id: true,
@@ -84,6 +91,7 @@ export async function POST(request: NextRequest) {
         role: true,
         department: true,
         position: true,
+        shiftType: true,
       },
     });
 
@@ -147,7 +155,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { id, name, email, department, position, role, password } = await request.json();
+    const { id, name, email, department, position, role, password, shiftType } = await request.json();
 
     if (!id) {
       return NextResponse.json(
@@ -179,6 +187,7 @@ export async function PUT(request: NextRequest) {
     if (department !== undefined) updateData.department = department;
     if (position !== undefined) updateData.position = position;
     if (role) updateData.role = role;
+    if (shiftType) updateData.shiftType = shiftType;
     if (password) {
       updateData.password = await bcrypt.hash(password, 10);
     }
@@ -193,6 +202,7 @@ export async function PUT(request: NextRequest) {
         role: true,
         department: true,
         position: true,
+        shiftType: true,
       },
     });
 

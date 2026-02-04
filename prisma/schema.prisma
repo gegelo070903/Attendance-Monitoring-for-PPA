@@ -18,6 +18,7 @@ model User {
   role          String       @default("EMPLOYEE") // ADMIN or EMPLOYEE
   department    String?
   position      String?
+  shiftType     String       @default("DAY") // DAY or NIGHT - defines default shift for employee
   profileImage  String?      // Profile picture URL/path
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
