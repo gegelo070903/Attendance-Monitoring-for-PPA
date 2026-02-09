@@ -8,6 +8,11 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Attendance Monitoring System - PPA",
   description: "Employee attendance tracking and monitoring system for PPA",
+  icons: {
+    icon: "/images/ppa-logo-nobg.png",
+    shortcut: "/images/ppa-logo-nobg.png",
+    apple: "/images/ppa-logo-nobg.png",
+  },
 };
 
 export default function RootLayout({

@@ -78,12 +78,20 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const today = startOfDay(now);
 
+    // Get user's default shift type
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { shiftType: true }
+    });
+    const shiftType = user?.shiftType || "DAY";
+
     // Find or create today's attendance record
     let attendance = await prisma.attendance.findUnique({
       where: {
-        userId_date: {
+        userId_date_shiftType: {
           userId: session.user.id,
           date: today,
+          shiftType: shiftType,
         },
       },
     });
@@ -93,6 +101,7 @@ export async function POST(request: NextRequest) {
         data: {
           userId: session.user.id,
           date: today,
+          shiftType: shiftType,
           status: "PRESENT",
         },
       });

@@ -37,6 +37,13 @@ model Attendance {
   pmOut       DateTime?
   nightIn     DateTime?
   nightOut    DateTime?
+  // Scan photos for verification (anti-buddy punching)
+  amInPhoto   String?
+  amOutPhoto  String?
+  pmInPhoto   String?
+  pmOutPhoto  String?
+  nightInPhoto  String?
+  nightOutPhoto String?
   status      String    @default("ABSENT") // PRESENT, ABSENT, LATE, HALF_DAY
   workHours   Float?
   notes       String?

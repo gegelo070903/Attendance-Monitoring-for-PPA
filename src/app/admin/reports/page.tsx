@@ -47,6 +47,7 @@ export default function AdminReportsPage() {
   const [reportType, setReportType] = useState<"organization" | "individual">("organization");
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
+  const [individualDepartment, setIndividualDepartment] = useState<string>("all");
   const [generating, setGenerating] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -74,6 +75,19 @@ export default function AdminReportsPage() {
     return employees.filter(emp => emp.department === selectedDepartment);
   }, [employees, selectedDepartment]);
 
+  // Filter employees by department for individual report
+  const individualFilteredEmployees = useMemo(() => {
+    if (individualDepartment === "all") {
+      return [...employees].sort((a, b) => {
+        const deptA = a.department || "Unassigned";
+        const deptB = b.department || "Unassigned";
+        if (deptA !== deptB) return deptA.localeCompare(deptB);
+        return a.name.localeCompare(b.name);
+      });
+    }
+    return employees.filter(emp => emp.department === individualDepartment).sort((a, b) => a.name.localeCompare(b.name));
+  }, [employees, individualDepartment]);
+
   // Group employees by department
   const employeesByDepartment = useMemo(() => {
     const grouped: { [key: string]: Employee[] } = {};
@@ -93,11 +107,10 @@ export default function AdminReportsPage() {
       try {
         const res = await fetch("/api/employees");
         const data = await res.json();
-        // Filter only employees (not admins)
-        const employeeList = data.filter((e: Employee & { role: string }) => e.role === "EMPLOYEE");
-        setEmployees(employeeList);
-        if (employeeList.length > 0) {
-          setSelectedEmployee(employeeList[0].id);
+        // Include all users (employees and admins)
+        setEmployees(data);
+        if (data.length > 0) {
+          setSelectedEmployee(data[0].id);
         }
       } catch (error) {
         console.error("Failed to fetch employees:", error);
@@ -582,12 +595,41 @@ export default function AdminReportsPage() {
             color: #c2410c !important;
           }
           
-          table {
-            font-size: 9pt;
+          /* Arial 12pt font for professional look */
+          #print-area {
+            font-family: Arial, sans-serif !important;
+            font-size: 12pt !important;
           }
           
-          th, td {
-            padding: 4px 6px !important;
+          #print-area table {
+            font-family: Arial, sans-serif !important;
+            font-size: 10pt !important;
+          }
+          
+          #print-area th, #print-area td {
+            padding: 3px 5px !important;
+            font-size: 10pt !important;
+          }
+          
+          /* Employee info print styles */
+          .employee-info-row {
+            display: flex !important;
+            gap: 40px !important;
+            margin-bottom: 4px !important;
+          }
+          .employee-info-item {
+            display: flex !important;
+            gap: 8px !important;
+          }
+          .employee-info-label {
+            font-weight: normal !important;
+            color: #6b7280 !important;
+            font-size: 11pt !important;
+          }
+          .employee-info-value {
+            font-weight: 600 !important;
+            color: #111827 !important;
+            font-size: 11pt !important;
           }
         }
       `}</style>
@@ -659,22 +701,50 @@ export default function AdminReportsPage() {
                 </div>
               )}
               {reportType === "individual" && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Select Employee
-                  </label>
-                  <select
-                    value={selectedEmployee}
-                    onChange={(e) => setSelectedEmployee(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ppa-navy focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  >
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name} - {emp.department || "N/A"}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Filter by Department
+                    </label>
+                    <select
+                      value={individualDepartment}
+                      onChange={(e) => {
+                        setIndividualDepartment(e.target.value);
+                        // Reset selected employee when department changes
+                        const filtered = e.target.value === "all" 
+                          ? employees 
+                          : employees.filter(emp => emp.department === e.target.value);
+                        if (filtered.length > 0) {
+                          setSelectedEmployee(filtered[0].id);
+                        }
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ppa-navy focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    >
+                      <option value="all">All Departments</option>
+                      {departments.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select Employee
+                    </label>
+                    <select
+                      value={selectedEmployee}
+                      onChange={(e) => setSelectedEmployee(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ppa-navy focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    >
+                      {individualFilteredEmployees.map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.name} {emp.department ? `- ${emp.department}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -708,38 +778,6 @@ export default function AdminReportsPage() {
           {reportType === "organization" ? (
             // Organization Report
             <>
-              {/* Summary Stats */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-ppa-navy dark:text-ppa-light mb-3 border-b border-gray-300 dark:border-gray-600 pb-2">
-                  Summary Statistics {selectedDepartment !== "all" && `- ${selectedDepartment}`}
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 print-stats-grid">
-                  {(() => {
-                    const stats = calculateOrgStats();
-                    return (
-                      <>
-                        <div className="print-stat-green bg-green-50 dark:bg-green-900/30 p-3 rounded-md border-l-4 border-green-500">
-                          <p className="text-xs text-green-600 dark:text-green-400 font-medium">Total Present Days</p>
-                          <p className="text-xl font-bold text-green-700 dark:text-green-300">{stats.presentDays}</p>
-                        </div>
-                        <div className="print-stat-red bg-red-50 dark:bg-red-900/30 p-3 rounded-md border-l-4 border-red-500">
-                          <p className="text-xs text-red-600 dark:text-red-400 font-medium">Total Absent Days</p>
-                          <p className="text-xl font-bold text-red-700 dark:text-red-300">{stats.absentDays}</p>
-                        </div>
-                        <div className="print-stat-yellow bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-md border-l-4 border-yellow-500">
-                          <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Total Late Days</p>
-                          <p className="text-xl font-bold text-yellow-700 dark:text-yellow-300">{stats.lateDays}</p>
-                        </div>
-                        <div className="print-stat-blue bg-blue-50 dark:bg-blue-900/30 p-3 rounded-md border-l-4 border-blue-500">
-                          <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Avg. Attendance Rate</p>
-                          <p className="text-xl font-bold text-blue-700 dark:text-blue-300">{stats.attendanceRate}%</p>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-
               {/* Employee Summary Table - Grouped by Department */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-ppa-navy dark:text-ppa-light mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
@@ -772,7 +810,7 @@ export default function AdminReportsPage() {
                               {/* Department Header Row */}
                               <tr className="bg-ppa-blue/10 dark:bg-ppa-blue/20">
                                 <td colSpan={8} className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-ppa-navy dark:text-ppa-light">
-                                  📁 {dept} ({deptEmployees.length} employee{deptEmployees.length !== 1 ? "s" : ""})
+                                  {dept} ({deptEmployees.length} employee{deptEmployees.length !== 1 ? "s" : ""})
                                 </td>
                               </tr>
                               {/* Department Employees */}
@@ -841,59 +879,26 @@ export default function AdminReportsPage() {
 
                 return (
                   <>
-                    {/* Employee Info */}
-                    <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Employee Name</p>
-                          <p className="font-semibold text-ppa-navy dark:text-ppa-light">{employee.name}</p>
+                    {/* Employee Info - Clean professional format */}
+                    <div className="mb-6 border-b border-gray-300 dark:border-gray-600 pb-4">
+                      <div className="employee-info-row flex flex-wrap gap-x-10 gap-y-2 text-sm">
+                        <div className="employee-info-item flex gap-2">
+                          <span className="employee-info-label text-gray-500 dark:text-gray-400">Employee Name:</span>
+                          <span className="employee-info-value font-semibold text-gray-900 dark:text-gray-100">{employee.name}</span>
                         </div>
-                        <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Email</p>
-                          <p className="font-semibold text-ppa-navy dark:text-ppa-light">{employee.email}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Department</p>
-                          <p className="font-semibold text-ppa-navy dark:text-ppa-light">{employee.department || "N/A"}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Position</p>
-                          <p className="font-semibold text-ppa-navy dark:text-ppa-light">{employee.position || "N/A"}</p>
+                        <div className="employee-info-item flex gap-2">
+                          <span className="employee-info-label text-gray-500 dark:text-gray-400">Email:</span>
+                          <span className="employee-info-value font-semibold text-gray-900 dark:text-gray-100">{employee.email}</span>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Individual Stats */}
-                    <div className="mb-6">
-                      <h3 className="text-lg font-semibold text-ppa-navy dark:text-ppa-light mb-3 border-b border-gray-300 dark:border-gray-600 pb-2">Monthly Summary</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 print-stats-grid">
-                        <div className="print-stat-green bg-green-50 dark:bg-green-900/30 p-3 rounded-md border-l-4 border-green-500">
-                          <p className="text-xs text-green-600 dark:text-green-400 font-medium">Present Days</p>
-                          <p className="text-xl font-bold text-green-700 dark:text-green-300">{stats.presentDays}</p>
+                      <div className="employee-info-row flex flex-wrap gap-x-10 gap-y-2 text-sm mt-2">
+                        <div className="employee-info-item flex gap-2">
+                          <span className="employee-info-label text-gray-500 dark:text-gray-400">Department:</span>
+                          <span className="employee-info-value font-semibold text-gray-900 dark:text-gray-100">{employee.department || "N/A"}</span>
                         </div>
-                        <div className="print-stat-red bg-red-50 dark:bg-red-900/30 p-3 rounded-md border-l-4 border-red-500">
-                          <p className="text-xs text-red-600 dark:text-red-400 font-medium">Absent Days</p>
-                          <p className="text-xl font-bold text-red-700 dark:text-red-300">{stats.absentDays}</p>
-                        </div>
-                        <div className="print-stat-yellow bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-md border-l-4 border-yellow-500">
-                          <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Late Days</p>
-                          <p className="text-xl font-bold text-yellow-700 dark:text-yellow-300">{stats.lateDays}</p>
-                        </div>
-                        <div className="print-stat-blue bg-blue-50 dark:bg-blue-900/30 p-3 rounded-md border-l-4 border-blue-500">
-                          <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Total Work Hours</p>
-                          <p className="text-xl font-bold text-blue-700 dark:text-blue-300">{stats.totalWorkHours}h</p>
-                        </div>
-                      </div>
-                      <div className="mt-3 p-3 print-stat-navy bg-ppa-light/30 dark:bg-ppa-navy/30 rounded-md border-l-4 border-ppa-navy">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-ppa-navy dark:text-ppa-light">Attendance Rate:</span>
-                          <span className="text-xl font-bold text-ppa-navy dark:text-ppa-light">{stats.attendanceRate}%</span>
-                        </div>
-                        <div className="mt-2 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-ppa-navy to-ppa-blue rounded-full transition-all duration-500"
-                            style={{ width: `${stats.attendanceRate}%` }}
-                          ></div>
+                        <div className="employee-info-item flex gap-2">
+                          <span className="employee-info-label text-gray-500 dark:text-gray-400">Position:</span>
+                          <span className="employee-info-value font-semibold text-gray-900 dark:text-gray-100">{employee.position || "N/A"}</span>
                         </div>
                       </div>
                     </div>

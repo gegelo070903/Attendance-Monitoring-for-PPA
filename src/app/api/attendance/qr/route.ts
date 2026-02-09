@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, userId, shiftType = "DAY" } = body;
+    const { email, userId, shiftType = "DAY", scanPhoto } = body;
 
     const identifier = email || userId;
 
@@ -271,6 +271,36 @@ export async function POST(request: NextRequest) {
     let updateData: Record<string, unknown> = {};
     let status = "PRESENT";
 
+    // Parse all time boundaries from settings
+    const amStart = parseTimeString(settings.amStartTime);
+    const amEnd = parseTimeString(settings.amEndTime);
+    const pmStart = parseTimeString(settings.pmStartTime);
+    const pmEnd = parseTimeString(settings.pmEndTime);
+    const nightStart = parseTimeString(settings.nightStartTime || "22:00");
+    const nightEnd = parseTimeString(settings.nightEndTime || "06:00");
+
+    // Helper function to check if current time is within a time range
+    const isWithinTimeRange = (startHour: number, startMin: number, endHour: number, endMin: number): boolean => {
+      const currentMinutes = currentHour * 60 + currentMinute;
+      const startMinutes = startHour * 60 + startMin;
+      const endMinutes = endHour * 60 + endMin;
+      return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+    };
+
+    // Helper function to check if time is before a given time
+    const isBeforeTime = (hour: number, minute: number): boolean => {
+      const currentMinutes = currentHour * 60 + currentMinute;
+      const targetMinutes = hour * 60 + minute;
+      return currentMinutes < targetMinutes;
+    };
+
+    // Helper function to check if time is after or at a given time
+    const isAfterOrAtTime = (hour: number, minute: number): boolean => {
+      const currentMinutes = currentHour * 60 + currentMinute;
+      const targetMinutes = hour * 60 + minute;
+      return currentMinutes >= targetMinutes;
+    };
+
     if (shiftType === "NIGHT") {
       // Night shift logic
       if (!attendance) {
@@ -297,6 +327,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
           success: true,
+          attendanceId: attendance.id,
           action: "Night In",
           time: now,
           status,
@@ -337,21 +368,54 @@ export async function POST(request: NextRequest) {
         });
       }
     } else {
-      // Day shift logic
+      // Day shift logic with strict time-based restrictions
+      
+      // Determine which time period we're in
+      const isInAMPeriod = isBeforeTime(amEnd.hour, amEnd.minute); // Before AM End (e.g., before 12:00)
+      const isInLunchPeriod = isAfterOrAtTime(amEnd.hour, amEnd.minute) && isBeforeTime(pmStart.hour, pmStart.minute); // Between AM End and PM Start
+      const isInPMPeriod = isAfterOrAtTime(pmStart.hour, pmStart.minute); // PM Start or later (e.g., 1:00 PM onwards)
+      
       if (!attendance) {
-        // First scan of the day
-        action = "am-in";
+        // First scan of the day - create new attendance record
         
-        // Check if within PM time window (afternoon arrival without AM)
-        const pmStart = parseTimeString(settings.pmStartTime);
-        if (currentHour >= pmStart.hour || (currentHour === pmStart.hour - 1 && currentMinute >= 30)) {
-          // It's afternoon - employee missed AM, record as PM In instead
-          const lateCheck = checkLateStatus(now, settings.pmStartTime, (settings as { pmGracePeriod?: number }).pmGracePeriod || 15);
+        if (isInAMPeriod) {
+          // Morning arrival - record as AM In
+          action = "am-in";
+          const lateCheck = checkLateStatus(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15);
           if (lateCheck.isHalfDay) {
             status = "HALF_DAY";
           } else if (lateCheck.isLate) {
             status = "LATE";
           }
+          
+          attendance = await prisma.attendance.create({
+            data: {
+              userId: user.id,
+              date: attendanceDate,
+              shiftType: "DAY",
+              amIn: now,
+              status,
+            },
+          });
+
+          return NextResponse.json({
+            success: true,
+            attendanceId: attendance.id,
+            action: "AM In",
+            time: now,
+            status,
+            message: `Good morning, ${user.name}! AM In recorded at ${now.toLocaleTimeString()}.${status === "LATE" ? " (Late)" : status === "HALF_DAY" ? " (Half Day)" : ""}`,
+            nextAction: "am-out",
+            user: {
+              name: user.name,
+              department: user.department,
+              position: user.position,
+              profileImage: user.profileImage,
+            },
+          });
+        } else if (isInLunchPeriod) {
+          // During lunch period - first arrival is recorded as PM In (missed AM = half day)
+          action = "pm-in";
           
           attendance = await prisma.attendance.create({
             data: {
@@ -365,6 +429,7 @@ export async function POST(request: NextRequest) {
 
           return NextResponse.json({
             success: true,
+            attendanceId: attendance.id,
             action: "PM In",
             time: now,
             status: "HALF_DAY",
@@ -377,79 +442,60 @@ export async function POST(request: NextRequest) {
               profileImage: user.profileImage,
             },
           });
-        }
-        
-        // Morning arrival - check if late
-        const lateCheck = checkLateStatus(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15);
-        if (lateCheck.isHalfDay) {
-          status = "HALF_DAY";
-        } else if (lateCheck.isLate) {
-          status = "LATE";
-        }
-        
-        attendance = await prisma.attendance.create({
-          data: {
-            userId: user.id,
-            date: attendanceDate,
-            shiftType: "DAY",
-            amIn: now,
-            status,
-          },
-        });
+        } else {
+          // PM period - employee missed AM, record as PM In (half day)
+          action = "pm-in";
+          const lateCheck = checkLateStatus(now, settings.pmStartTime, (settings as { pmGracePeriod?: number }).pmGracePeriod || 15);
+          
+          attendance = await prisma.attendance.create({
+            data: {
+              userId: user.id,
+              date: attendanceDate,
+              shiftType: "DAY",
+              pmIn: now,
+              status: "HALF_DAY", // Missing AM session = half day
+            },
+          });
 
-        return NextResponse.json({
-          success: true,
-          action: "AM In",
-          time: now,
-          status,
-          message: `Good morning, ${user.name}! AM In recorded at ${now.toLocaleTimeString()}.${status === "LATE" ? " (Late)" : status === "HALF_DAY" ? " (Half Day)" : ""}`,
-          nextAction: "am-out",
-          user: {
-            name: user.name,
-            department: user.department,
-            position: user.position,
-            profileImage: user.profileImage,
-          },
-        });
+          let statusMsg = " (Morning session missed - Half Day)";
+          if (lateCheck.isLate) {
+            statusMsg = " (Morning missed + Late PM arrival - Half Day)";
+          }
+
+          return NextResponse.json({
+            success: true,
+            attendanceId: attendance.id,
+            action: "PM In",
+            time: now,
+            status: "HALF_DAY",
+            message: `Good afternoon, ${user.name}! PM In recorded at ${now.toLocaleTimeString()}.${statusMsg}`,
+            nextAction: "pm-out",
+            user: {
+              name: user.name,
+              department: user.department,
+              position: user.position,
+              profileImage: user.profileImage,
+            },
+          });
+        }
       }
 
-      // Determine next action based on existing record
-      if (!attendance.amIn && !attendance.pmIn) {
-        // No check-in yet
-        const pmStart = parseTimeString(settings.pmStartTime);
-        if (currentHour >= pmStart.hour || (currentHour === pmStart.hour - 1 && currentMinute >= 30)) {
-          // Afternoon - record as PM In (missed AM = half day)
-          action = "pm-in";
-          updateData.status = "HALF_DAY"; // Missing AM session
-          updateData.pmIn = now;
-        } else {
-          // Morning - record as AM In
-          action = "am-in";
-          const lateCheck = checkLateStatus(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15);
-          if (lateCheck.isHalfDay) {
-            updateData.status = "HALF_DAY";
-          } else if (lateCheck.isLate) {
-            updateData.status = "LATE";
-          } else if (attendance.status === "ABSENT") {
-            updateData.status = "PRESENT";
-          }
-          updateData.amIn = now;
-        }
-      } else if (attendance.amIn && !attendance.amOut && !attendance.pmIn) {
-        // Has AM In, needs AM Out or PM In
-        const pmStart = parseTimeString(settings.pmStartTime);
+      // Existing attendance record - determine next action based on current time and record state
+      
+      if (attendance.amIn && !attendance.amOut && !attendance.pmIn && !attendance.pmOut) {
+        // Has AM In only - next could be AM Out or PM In depending on time
         
-        // If it's past PM start time, skip AM Out and go to PM In
-        if (currentHour >= pmStart.hour) {
-          action = "pm-in";
-          // Don't change status to late if already present/late from AM - PM In after lunch is normal
-          updateData.pmIn = now;
-        } else {
+        if (isInAMPeriod || isInLunchPeriod) {
+          // Still in AM period or lunch - record as AM Out
           action = "am-out";
           updateData.amOut = now;
+        } else {
+          // Already in PM period - skip AM Out, go to PM In
+          action = "pm-in";
+          updateData.pmIn = now;
         }
-      } else if (attendance.amIn && attendance.amOut && !attendance.pmIn) {
-        // Has AM In and Out, needs PM In
+      } else if (attendance.amIn && attendance.amOut && !attendance.pmIn && !attendance.pmOut) {
+        // Has AM In and AM Out - needs PM In
         action = "pm-in";
         const lateCheck = checkLateStatus(now, settings.pmStartTime, (settings as { pmGracePeriod?: number }).pmGracePeriod || 15);
         // Only mark late for PM if they were on time for AM but late returning from lunch
@@ -457,16 +503,10 @@ export async function POST(request: NextRequest) {
           updateData.status = "LATE";
         }
         updateData.pmIn = now;
-      } else if ((attendance.amIn || attendance.pmIn) && !attendance.pmOut) {
-        // Has PM In (with or without AM), needs PM Out
-        if (!attendance.pmIn) {
-          // Edge case: has AM but skipped to PM Out
-          action = "pm-out";
-          updateData.pmOut = now;
-        } else {
-          action = "pm-out";
-          updateData.pmOut = now;
-        }
+      } else if (attendance.pmIn && !attendance.pmOut) {
+        // Has PM In (with or without AM) - needs PM Out
+        action = "pm-out";
+        updateData.pmOut = now;
         
         // Calculate total work hours
         let totalHours = 0;
@@ -477,6 +517,25 @@ export async function POST(request: NextRequest) {
           totalHours += (now.getTime() - new Date(attendance.pmIn).getTime()) / (1000 * 60 * 60);
         }
         updateData.workHours = Math.round(totalHours * 100) / 100;
+      } else if (!attendance.amIn && !attendance.pmIn) {
+        // No check-in yet (edge case - record exists but no times)
+        if (isInAMPeriod) {
+          action = "am-in";
+          const lateCheck = checkLateStatus(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15);
+          if (lateCheck.isHalfDay) {
+            updateData.status = "HALF_DAY";
+          } else if (lateCheck.isLate) {
+            updateData.status = "LATE";
+          } else if (attendance.status === "ABSENT") {
+            updateData.status = "PRESENT";
+          }
+          updateData.amIn = now;
+        } else {
+          // PM period - missed AM = half day
+          action = "pm-in";
+          updateData.status = "HALF_DAY";
+          updateData.pmIn = now;
+        }
       } else {
         return NextResponse.json({
           success: false,
@@ -522,6 +581,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      attendanceId: updatedAttendance.id,
       action: actionLabels[action],
       time: now,
       status: updatedAttendance.status,

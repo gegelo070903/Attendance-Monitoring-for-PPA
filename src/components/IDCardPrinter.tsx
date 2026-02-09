@@ -255,13 +255,24 @@ export default function IDCardPrinter({
         border-left: 50px solid #0038A8;
         border-top: 50px solid transparent;
       }
+      .back-header {
+        text-align: center;
+        margin-bottom: 4px;
+        position: relative;
+        z-index: 1;
+      }
+      .back-company {
+        font-size: 10px;
+        font-weight: 700;
+        color: #0038A8;
+      }
       .back-title {
-        font-size: 9px;
+        font-size: 8px;
         color: #0038A8;
         margin-bottom: 12px;
         text-transform: uppercase;
         letter-spacing: 1px;
-        font-weight: 600;
+        font-weight: 500;
         position: relative;
         z-index: 1;
       }
@@ -278,23 +289,6 @@ export default function IDCardPrinter({
         width: 110px;
         height: 110px;
         display: block;
-      }
-      .scan-instruction {
-        margin-top: 14px;
-        font-size: 8px;
-        color: #64748b;
-        text-align: center;
-        line-height: 1.5;
-        position: relative;
-        z-index: 1;
-      }
-      .back-footer {
-        margin-top: auto;
-        text-align: center;
-        font-size: 7px;
-        color: #94a3b8;
-        position: relative;
-        z-index: 1;
       }
     `;
 
@@ -398,15 +392,12 @@ export default function IDCardPrinter({
               <div class="back-corner-top-right"></div>
               <div class="back-corner-bottom-left"></div>
               
+              <div class="back-header">
+                <span class="back-company">Philippine Ports Authority</span>
+              </div>
               <div class="back-title">Scan for Attendance</div>
               <div class="qr-container">
                 <img src="${qrDataUrl}" class="qr-code" alt="QR Code" />
-              </div>
-              <div class="scan-instruction">
-                Present this QR code at the<br/>attendance station to check in/out
-              </div>
-              <div class="back-footer">
-                Philippine Ports Authority<br/>Attendance Monitoring System
               </div>
             </div>
           </div>
@@ -490,7 +481,8 @@ export default function IDCardPrinter({
               <div className="absolute top-0 right-0 w-0 h-0 border-r-[40px] border-r-[#CE1126] border-b-[40px] border-b-transparent"></div>
               <div className="absolute bottom-0 left-0 w-0 h-0 border-l-[40px] border-l-[#0038A8] border-t-[40px] border-t-transparent"></div>
               
-              <p className="text-[8px] text-[#0038A8] uppercase tracking-wider font-semibold mb-3 relative z-10">Scan for Attendance</p>
+              <p className="text-[9px] text-[#0038A8] font-bold mb-1 relative z-10">Philippine Ports Authority</p>
+              <p className="text-[7px] text-[#0038A8] uppercase tracking-wider font-medium mb-3 relative z-10">Scan for Attendance</p>
               
               <div className="bg-white p-2 rounded-xl shadow-md border-2 border-[#0038A8] relative z-10">
                 {qrDataUrl ? (
@@ -499,14 +491,6 @@ export default function IDCardPrinter({
                   <div className="w-[100px] h-[100px] bg-slate-100 animate-pulse rounded-lg"></div>
                 )}
               </div>
-              
-              <p className="text-[7px] text-slate-500 text-center mt-3 px-4 leading-relaxed relative z-10">
-                Present this QR code at the<br/>attendance station to check in/out
-              </p>
-              
-              <p className="text-[6px] text-slate-400 text-center mt-auto pb-3 relative z-10">
-                Philippine Ports Authority<br/>Attendance Monitoring System
-              </p>
             </div>
           </div>
         </div>

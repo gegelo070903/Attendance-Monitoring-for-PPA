@@ -28,7 +28,7 @@ export default function Sidebar() {
   const isAdmin = session?.user?.role === "ADMIN";
 
   return (
-    <aside className="w-64 h-screen flex flex-col relative border-r border-gray-200 dark:border-gray-700">
+    <aside className="w-64 h-screen flex flex-col relative border-r border-gray-200 dark:border-gray-700 sticky top-0">
       {/* Watercolor Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#0038A8]/10 via-white to-[#CE1126]/5 dark:from-[#0038A8]/20 dark:via-gray-900 dark:to-[#CE1126]/10"></div>
       
