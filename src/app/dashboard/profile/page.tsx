@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useToast } from "@/components/Toast";
 
 // SVG Icons as components
 const UserIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
@@ -86,6 +87,7 @@ const PencilIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
 
 export default function ProfilePage() {
   const { data: session, update } = useSession();
+  const { showSuccess, showError } = useToast();
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -159,14 +161,17 @@ export default function ProfilePage() {
 
       if (res.ok) {
         setProfileMessage({ type: "success", text: "Profile updated successfully!" });
+        showSuccess("Profile updated successfully!");
         setIsEditingProfile(false);
         // Update session to reflect changes
         await update();
       } else {
         setProfileMessage({ type: "error", text: data.error || "Failed to update profile" });
+        showError(data.error || "Failed to update profile");
       }
     } catch (error) {
       setProfileMessage({ type: "error", text: "An error occurred" });
+      showError("An error occurred");
     } finally {
       setSavingProfile(false);
     }
@@ -180,12 +185,14 @@ export default function ProfilePage() {
     const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (!validTypes.includes(file.type)) {
       setMessage({ type: "error", text: "Please select a valid image file (JPEG, PNG, WebP, or GIF)" });
+      showError("Please select a valid image file (JPEG, PNG, WebP, or GIF)");
       return;
     }
 
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
       setMessage({ type: "error", text: "Image size must be less than 5MB" });
+      showError("Image size must be less than 5MB");
       return;
     }
 
@@ -206,14 +213,17 @@ export default function ProfilePage() {
       if (res.ok) {
         setProfileImage(data.imageUrl);
         setMessage({ type: "success", text: "Profile picture updated successfully!" });
+        showSuccess("Profile picture updated successfully!");
         // Update session to reflect new image
         await update();
       } else {
         setMessage({ type: "error", text: data.error || "Failed to upload image" });
+        showError(data.error || "Failed to upload image");
       }
     } catch (error) {
       console.error("Upload error:", error);
       setMessage({ type: "error", text: "An error occurred while uploading" });
+      showError("An error occurred while uploading");
     } finally {
       setIsUploading(false);
     }
@@ -229,11 +239,13 @@ export default function ProfilePage() {
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setPasswordMessage({ type: "error", text: "New passwords do not match" });
+      showError("New passwords do not match");
       return;
     }
 
     if (passwordData.newPassword.length < 6) {
       setPasswordMessage({ type: "error", text: "New password must be at least 6 characters" });
+      showError("New password must be at least 6 characters");
       return;
     }
 
@@ -253,31 +265,34 @@ export default function ProfilePage() {
 
       if (res.ok) {
         setPasswordMessage({ type: "success", text: "Password changed successfully!" });
+        showSuccess("Password changed successfully!");
         setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
       } else {
         setPasswordMessage({ type: "error", text: data.error || "Failed to change password" });
+        showError(data.error || "Failed to change password");
       }
     } catch (error) {
       setPasswordMessage({ type: "error", text: "An error occurred" });
+      showError("An error occurred");
     } finally {
       setChangingPassword(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-3">
-        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-          <UserIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+    <div className="max-w-xl mx-auto">
+      <h1 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+        <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+          <UserIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
         </div>
         My Profile
       </h1>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
         {/* Profile Image Section */}
-        <div className="flex flex-col items-center mb-8">
+        <div className="flex flex-col items-center mb-6">
           <div className="relative group">
-            <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-blue-500 shadow-lg bg-gray-100 dark:bg-gray-700">
+            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-blue-500 shadow-lg bg-gray-100 dark:bg-gray-700">
               {profileImage ? (
                 <img
                   src={profileImage}
@@ -286,7 +301,7 @@ export default function ProfilePage() {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600">
-                  <UserIcon className="w-20 h-20 text-gray-400 dark:text-gray-500" />
+                  <UserIcon className="w-16 h-16 text-gray-400 dark:text-gray-500" />
                 </div>
               )}
             </div>
@@ -297,7 +312,7 @@ export default function ProfilePage() {
               disabled={isUploading}
               className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
             >
-              <span className="text-white text-sm font-medium flex items-center gap-2">
+              <span className="text-white text-xs font-medium flex items-center gap-1">
                 {isUploading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -324,22 +339,22 @@ export default function ProfilePage() {
           <button
             onClick={triggerFileInput}
             disabled={isUploading}
-            className="mt-4 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium shadow-md hover:shadow-lg"
+            className="mt-3 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 font-medium shadow-md hover:shadow-lg"
           >
             {isUploading ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
                 Uploading...
               </>
             ) : (
               <>
-                <CameraIcon className="w-5 h-5" />
+                <CameraIcon className="w-4 h-4" />
                 Upload New Photo
               </>
             )}
           </button>
 
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
+          <p className="text-gray-500 dark:text-gray-400 text-xs mt-1.5">
             Recommended: Square image, at least 200×200 pixels
           </p>
         </div>
@@ -347,25 +362,25 @@ export default function ProfilePage() {
         {/* Message */}
         {message && (
           <div
-            className={`p-4 rounded-lg mb-6 flex items-center gap-3 ${
+            className={`p-3 rounded-lg mb-4 flex items-center gap-2 ${
               message.type === "success"
                 ? "bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800"
                 : "bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800"
             }`}
           >
             {message.type === "success" ? (
-              <CheckCircleIcon className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+              <CheckCircleIcon className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
             ) : (
-              <XCircleIcon className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+              <XCircleIcon className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
             )}
-            <span className="font-medium">{message.text}</span>
+            <span className="font-medium text-sm">{message.text}</span>
           </div>
         )}
 
         {/* Profile Info */}
-        <div className="border-t dark:border-gray-700 pt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Profile Information</h2>
+        <div className="border-t dark:border-gray-700 pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-semibold text-gray-800 dark:text-white">Profile Information</h2>
             {!isEditingProfile ? (
               <button
                 onClick={() => setIsEditingProfile(true)}
@@ -425,33 +440,33 @@ export default function ProfilePage() {
             </div>
           )}
           
-          <div className="space-y-3">
-            <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <EnvelopeIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+              <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <EnvelopeIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</p>
-                <p className="font-medium text-gray-800 dark:text-gray-100">{session?.user?.email || "Not available"}</p>
+                <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</p>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{session?.user?.email || "Not available"}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                <UserIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+              <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <UserIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</p>
-                <p className="font-medium text-gray-800 dark:text-gray-100">{session?.user?.name || "Not available"}</p>
+                <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</p>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{session?.user?.name || "Not available"}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600">
-              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <BuildingIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600">
+              <div className="p-1.5 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <BuildingIcon className="w-4 h-4 text-green-600 dark:text-green-400" />
               </div>
               <div className="flex-1">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department</p>
+                <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department</p>
                 {isEditingProfile ? (
                   <input
                     type="text"
@@ -461,17 +476,17 @@ export default function ProfilePage() {
                     placeholder="Enter your department"
                   />
                 ) : (
-                  <p className="font-medium text-gray-800 dark:text-gray-100">{(session?.user as any)?.department || "Not assigned"}</p>
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{(session?.user as any)?.department || "Not assigned"}</p>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600">
-              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                <BriefcaseIcon className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600">
+              <div className="p-1.5 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <BriefcaseIcon className="w-4 h-4 text-orange-600 dark:text-orange-400" />
               </div>
               <div className="flex-1">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Position</p>
+                <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Position</p>
                 {isEditingProfile ? (
                   <input
                     type="text"
@@ -481,30 +496,30 @@ export default function ProfilePage() {
                     placeholder="Enter your position"
                   />
                 ) : (
-                  <p className="font-medium text-gray-800 dark:text-gray-100">{(session?.user as any)?.position || "Not assigned"}</p>
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{(session?.user as any)?.position || "Not assigned"}</p>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                <KeyIcon className="w-5 h-5 text-red-600 dark:text-red-400" />
+            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+              <div className="p-1.5 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                <KeyIcon className="w-4 h-4 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</p>
-                <p className="font-medium text-gray-800 dark:text-gray-100 capitalize">{(session?.user as any)?.role || "Employee"}</p>
+                <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</p>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 capitalize">{(session?.user as any)?.role || "Employee"}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Tips */}
-        <div className="mt-6 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-lg border border-blue-100 dark:border-blue-800">
-          <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-3 flex items-center gap-2">
-            <LightBulbIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        <div className="mt-4 p-3 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-lg border border-blue-100 dark:border-blue-800">
+          <h3 className="font-semibold text-sm text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-1.5">
+            <LightBulbIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             Photo Tips
           </h3>
-          <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-2">
+          <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1.5">
             <li className="flex items-start gap-2">
               <PhotoIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <span>Use a clear, front-facing photo for best QR scan recognition</span>
@@ -526,34 +541,34 @@ export default function ProfilePage() {
       </div>
 
       {/* Change Password Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mt-6">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-          <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-            <KeyIcon className="w-5 h-5 text-red-600 dark:text-red-400" />
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mt-4">
+        <h2 className="text-base font-semibold text-gray-800 dark:text-white mb-3 flex items-center gap-1.5">
+          <div className="p-1.5 bg-red-100 dark:bg-red-900/30 rounded-lg">
+            <KeyIcon className="w-4 h-4 text-red-600 dark:text-red-400" />
           </div>
           Change Password
         </h2>
 
         {passwordMessage && (
           <div
-            className={`p-4 rounded-lg mb-4 flex items-center gap-3 ${
+            className={`p-3 rounded-lg mb-3 flex items-center gap-2 ${
               passwordMessage.type === "success"
                 ? "bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800"
                 : "bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800"
             }`}
           >
             {passwordMessage.type === "success" ? (
-              <CheckCircleIcon className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+              <CheckCircleIcon className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
             ) : (
-              <XCircleIcon className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+              <XCircleIcon className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
             )}
-            <span className="font-medium">{passwordMessage.text}</span>
+            <span className="font-medium text-sm">{passwordMessage.text}</span>
           </div>
         )}
 
-        <form onSubmit={handlePasswordChange} className="space-y-4">
+        <form onSubmit={handlePasswordChange} className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Current Password
             </label>
             <div className="relative">
@@ -562,25 +577,25 @@ export default function ProfilePage() {
                 value={passwordData.currentPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                 required
-                className="w-full px-4 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                className="w-full px-3 py-1.5 pr-10 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 placeholder="Enter your current password"
               />
               <button
                 type="button"
                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"
               >
                 {showCurrentPassword ? (
-                  <EyeSlashIcon className="w-5 h-5" />
+                  <EyeSlashIcon className="w-4 h-4" />
                 ) : (
-                  <EyeIcon className="w-5 h-5" />
+                  <EyeIcon className="w-4 h-4" />
                 )}
               </button>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               New Password
             </label>
             <div className="relative">
@@ -590,25 +605,25 @@ export default function ProfilePage() {
                 onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                 required
                 minLength={6}
-                className="w-full px-4 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                className="w-full px-3 py-1.5 pr-10 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 placeholder="Enter new password (min. 6 characters)"
               />
               <button
                 type="button"
                 onClick={() => setShowNewPassword(!showNewPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"
               >
                 {showNewPassword ? (
-                  <EyeSlashIcon className="w-5 h-5" />
+                  <EyeSlashIcon className="w-4 h-4" />
                 ) : (
-                  <EyeIcon className="w-5 h-5" />
+                  <EyeIcon className="w-4 h-4" />
                 )}
               </button>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Confirm New Password
             </label>
             <div className="relative">
@@ -617,18 +632,18 @@ export default function ProfilePage() {
                 value={passwordData.confirmPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                 required
-                className="w-full px-4 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                className="w-full px-3 py-1.5 pr-10 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 placeholder="Confirm your new password"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"
               >
                 {showConfirmPassword ? (
-                  <EyeSlashIcon className="w-5 h-5" />
+                  <EyeSlashIcon className="w-4 h-4" />
                 ) : (
-                  <EyeIcon className="w-5 h-5" />
+                  <EyeIcon className="w-4 h-4" />
                 )}
               </button>
             </div>
@@ -637,16 +652,16 @@ export default function ProfilePage() {
           <button
             type="submit"
             disabled={changingPassword}
-            className="w-full py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+            className="w-full py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-1.5"
           >
             {changingPassword ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
                 Changing Password...
               </>
             ) : (
               <>
-                <KeyIcon className="w-5 h-5" />
+                <KeyIcon className="w-4 h-4" />
                 Change Password
               </>
             )}

@@ -75,3 +75,22 @@ model Settings {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }
+
+model ActivityLog {
+  id          String    @id @default(cuid())
+  userId      String?   // User who performed the action (null for system actions)
+  userName    String?   // Cached user name for display
+  action      String    // e.g., "SCAN_AM_IN", "SCAN_PM_OUT", "LOGIN", "LOGOUT", etc.
+  description String    // Human-readable description
+  type        String    @default("INFO") // INFO, SUCCESS, WARNING, ERROR
+  metadata    String?   // JSON string for additional data
+  scanPhoto   String?   // Path to scan photo if applicable
+  ipAddress   String?   // IP address of the request
+  userAgent   String?   // Browser/device info
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([type])
+}

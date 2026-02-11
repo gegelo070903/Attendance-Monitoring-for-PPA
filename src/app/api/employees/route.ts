@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
+import { logActivity, ActivityActions } from "@/lib/activityLogger";
 
 // GET - Get all employees (Admin only)
 export async function GET(request: NextRequest) {
@@ -95,6 +96,23 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Log employee creation activity
+    await logActivity({
+      userId: session.user.id,
+      userName: session.user.name || session.user.email || "Admin",
+      action: ActivityActions.EMPLOYEE_CREATE,
+      description: `${session.user.name || "Admin"} created new employee: ${name} (${email})`,
+      type: "SUCCESS",
+      metadata: {
+        newEmployeeId: user.id,
+        newEmployeeName: name,
+        newEmployeeEmail: email,
+        department,
+        position,
+        role: role || "EMPLOYEE",
+      },
+    });
+
     return NextResponse.json(user, { status: 201 });
   } catch (error) {
     console.error("Create employee error:", error);
@@ -132,8 +150,28 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Get user info before deletion for logging
+    const userToDelete = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    });
+
     await prisma.user.delete({
       where: { id: userId },
+    });
+
+    // Log employee deletion activity
+    await logActivity({
+      userId: session.user.id,
+      userName: session.user.name || session.user.email || "Admin",
+      action: ActivityActions.EMPLOYEE_DELETE,
+      description: `${session.user.name || "Admin"} deleted employee: ${userToDelete?.name || "Unknown"} (${userToDelete?.email || userId})`,
+      type: "WARNING",
+      metadata: {
+        deletedUserId: userId,
+        deletedUserName: userToDelete?.name,
+        deletedUserEmail: userToDelete?.email,
+      },
     });
 
     return NextResponse.json({ message: "User deleted successfully" });
@@ -203,6 +241,21 @@ export async function PUT(request: NextRequest) {
         department: true,
         position: true,
         shiftType: true,
+      },
+    });
+
+    // Log employee update activity
+    await logActivity({
+      userId: session.user.id,
+      userName: session.user.name || session.user.email || "Admin",
+      action: ActivityActions.EMPLOYEE_UPDATE,
+      description: `${session.user.name || "Admin"} updated employee: ${user.name} (${user.email})`,
+      type: "SUCCESS",
+      metadata: {
+        updatedUserId: id,
+        updatedUserName: user.name,
+        updatedUserEmail: user.email,
+        changes: Object.keys(updateData),
       },
     });
 

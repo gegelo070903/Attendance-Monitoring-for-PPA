@@ -292,8 +292,8 @@ export default function AdminReportsPage() {
       <style jsx global>{`
         @media print {
           @page {
-            size: A4 portrait;
-            margin: 15mm;
+            size: A4 landscape;
+            margin: 8mm 10mm;
           }
           
           /* Remove dark class from html when printing */
@@ -319,6 +319,7 @@ export default function AdminReportsPage() {
             width: 100%;
             background: white !important;
             color: black !important;
+            padding: 0 !important;
           }
           
           /* Force white background for main container */
@@ -595,59 +596,124 @@ export default function AdminReportsPage() {
             color: #c2410c !important;
           }
           
-          /* Arial 12pt font for professional look */
+          /* Arial compact font for fitting on one page */
           #print-area {
             font-family: Arial, sans-serif !important;
-            font-size: 12pt !important;
+            font-size: 8pt !important;
           }
           
           #print-area table {
             font-family: Arial, sans-serif !important;
-            font-size: 10pt !important;
+            font-size: 7pt !important;
+            width: 100% !important;
           }
           
           #print-area th, #print-area td {
-            padding: 3px 5px !important;
+            padding: 1px 3px !important;
+            font-size: 7pt !important;
+            line-height: 1.2 !important;
+          }
+          
+          /* Compact header */
+          #print-area .mb-4 {
+            margin-bottom: 4px !important;
+          }
+          #print-area .pb-4 {
+            padding-bottom: 4px !important;
+          }
+          #print-area .mb-6 {
+            margin-bottom: 4px !important;
+          }
+          #print-area .mt-8 {
+            margin-top: 6px !important;
+          }
+          #print-area .pt-6 {
+            padding-top: 4px !important;
+          }
+          #print-area .mt-3 {
+            margin-top: 2px !important;
+          }
+          
+          /* Compact report header text */
+          #print-area h1 {
+            font-size: 12pt !important;
+            margin: 0 !important;
+          }
+          #print-area h2 {
             font-size: 10pt !important;
+            margin: 2px 0 !important;
+          }
+          #print-area h3 {
+            font-size: 9pt !important;
+            margin-bottom: 3px !important;
+            padding-bottom: 2px !important;
+          }
+          
+          /* Compact logo */
+          #print-area img {
+            width: 50px !important;
+            height: 50px !important;
+          }
+          
+          /* Reduce status badge size */
+          #print-area span[class*="rounded"] {
+            padding: 0 2px !important;
+            font-size: 6pt !important;
+          }
+          
+          /* Compact footer */
+          #print-area .grid-cols-2 {
+            gap: 8px !important;
+          }
+          #print-area .mt-6 {
+            margin-top: 4px !important;
           }
           
           /* Employee info print styles */
           .employee-info-row {
             display: flex !important;
-            gap: 40px !important;
-            margin-bottom: 4px !important;
+            gap: 30px !important;
+            margin-bottom: 2px !important;
           }
           .employee-info-item {
             display: flex !important;
-            gap: 8px !important;
+            gap: 6px !important;
           }
           .employee-info-label {
             font-weight: normal !important;
             color: #6b7280 !important;
-            font-size: 11pt !important;
+            font-size: 8pt !important;
           }
           .employee-info-value {
             font-weight: 600 !important;
             color: #111827 !important;
-            font-size: 11pt !important;
+            font-size: 8pt !important;
+          }
+          
+          /* Force single page - prevent page breaks inside content */
+          #print-area table {
+            page-break-inside: avoid !important;
+          }
+          #print-area {
+            page-break-after: avoid !important;
           }
         }
       `}</style>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Controls - Hidden when printing */}
         <div className="no-print">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Monthly Reports</h1>
-              <p className="text-gray-600 dark:text-gray-400">Generate and print attendance reports</p>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Monthly Reports</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Generate and print attendance reports</p>
             </div>
             <button
               onClick={handlePrint}
               disabled={generating}
-              className="flex items-center gap-2 px-6 py-3 bg-ppa-navy text-white rounded-lg hover:bg-ppa-blue transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-ppa-navy text-white rounded-lg hover:bg-ppa-blue transition-colors disabled:opacity-50"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
               </svg>
               {generating ? "Preparing..." : "Print Report"}
@@ -655,27 +721,27 @@ export default function AdminReportsPage() {
           </div>
 
           {/* Filters */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Select Month
                 </label>
                 <input
                   type="month"
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ppa-navy focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ppa-navy focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Report Type
                 </label>
                 <select
                   value={reportType}
                   onChange={(e) => setReportType(e.target.value as "organization" | "individual")}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ppa-navy focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ppa-navy focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 >
                   <option value="organization">Whole Organization</option>
                   <option value="individual">Individual Employee</option>
@@ -683,13 +749,13 @@ export default function AdminReportsPage() {
               </div>
               {reportType === "organization" && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                     Filter by Department
                   </label>
                   <select
                     value={selectedDepartment}
                     onChange={(e) => setSelectedDepartment(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ppa-navy focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ppa-navy focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   >
                     <option value="all">All Departments</option>
                     {departments.map((dept) => (
@@ -703,7 +769,7 @@ export default function AdminReportsPage() {
               {reportType === "individual" && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                       Filter by Department
                     </label>
                     <select
@@ -718,7 +784,7 @@ export default function AdminReportsPage() {
                           setSelectedEmployee(filtered[0].id);
                         }
                       }}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ppa-navy focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ppa-navy focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     >
                       <option value="all">All Departments</option>
                       {departments.map((dept) => (
@@ -729,13 +795,13 @@ export default function AdminReportsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                       Select Employee
                     </label>
                     <select
                       value={selectedEmployee}
                       onChange={(e) => setSelectedEmployee(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ppa-navy focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-ppa-navy focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     >
                       {individualFilteredEmployees.map((emp) => (
                         <option key={emp.id} value={emp.id}>
@@ -751,26 +817,26 @@ export default function AdminReportsPage() {
         </div>
 
         {/* Printable Report Area */}
-        <div id="print-area" ref={printRef} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-8">
+        <div id="print-area" ref={printRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
           {/* Report Header */}
-          <div className="mb-8 border-b-2 border-ppa-navy dark:border-ppa-light pb-6">
+          <div className="mb-4 border-b-2 border-ppa-navy dark:border-ppa-light pb-4">
             <div className="relative">
               {/* Logo on far right */}
               <div className="absolute right-0 top-0">
                 <img
                   src="/images/download-removebg-preview.png"
                   alt="PPA Logo"
-                  className="w-24 h-24 object-contain"
+                  className="w-20 h-20 object-contain"
                 />
               </div>
               {/* Centered content */}
               <div className="text-center">
-                <h1 className="text-2xl font-bold text-ppa-navy dark:text-ppa-light">PHILIPPINE PORTS AUTHORITY</h1>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">Attendance Monitoring System</p>
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-4">
+                <h1 className="text-xl font-bold text-ppa-navy dark:text-ppa-light">PHILIPPINE PORTS AUTHORITY</h1>
+                <p className="text-gray-600 dark:text-gray-400 text-xs">Attendance Monitoring System</p>
+                <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mt-3">
                   Monthly Attendance Sheet
                 </h2>
-                <p className="text-gray-600 dark:text-gray-400">For the Month of {monthName}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">For the Month of {monthName}</p>
               </div>
             </div>
           </div>

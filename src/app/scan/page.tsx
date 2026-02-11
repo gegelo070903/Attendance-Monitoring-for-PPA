@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import QRScanner from "@/components/QRScanner";
 import WatercolorBackground from "@/components/WatercolorBackground";
+import { useToast } from "@/components/Toast";
 
 interface UserInfo {
   name: string;
@@ -132,6 +133,7 @@ function formatTimeDisplay(time24: string): string {
 
 export default function ScanStationPage() {
   const router = useRouter();
+  const { showSuccess, showError: showErrorToast } = useToast();
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
@@ -260,6 +262,9 @@ export default function ScanStationPage() {
 
           setScanResult(result);
 
+          // Show toast notification
+          showSuccess(responseData.message || `${responseData.action} recorded successfully!`);
+
           // Show overlay with greeting message
           if (responseData.user && responseData.action) {
             setOverlayData({
@@ -287,6 +292,7 @@ export default function ScanStationPage() {
             success: false,
             message: responseData.message || responseData.error || "Failed to record attendance",
           });
+          showErrorToast(responseData.message || responseData.error || "Failed to record attendance");
         }
 
         setTimeout(() => setScanResult(null), 5000);
@@ -304,6 +310,7 @@ export default function ScanStationPage() {
 
   const handleError = (error: string) => {
     setScanResult({ success: false, message: error });
+    showErrorToast(error);
     setTimeout(() => setScanResult(null), 3000);
   };
 

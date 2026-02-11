@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import WatercolorBackground from "@/components/WatercolorBackground";
+import { useToast } from "@/components/Toast";
 
 // Eye icons as inline SVG components
 const EyeIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -22,6 +23,7 @@ const EyeSlashIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
 
 export default function LoginPage() {
   const router = useRouter();
+  const { showSuccess, showError } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -42,12 +44,15 @@ export default function LoginPage() {
 
       if (result?.error) {
         setError(result.error);
+        showError(result.error);
       } else {
+        showSuccess("Login successful! Redirecting...");
         router.push("/dashboard");
         router.refresh();
       }
     } catch (err) {
       setError("An unexpected error occurred");
+      showError("An unexpected error occurred");
     } finally {
       setLoading(false);
     }

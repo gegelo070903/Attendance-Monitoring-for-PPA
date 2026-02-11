@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
+import { logActivity, ActivityActions } from "@/lib/activityLogger";
 
 // POST - Change own password (any authenticated user)
 export async function POST(request: NextRequest) {
@@ -54,6 +55,15 @@ export async function POST(request: NextRequest) {
     await prisma.user.update({
       where: { id: session.user.id },
       data: { password: hashedPassword },
+    });
+
+    // Log password change activity
+    await logActivity({
+      userId: session.user.id,
+      userName: session.user.name || session.user.email || "Unknown",
+      action: ActivityActions.PASSWORD_CHANGE,
+      description: `${session.user.name || session.user.email} changed their password`,
+      type: "SUCCESS",
     });
 
     return NextResponse.json({ message: "Password changed successfully" });

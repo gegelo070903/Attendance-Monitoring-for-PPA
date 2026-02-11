@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay, subDays } from "date-fns";
+import { logActivity, ActivityActions } from "@/lib/activityLogger";
 
 // Minimum seconds between scans for the same user (cooldown)
 const SCAN_COOLDOWN_SECONDS = 3;
@@ -325,6 +326,23 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        // Log the scan activity
+        await logActivity({
+          userId: user.id,
+          userName: user.name,
+          action: ActivityActions.SCAN_NIGHT_IN,
+          description: `${user.name} scanned Night In at ${now.toLocaleTimeString()}`,
+          type: "SUCCESS",
+          metadata: {
+            attendanceId: attendance.id,
+            shiftType: "NIGHT",
+            status,
+            department: user.department,
+            position: user.position,
+          },
+          scanPhoto,
+        });
+
         return NextResponse.json({
           success: true,
           attendanceId: attendance.id,
@@ -398,6 +416,22 @@ export async function POST(request: NextRequest) {
             },
           });
 
+          // Log activity for AM In
+          await logActivity({
+            userId: user.id,
+            userName: user.name || "Unknown",
+            action: ActivityActions.SCAN_AM_IN,
+            description: `${user.name} scanned AM In at ${now.toLocaleTimeString()}${status === "LATE" ? " (Late)" : status === "HALF_DAY" ? " (Half Day)" : ""}`,
+            type: "SUCCESS",
+            metadata: {
+              attendanceId: attendance.id,
+              time: now.toISOString(),
+              status,
+              shiftType: "DAY",
+            },
+            scanPhoto: scanPhoto || undefined,
+          });
+
           return NextResponse.json({
             success: true,
             attendanceId: attendance.id,
@@ -425,6 +459,22 @@ export async function POST(request: NextRequest) {
               pmIn: now,
               status: "HALF_DAY", // Missing AM session = half day
             },
+          });
+
+          // Log activity for PM In during lunch
+          await logActivity({
+            userId: user.id,
+            userName: user.name || "Unknown",
+            action: ActivityActions.SCAN_PM_IN,
+            description: `${user.name} scanned PM In at ${now.toLocaleTimeString()} (Morning session missed - Half Day)`,
+            type: "SUCCESS",
+            metadata: {
+              attendanceId: attendance.id,
+              time: now.toISOString(),
+              status: "HALF_DAY",
+              shiftType: "DAY",
+            },
+            scanPhoto: scanPhoto || undefined,
           });
 
           return NextResponse.json({
@@ -461,6 +511,23 @@ export async function POST(request: NextRequest) {
           if (lateCheck.isLate) {
             statusMsg = " (Morning missed + Late PM arrival - Half Day)";
           }
+
+          // Log activity for PM In during PM period
+          await logActivity({
+            userId: user.id,
+            userName: user.name || "Unknown",
+            action: ActivityActions.SCAN_PM_IN,
+            description: `${user.name} scanned PM In at ${now.toLocaleTimeString()}.${statusMsg}`,
+            type: "SUCCESS",
+            metadata: {
+              attendanceId: attendance.id,
+              time: now.toISOString(),
+              status: "HALF_DAY",
+              shiftType: "DAY",
+              lateForPM: lateCheck.isLate,
+            },
+            scanPhoto: scanPhoto || undefined,
+          });
 
           return NextResponse.json({
             success: true,
@@ -561,6 +628,15 @@ export async function POST(request: NextRequest) {
       "night-out": "Night Out",
     };
 
+    const activityActionMap: Record<string, string> = {
+      "am-in": ActivityActions.SCAN_AM_IN,
+      "am-out": ActivityActions.SCAN_AM_OUT,
+      "pm-in": ActivityActions.SCAN_PM_IN,
+      "pm-out": ActivityActions.SCAN_PM_OUT,
+      "night-in": ActivityActions.SCAN_NIGHT_IN,
+      "night-out": ActivityActions.SCAN_NIGHT_OUT,
+    };
+
     const messages: Record<string, string> = {
       "am-in": `Good morning, ${user.name}! AM In recorded at ${now.toLocaleTimeString()}.`,
       "am-out": `See you later, ${user.name}! AM Out recorded at ${now.toLocaleTimeString()}.`,
@@ -578,6 +654,23 @@ export async function POST(request: NextRequest) {
       "night-in": "night-out",
       "night-out": "complete",
     };
+
+    // Log the scan activity
+    await logActivity({
+      userId: user.id,
+      userName: user.name,
+      action: activityActionMap[action] || action.toUpperCase().replace("-", "_"),
+      description: `${user.name} scanned ${actionLabels[action]} at ${now.toLocaleTimeString()}`,
+      type: "SUCCESS",
+      metadata: {
+        attendanceId: updatedAttendance.id,
+        shiftType,
+        status: updatedAttendance.status,
+        department: user.department,
+        position: user.position,
+      },
+      scanPhoto,
+    });
 
     return NextResponse.json({
       success: true,

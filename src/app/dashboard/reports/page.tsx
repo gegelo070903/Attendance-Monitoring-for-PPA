@@ -89,19 +89,19 @@ export default function ReportsPage() {
     : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reports</h1>
-        <p className="text-gray-600 dark:text-gray-400">View your attendance analytics and reports</p>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Reports</h1>
+        <p className="text-sm text-gray-600 dark:text-gray-400">View your attendance analytics and reports</p>
       </div>
 
       {/* Period Selector */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-        <div className="flex flex-wrap items-center gap-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex gap-2">
             <button
               onClick={() => handlePeriodChange("week")}
-              className={`px-4 py-2 rounded-lg transition-colors ${
+              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                 period === "week"
                   ? "bg-primary-600 text-white"
                   : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
@@ -111,7 +111,7 @@ export default function ReportsPage() {
             </button>
             <button
               onClick={() => handlePeriodChange("month")}
-              className={`px-4 py-2 rounded-lg transition-colors ${
+              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                 period === "month"
                   ? "bg-primary-600 text-white"
                   : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
@@ -121,7 +121,7 @@ export default function ReportsPage() {
             </button>
             <button
               onClick={() => handlePeriodChange("custom")}
-              className={`px-4 py-2 rounded-lg transition-colors ${
+              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                 period === "custom"
                   ? "bg-primary-600 text-white"
                   : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
@@ -132,14 +132,14 @@ export default function ReportsPage() {
           </div>
 
           {period === "custom" && (
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <input
                 type="date"
                 value={dateRange.startDate}
                 onChange={(e) =>
                   setDateRange({ ...dateRange, startDate: e.target.value })
                 }
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               />
               <input
                 type="date"
@@ -147,7 +147,7 @@ export default function ReportsPage() {
                 onChange={(e) =>
                   setDateRange({ ...dateRange, endDate: e.target.value })
                 }
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               />
             </div>
           )}
@@ -155,7 +155,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <StatsCard
           title="Attendance Rate"
           value={`${attendanceRate}%`}
@@ -187,76 +187,76 @@ export default function ReportsPage() {
       </div>
 
       {/* Detailed Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">
             Attendance Breakdown
           </h3>
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                <span className="text-gray-700 dark:text-gray-300">Present</span>
-              </div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold dark:text-white">{stats?.presentDays || 0}</span>
-                <span className="text-gray-500 dark:text-gray-400 text-sm">days</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                <span className="text-sm text-gray-700 dark:text-gray-300">Present</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="font-semibold text-sm dark:text-white">{stats?.presentDays || 0}</span>
+                <span className="text-gray-500 dark:text-gray-400 text-xs">days</span>
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                <span className="text-gray-700 dark:text-gray-300">Late</span>
-              </div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold dark:text-white">{stats?.lateDays || 0}</span>
-                <span className="text-gray-500 dark:text-gray-400 text-sm">days</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                <span className="text-sm text-gray-700 dark:text-gray-300">Late</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="font-semibold text-sm dark:text-white">{stats?.lateDays || 0}</span>
+                <span className="text-gray-500 dark:text-gray-400 text-xs">days</span>
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                <span className="text-gray-700 dark:text-gray-300">Half Day</span>
-              </div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold dark:text-white">{stats?.halfDays || 0}</span>
-                <span className="text-gray-500 dark:text-gray-400 text-sm">days</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-orange-500"></div>
+                <span className="text-sm text-gray-700 dark:text-gray-300">Half Day</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="font-semibold text-sm dark:text-white">{stats?.halfDays || 0}</span>
+                <span className="text-gray-500 dark:text-gray-400 text-xs">days</span>
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                <span className="text-gray-700 dark:text-gray-300">Absent</span>
-              </div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold dark:text-white">{stats?.absentDays || 0}</span>
-                <span className="text-gray-500 dark:text-gray-400 text-sm">days</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                <span className="text-sm text-gray-700 dark:text-gray-300">Absent</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="font-semibold text-sm dark:text-white">{stats?.absentDays || 0}</span>
+                <span className="text-gray-500 dark:text-gray-400 text-xs">days</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">
             Work Hours Summary
           </h3>
-          <div className="space-y-4">
-            <div className="p-4 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Hours Worked</p>
-              <p className="text-3xl font-bold text-purple-700 dark:text-purple-400">
+          <div className="space-y-3">
+            <div className="p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Total Hours Worked</p>
+              <p className="text-2xl font-bold text-purple-700 dark:text-purple-400">
                 {stats?.totalWorkHours || 0}h
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Average per Day</p>
-                <p className="text-xl font-semibold text-gray-900 dark:text-white">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Average per Day</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
                   {stats?.averageWorkHours || 0}h
                 </p>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Working Days</p>
-                <p className="text-xl font-semibold text-gray-900 dark:text-white">
+              <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Working Days</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
                   {attendances.filter((a) => a.workHours && a.workHours > 0).length}
                 </p>
               </div>

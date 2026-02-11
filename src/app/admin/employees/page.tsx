@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { User } from "@/types";
+import { useToast } from "@/components/Toast";
 
 // Eye icons as inline SVG components
 const EyeIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -18,6 +19,7 @@ const EyeSlashIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
 );
 
 export default function EmployeesPage() {
+  const { showSuccess, showError } = useToast();
   const [employees, setEmployees] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -106,7 +108,9 @@ export default function EmployeesPage() {
 
       if (!response.ok) {
         setError(data.error || "Failed to create employee");
+        showError(data.error || "Failed to create employee");
       } else {
+        showSuccess(`Employee ${formData.name} created successfully!`);
         setShowModal(false);
         setFormData({
           name: "",
@@ -121,6 +125,7 @@ export default function EmployeesPage() {
       }
     } catch (err) {
       setError("An unexpected error occurred");
+      showError("An unexpected error occurred");
     } finally {
       setSubmitting(false);
     }
@@ -156,13 +161,16 @@ export default function EmployeesPage() {
 
       if (!response.ok) {
         setEditError(data.error || "Failed to update employee");
+        showError(data.error || "Failed to update employee");
       } else {
+        showSuccess(`Employee ${editFormData.name} updated successfully!`);
         setShowEditModal(false);
         setEditingEmployee(null);
         fetchEmployees();
       }
     } catch (err) {
       setEditError("An unexpected error occurred");
+      showError("An unexpected error occurred");
     } finally {
       setSubmitting(false);
     }
@@ -193,10 +201,14 @@ export default function EmployeesPage() {
       });
 
       if (response.ok) {
+        showSuccess("Employee deleted successfully!");
         fetchEmployees();
+      } else {
+        showError("Failed to delete employee");
       }
     } catch (error) {
       console.error("Failed to delete employee:", error);
+      showError("Failed to delete employee");
     }
   };
 
@@ -209,18 +221,18 @@ export default function EmployeesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Employees</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage employee accounts</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Employees</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Manage employee accounts</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2 shadow-md"
+          className="px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-1.5 shadow-md"
         >
           <svg
-            className="w-5 h-5"
+            className="w-4 h-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -237,30 +249,30 @@ export default function EmployeesPage() {
       </div>
 
       {/* Employees Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-300">
+                <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 dark:text-gray-300">
                   Name
                 </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-300">
+                <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 dark:text-gray-300">
                   Email
                 </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-300">
+                <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 dark:text-gray-300">
                   Department
                 </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-300">
+                <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 dark:text-gray-300">
                   Position
                 </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-300">
+                <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 dark:text-gray-300">
                   Shift
                 </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-300">
+                <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 dark:text-gray-300">
                   Role
                 </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-300">
+                <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 dark:text-gray-300">
                   Actions
                 </th>
               </tr>
@@ -269,12 +281,12 @@ export default function EmployeesPage() {
               {employees.map((employee) => (
                 <tr
                   key={employee.id}
-                  className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
                 >
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary-100 dark:bg-ppa-navy/30 rounded-full flex items-center justify-center">
-                        <span className="text-primary-700 dark:text-blue-300 font-semibold">
+                  <td className="py-2.5 px-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-primary-100 dark:bg-ppa-navy/30 rounded-full flex items-center justify-center">
+                        <span className="text-primary-700 dark:text-blue-300 font-semibold text-xs">
                           {employee.name.charAt(0)}
                         </span>
                       </div>
@@ -283,14 +295,14 @@ export default function EmployeesPage() {
                       </span>
                     </div>
                   </td>
-                  <td className="py-4 px-6 text-gray-600 dark:text-gray-300">{employee.email}</td>
-                  <td className="py-4 px-6 text-gray-600 dark:text-gray-300">
+                  <td className="py-2.5 px-4 text-gray-600 dark:text-gray-300">{employee.email}</td>
+                  <td className="py-2.5 px-4 text-gray-600 dark:text-gray-300">
                     {employee.department || "-"}
                   </td>
-                  <td className="py-4 px-6 text-gray-600 dark:text-gray-300">
+                  <td className="py-2.5 px-4 text-gray-600 dark:text-gray-300">
                     {employee.position || "-"}
                   </td>
-                  <td className="py-4 px-6">
+                  <td className="py-2.5 px-4">
                     <span
                       className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${
                         (employee as any).shiftType === "NIGHT"
@@ -315,9 +327,9 @@ export default function EmployeesPage() {
                       )}
                     </span>
                   </td>
-                  <td className="py-4 px-6">
+                  <td className="py-2.5 px-4">
                     <span
-                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      className={`inline-flex px-2 py-0.5 text-[10px] font-medium rounded-full ${
                         employee.role === "ADMIN"
                           ? "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
                           : "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
@@ -326,15 +338,15 @@ export default function EmployeesPage() {
                       {employee.role}
                     </span>
                   </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-2">
+                  <td className="py-2.5 px-4">
+                    <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleEdit(employee)}
-                        className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                         title="Edit Employee"
                       >
                         <svg
-                          className="w-5 h-5"
+                          className="w-4 h-4"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"

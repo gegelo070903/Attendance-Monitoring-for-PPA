@@ -2,6 +2,7 @@ import { type NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import prisma from './prisma';
+import { logActivity, ActivityActions } from './activityLogger';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -21,6 +22,13 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!user) {
+          // Log failed login attempt
+          await logActivity({
+            userName: credentials.email,
+            action: ActivityActions.LOGIN,
+            description: `Failed login attempt for ${credentials.email} - User not found`,
+            type: "WARNING",
+          });
           throw new Error('User not found');
         }
 
@@ -30,8 +38,29 @@ export const authOptions: NextAuthOptions = {
         );
 
         if (!isPasswordValid) {
+          // Log failed login attempt
+          await logActivity({
+            userId: user.id,
+            userName: user.name || user.email,
+            action: ActivityActions.LOGIN,
+            description: `Failed login attempt for ${user.name || user.email} - Invalid password`,
+            type: "WARNING",
+          });
           throw new Error('Invalid password');
         }
+
+        // Log successful login
+        await logActivity({
+          userId: user.id,
+          userName: user.name || user.email,
+          action: ActivityActions.LOGIN,
+          description: `${user.name || user.email} logged in successfully`,
+          type: "SUCCESS",
+          metadata: {
+            role: user.role,
+            department: user.department,
+          },
+        });
 
         return {
           id: user.id,

@@ -68,16 +68,16 @@ export default function StatsCard({
   const colors = colorClasses[color];
 
   return (
-    <div className={`${colors.bg} rounded-lg p-3 border ${colors.border} shadow-sm hover:shadow-md transition-shadow`}>
+    <div className={`${colors.bg} rounded-lg p-2.5 border ${colors.border} shadow-sm hover:shadow-md transition-shadow`}>
       <div className="flex items-start justify-between">
         <div>
-          <p className={`text-xs ${colors.title} mb-0.5`}>{title}</p>
-          <p className={`text-xl font-bold ${colors.text}`}>{value}</p>
-          {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>}
+          <p className={`text-[10px] ${colors.title} mb-0.5`}>{title}</p>
+          <p className={`text-lg font-bold ${colors.text}`}>{value}</p>
+          {subtitle && <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>}
         </div>
-        <div className={`w-8 h-8 ${colors.icon} rounded-lg flex items-center justify-center shadow`}>
+        <div className={`w-7 h-7 ${colors.icon} rounded-md flex items-center justify-center shadow`}>
           <svg
-            className="w-4 h-4"
+            className="w-3.5 h-3.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

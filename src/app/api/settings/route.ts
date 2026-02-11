@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
+import { logActivity, ActivityActions } from "@/lib/activityLogger";
 
 // GET - Get current settings
 export async function GET() {
@@ -100,6 +101,23 @@ export async function PUT(request: NextRequest) {
         },
       });
     }
+
+    // Log settings update activity
+    await logActivity({
+      userId: session.user.id,
+      userName: session.user.name || session.user.email || "Admin",
+      action: ActivityActions.SETTINGS_UPDATE,
+      description: `${session.user.name || "Admin"} updated system settings`,
+      type: "SUCCESS",
+      metadata: {
+        amStartTime: settings.amStartTime,
+        amEndTime: settings.amEndTime,
+        pmStartTime: settings.pmStartTime,
+        pmEndTime: settings.pmEndTime,
+        nightStartTime: settings.nightStartTime,
+        nightEndTime: settings.nightEndTime,
+      },
+    });
 
     return NextResponse.json(settings);
   } catch (error) {

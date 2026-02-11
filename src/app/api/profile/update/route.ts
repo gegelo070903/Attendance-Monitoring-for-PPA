@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
+import { logActivity } from "@/lib/activityLogger";
 
 export async function PUT(request: NextRequest) {
   try {
@@ -36,6 +37,19 @@ export async function PUT(request: NextRequest) {
         email: true,
         department: true,
         position: true,
+      },
+    });
+
+    // Log profile update activity
+    await logActivity({
+      userId: session.user.id,
+      userName: session.user.name || session.user.email || "Unknown",
+      action: "PROFILE_UPDATE",
+      description: `${session.user.name || session.user.email} updated their profile`,
+      type: "SUCCESS",
+      metadata: {
+        department: updatedUser.department,
+        position: updatedUser.position,
       },
     });
 

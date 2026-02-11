@@ -5,6 +5,7 @@ import { existsSync } from "fs";
 import path from "path";
 import prisma from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
+import { logActivity } from "@/lib/activityLogger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,9 +64,22 @@ export async function POST(request: NextRequest) {
 
     // Update user profile with image URL
     const imageUrl = `/uploads/profiles/${filename}`;
-    await prisma.user.update({
+    const targetUser = await prisma.user.update({
       where: { id: targetUserId },
       data: { profileImage: imageUrl },
+    });
+
+    // Log profile image upload activity
+    await logActivity({
+      userId: targetUserId,
+      userName: targetUser.name || targetUser.email || "Unknown",
+      action: "PROFILE_IMAGE_UPLOAD",
+      description: `${session.user.name || session.user.email} ${targetUserId !== session.user.id ? `updated profile image for ${targetUser.name}` : "updated their profile image"}`,
+      type: "SUCCESS",
+      metadata: {
+        imageUrl,
+        updatedBy: session.user.id,
+      },
     });
 
     return NextResponse.json({
