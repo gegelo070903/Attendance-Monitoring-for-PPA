@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Standalone output for Railway/Docker deployments
+  output: "standalone",
   // Performance optimizations
   poweredByHeader: false,
   reactStrictMode: true,

@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { writeFile, mkdir } from "fs/promises";
-import { existsSync } from "fs";
-import path from "path";
 import prisma from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { logActivity } from "@/lib/activityLogger";
@@ -46,24 +43,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "profiles");
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
-    // Generate unique filename
+    // Save file to database
     const ext = file.name.split(".").pop() || "jpg";
     const filename = `${targetUserId}-${Date.now()}.${ext}`;
-    const filepath = path.join(uploadDir, filename);
-
-    // Save file
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
+
+    const fileUpload = await prisma.fileUpload.create({
+      data: {
+        data: buffer,
+        mimeType: file.type,
+        filename,
+      },
+    });
 
     // Update user profile with image URL
-    const imageUrl = `/uploads/profiles/${filename}`;
+    const imageUrl = `/api/files/${fileUpload.id}`;
     const targetUser = await prisma.user.update({
       where: { id: targetUserId },
       data: { profileImage: imageUrl },

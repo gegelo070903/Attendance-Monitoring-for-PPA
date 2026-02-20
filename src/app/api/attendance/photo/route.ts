@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import { existsSync } from "fs";
+import prisma from "@/lib/prisma";
 
 // POST - Upload scan photo
 export async function POST(request: NextRequest) {
@@ -18,24 +16,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create uploads directory for scan photos if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", "scans");
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const filename = `scan_${attendanceId}_${action}_${timestamp}.jpg`;
-    const filepath = path.join(uploadsDir, filename);
-
-    // Convert File to Buffer and save
+    // Convert File to Buffer and save to database
     const bytes = await photo.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
+    const timestamp = Date.now();
+    const filename = `scan_${attendanceId}_${action}_${timestamp}.jpg`;
 
-    // Return the public URL path
-    const photoUrl = `/uploads/scans/${filename}`;
+    const fileUpload = await prisma.fileUpload.create({
+      data: {
+        data: buffer,
+        mimeType: photo.type || "image/jpeg",
+        filename,
+      },
+    });
+
+    // Return the API URL path
+    const photoUrl = `/api/files/${fileUpload.id}`;
 
     return NextResponse.json({
       success: true,

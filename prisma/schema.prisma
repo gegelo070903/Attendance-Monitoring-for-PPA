@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -93,4 +93,12 @@ model ActivityLog {
   @@index([action])
   @@index([createdAt])
   @@index([type])
+}
+
+model FileUpload {
+  id        String   @id @default(cuid())
+  data      Bytes    // Binary file data stored in PostgreSQL
+  mimeType  String   // e.g., "image/jpeg", "image/png"
+  filename  String   // Original or generated filename
+  createdAt DateTime @default(now())
 }
