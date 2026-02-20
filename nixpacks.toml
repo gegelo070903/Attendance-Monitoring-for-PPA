@@ -7,4 +7,4 @@ DATABASE_URL = "postgresql://dummy:dummy@localhost:5432/dummy"
 cmds = ["npm run build"]
 
 [start]
-cmd = "npx prisma db push && next start -H 0.0.0.0 -p ${PORT:-3000}"
+cmd = "npx prisma db push && node prisma/seed.js; next start -H 0.0.0.0 -p ${PORT:-3000}"
