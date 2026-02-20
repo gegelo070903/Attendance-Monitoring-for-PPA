@@ -1,0 +1,10 @@
+[variables]
+# Provide a dummy DATABASE_URL during build so prisma generate works
+# The real DATABASE_URL is used at runtime via Railway's env vars
+DATABASE_URL = "postgresql://dummy:dummy@localhost:5432/dummy"
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npx prisma db push && npm run start"
