@@ -17,7 +17,7 @@ export async function GET(
 
     return new NextResponse(new Uint8Array(file.data), {
       headers: {
-        "Content-Type": file.mimeType,
+        "Content-Type": file.mimeType || "application/octet-stream",
         "Content-Length": file.data.length.toString(),
         "Cache-Control": "public, max-age=31536000, immutable",
       },
