@@ -61,13 +61,14 @@ export async function GET(request: NextRequest) {
       });
 
       // Count only EMPLOYEE attendance (not admins)
+
       const todayPresentCount = await prisma.attendance.count({
         where: {
           date: {
             gte: today,
             lte: todayEnd,
           },
-          status: { in: ["PRESENT", "LATE"] },
+          status: { in: ["PRESENT", "LATE", "HALF_DAY"] },
           user: {
             role: "EMPLOYEE",
           },
