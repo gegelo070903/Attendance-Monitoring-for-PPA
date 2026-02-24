@@ -10,20 +10,33 @@ interface QRScannerProps {
 
 export default function QRScanner({ onScan, onError }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
-  const [lastScanned, setLastScanned] = useState<string | null>(null);
+  const lastScannedRef = useRef<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const processingRef = useRef(false);
 
   // Function to capture photo from video stream
   const capturePhoto = useCallback((): Promise<Blob | null> => {
     return new Promise((resolve) => {
       try {
-        const videoElement = document.querySelector("#qr-reader video") as HTMLVideoElement;
+        // Try multiple selectors to find the video element
+        const videoElement = (
+          document.querySelector("#qr-reader video") ||
+          document.querySelector("#qr-reader__scan_region video") ||
+          document.querySelector("video")
+        ) as HTMLVideoElement | null;
         const canvas = canvasRef.current;
         
         if (!videoElement || !canvas) {
-          console.error("Video element or canvas not found");
+          console.error("Video element or canvas not found for photo capture");
+          resolve(null);
+          return;
+        }
+
+        // Ensure video is ready
+        if (videoElement.readyState < 2 || videoElement.videoWidth === 0) {
+          console.error("Video not ready for capture");
           resolve(null);
           return;
         }
@@ -64,8 +77,10 @@ export default function QRScanner({ onScan, onError }: QRScannerProps) {
       await scannerRef.current.start(
         { facingMode: "environment" },
         {
-          fps: 10,
+          fps: 15,
           qrbox: { width: 250, height: 250 },
+          aspectRatio: 1,
+          disableFlip: false,
         },
         async (decodedText) => {
           try {
@@ -79,13 +94,17 @@ export default function QRScanner({ onScan, onError }: QRScannerProps) {
 
             const identifier = data.email || data.userId;
 
-            // Prevent duplicate scans within 5 seconds
-            if (lastScanned === identifier) {
+            // Prevent duplicate scans - use ref for synchronous check
+            if (lastScannedRef.current === identifier || processingRef.current) {
               return;
             }
 
-            setLastScanned(identifier);
-            setTimeout(() => setLastScanned(null), 5000);
+            processingRef.current = true;
+            lastScannedRef.current = identifier;
+            setTimeout(() => {
+              lastScannedRef.current = null;
+              processingRef.current = false;
+            }, 5000);
 
             // Capture photo before calling onScan
             const photoBlob = await capturePhoto();
@@ -183,11 +202,7 @@ export default function QRScanner({ onScan, onError }: QRScannerProps) {
         </button>
       )}
 
-      {lastScanned && (
-        <p className="text-xs text-gray-500">
-          Recently scanned. Please wait...
-        </p>
-      )}
+
     </div>
   );
 }

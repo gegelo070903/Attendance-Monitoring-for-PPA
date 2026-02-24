@@ -1,0 +1,84 @@
+// Prisma schema for Attendance Monitoring System
+// This is a basic schema for users (employees/admins) and attendance records
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  password     String
+  role         String   // "ADMIN" or "EMPLOYEE"
+  department   String?
+  position     String?
+  shiftType    String?  // "DAY" or "NIGHT"
+  profileImage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  attendances  Attendance[]
+}
+
+model Attendance {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  date       DateTime
+  shiftType  String?
+  amIn       DateTime?
+  amOut      DateTime?
+  pmIn       DateTime?
+  pmOut      DateTime?
+  nightIn    DateTime?
+  nightOut   DateTime?
+  status     String
+  workHours  Float?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+
+model FileUpload {
+  id        String   @id @default(cuid())
+  filename  String
+  mimeType  String
+  data      Bytes
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  userName    String?
+  action      String
+  description String
+  type        String   // INFO, SUCCESS, WARNING, ERROR
+  metadata    String?
+  scanPhoto   String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+}
+
+model Settings {
+  id               String   @id @default(cuid())
+  amStartTime      String   @default("08:00")
+  amEndTime        String   @default("12:00")
+  pmStartTime      String   @default("13:00")
+  pmEndTime        String   @default("17:00")
+  nightStartTime   String   @default("22:00")
+  nightEndTime     String   @default("06:00")
+  amGracePeriod    Int      @default(15)
+  pmGracePeriod    Int      @default(15)
+  nightGracePeriod Int      @default(15)
+  lateThreshold    Int      @default(15)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}

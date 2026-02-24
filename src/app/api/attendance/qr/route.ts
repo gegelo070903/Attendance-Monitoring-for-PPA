@@ -316,48 +316,61 @@ export async function POST(request: NextRequest) {
           status = "LATE";
         }
         
-        attendance = await prisma.attendance.create({
-          data: {
+        // Double-check: re-query to prevent race condition duplicates
+        const existingCheck = await prisma.attendance.findFirst({
+          where: {
             userId: user.id,
-            date: attendanceDate,
             shiftType: "NIGHT",
-            nightIn: now,
-            status,
+            date: { gte: attendanceDate, lte: endOfDay(attendanceDate) },
           },
         });
+        if (existingCheck) {
+          attendance = existingCheck;
+          // Fall through to the existing attendance update logic below
+        } else {
+          attendance = await prisma.attendance.create({
+            data: {
+              userId: user.id,
+              date: attendanceDate,
+              shiftType: "NIGHT",
+              nightIn: now,
+              status,
+            },
+          });
 
-        // Log the scan activity
-        await logActivity({
-          userId: user.id,
-          userName: user.name,
-          action: ActivityActions.SCAN_NIGHT_IN,
-          description: `${user.name} scanned Night In at ${now.toLocaleTimeString()}`,
-          type: "SUCCESS",
-          metadata: {
+          // Log the scan activity
+          await logActivity({
+            userId: user.id,
+            userName: user.name,
+            action: ActivityActions.SCAN_NIGHT_IN,
+            description: `${user.name} scanned Night In at ${now.toLocaleTimeString()}`,
+            type: "SUCCESS",
+            metadata: {
+              attendanceId: attendance.id,
+              shiftType: "NIGHT",
+              status,
+              department: user.department,
+              position: user.position,
+            },
+            scanPhoto,
+          });
+
+          return NextResponse.json({
+            success: true,
             attendanceId: attendance.id,
-            shiftType: "NIGHT",
+            action: "Night In",
+            time: now,
             status,
-            department: user.department,
-            position: user.position,
-          },
-          scanPhoto,
-        });
-
-        return NextResponse.json({
-          success: true,
-          attendanceId: attendance.id,
-          action: "Night In",
-          time: now,
-          status,
-          message: `Good evening, ${user.name}! Night In recorded at ${now.toLocaleTimeString()}.`,
-          nextAction: "night-out",
-          user: {
-            name: user.name,
-            department: user.department,
-            position: user.position,
-            profileImage: user.profileImage,
-          },
-        });
+            message: `Good evening, ${user.name}! Night In recorded at ${now.toLocaleTimeString()}.`,
+            nextAction: "night-out",
+            user: {
+              name: user.name,
+              department: user.department,
+              position: user.position,
+              profileImage: user.profileImage,
+            },
+          });
+        }
       }
 
       if (!attendance.nightIn) {
@@ -394,7 +407,22 @@ export async function POST(request: NextRequest) {
       const isInPMPeriod = isAfterOrAtTime(pmStart.hour, pmStart.minute); // PM Start or later (e.g., 1:00 PM onwards)
       
       if (!attendance) {
-        // First scan of the day - create new attendance record
+        // First scan of the day - but double-check to prevent race condition duplicates
+        const existingDayCheck = await prisma.attendance.findFirst({
+          where: {
+            userId: user.id,
+            shiftType: "DAY",
+            date: { gte: attendanceDate, lte: endOfDay(attendanceDate) },
+          },
+        });
+        if (existingDayCheck) {
+          // Record already exists from a concurrent scan, use it instead of creating a duplicate
+          attendance = existingDayCheck;
+        }
+      }
+
+      if (!attendance) {
+        // Truly first scan of the day - create new attendance record
         
         if (isInAMPeriod) {
           // Morning arrival - record as AM In

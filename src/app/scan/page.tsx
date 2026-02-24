@@ -218,36 +218,48 @@ export default function ScanStationPage() {
         const responseData = await res.json();
 
         if (res.ok && responseData.success) {
-          // If we have a photo and attendance was recorded, upload the photo
+          // Upload photo in the background (non-blocking) so scan result appears immediately
           if (photoBlob && responseData.attendanceId && responseData.action) {
-            try {
-              const formData = new FormData();
-              formData.append("photo", photoBlob, "scan.jpg");
-              formData.append("attendanceId", responseData.attendanceId);
-              formData.append("action", responseData.action.toLowerCase().replace(" ", "-"));
+            const bgAttendanceId = responseData.attendanceId;
+            const bgAction = responseData.action.toLowerCase().replace(" ", "-");
+            const bgFormData = new FormData();
+            bgFormData.append("photo", photoBlob, "scan.jpg");
+            bgFormData.append("attendanceId", bgAttendanceId);
+            bgFormData.append("action", bgAction);
 
-              const photoRes = await fetch("/api/attendance/photo", {
-                method: "POST",
-                body: formData,
+            // Fire-and-forget: upload photo without awaiting
+            fetch("/api/attendance/photo", {
+              method: "POST",
+              body: bgFormData,
+            })
+              .then((photoRes) => {
+                if (photoRes.ok) return photoRes.json();
+                console.error("Photo upload failed with status:", photoRes.status);
+                return null;
+              })
+              .then((photoData) => {
+                if (photoData?.photoUrl) {
+                  console.log("Photo uploaded, updating activity log with:", photoData.photoUrl);
+                  fetch("/api/attendance/photo/update", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      attendanceId: bgAttendanceId,
+                      action: bgAction,
+                      photoUrl: photoData.photoUrl,
+                    }),
+                  })
+                    .then((updateRes) => {
+                      if (!updateRes.ok) console.error("Photo update failed:", updateRes.status);
+                    })
+                    .catch((err) => console.error("Photo update error:", err));
+                } else {
+                  console.error("No photoUrl in response");
+                }
+              })
+              .catch((photoError) => {
+                console.error("Failed to upload scan photo:", photoError);
               });
-
-              if (photoRes.ok) {
-                const photoData = await photoRes.json();
-                // Update attendance with photo URL
-                await fetch("/api/attendance/photo/update", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    attendanceId: responseData.attendanceId,
-                    action: responseData.action.toLowerCase().replace(" ", "-"),
-                    photoUrl: photoData.photoUrl,
-                  }),
-                });
-              }
-            } catch (photoError) {
-              console.error("Failed to upload scan photo:", photoError);
-              // Don't fail the scan if photo upload fails
-            }
           }
 
           const result: ScanResult = {

@@ -1,12 +1,15 @@
 import { getStatusColor, formatDate, formatTime, formatHoursAndMinutes } from "@/lib/utils";
 import { differenceInMinutes, parseISO } from "date-fns";
-function calcWorkHours(amIn: string | null | undefined, amOut: string | null | undefined, pmIn: string | null | undefined, pmOut: string | null | undefined) {
+function calcWorkHours(amIn: string | null | undefined, amOut: string | null | undefined, pmIn: string | null | undefined, pmOut: string | null | undefined, nightIn: string | null | undefined = null, nightOut: string | null | undefined = null) {
   let total = 0;
   if (amIn && amOut) {
     total += differenceInMinutes(parseISO(amOut), parseISO(amIn));
   }
   if (pmIn && pmOut) {
     total += differenceInMinutes(parseISO(pmOut), parseISO(pmIn));
+  }
+  if (nightIn && nightOut) {
+    total += differenceInMinutes(parseISO(nightOut), parseISO(nightIn));
   }
   return Math.round((total / 60) * 100) / 100;
 }
@@ -160,13 +163,15 @@ export default function AttendanceTable({
               <td className="py-2 px-3 text-xs text-center text-gray-600 dark:text-gray-300">
                 {(attendance.workHours && attendance.workHours > 0)
                   ? formatHoursAndMinutes(attendance.workHours)
-                  : (attendance.amIn && attendance.amOut) || (attendance.pmIn && attendance.pmOut)
+                  : (attendance.amIn && attendance.amOut) || (attendance.pmIn && attendance.pmOut) || (attendance.nightIn && attendance.nightOut)
                     ? formatHoursAndMinutes(
                         calcWorkHours(
                           attendance.amIn ?? null,
                           attendance.amOut ?? null,
                           attendance.pmIn ?? null,
-                          attendance.pmOut ?? null
+                          attendance.pmOut ?? null,
+                          attendance.nightIn ?? null,
+                          attendance.nightOut ?? null
                         )
                       )
                     : "-"}

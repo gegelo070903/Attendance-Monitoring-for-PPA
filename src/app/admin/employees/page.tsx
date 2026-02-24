@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { User } from "@/types";
 import { useToast } from "@/components/Toast";
+import QRCode from "qrcode";
 
 // Eye icons as inline SVG components
 const EyeIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -49,6 +50,8 @@ export default function EmployeesPage() {
   const [error, setError] = useState("");
   const [editError, setEditError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [qrEmployee, setQrEmployee] = useState<User | null>(null);
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const fetchEmployees = async () => {
     try {
@@ -285,11 +288,19 @@ export default function EmployeesPage() {
                 >
                   <td className="py-2.5 px-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-primary-100 dark:bg-ppa-navy/30 rounded-full flex items-center justify-center">
-                        <span className="text-primary-700 dark:text-blue-300 font-semibold text-xs">
-                          {employee.name.charAt(0)}
-                        </span>
-                      </div>
+                      {employee.profileImage ? (
+                        <img
+                          src={employee.profileImage}
+                          alt={employee.name}
+                          className="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 bg-primary-100 dark:bg-ppa-navy/30 rounded-full flex items-center justify-center">
+                          <span className="text-primary-700 dark:text-blue-300 font-semibold text-xs">
+                            {employee.name.charAt(0)}
+                          </span>
+                        </div>
+                      )}
                       <span className="font-medium text-gray-900 dark:text-gray-100">
                         {employee.name}
                       </span>
@@ -340,6 +351,30 @@ export default function EmployeesPage() {
                   </td>
                   <td className="py-2.5 px-4">
                     <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setQrEmployee(employee)}
+                        className="p-1 text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
+                        title="Show QR Code"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          strokeWidth={1.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"
+                          />
+                        </svg>
+                      </button>
                       <button
                         onClick={() => handleEdit(employee)}
                         className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
@@ -766,6 +801,204 @@ export default function EmployeesPage() {
           </div>
         </div>
       )}
+
+      {/* QR Code Modal */}
+      {qrEmployee && (
+        <QRCodeModal
+          employee={qrEmployee}
+          onClose={() => setQrEmployee(null)}
+          canvasRef={qrCanvasRef}
+        />
+      )}
+    </div>
+  );
+}
+
+function QRCodeModal({
+  employee,
+  onClose,
+  canvasRef,
+}: {
+  employee: User;
+  onClose: () => void;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+}) {
+  const [ready, setReady] = useState(false);
+  const localCanvasRef = useRef<HTMLCanvasElement>(null);
+  const activeCanvas = canvasRef || localCanvasRef;
+
+  useEffect(() => {
+    const generateQR = async () => {
+      const canvas = activeCanvas.current;
+      if (!canvas) return;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const size = 280;
+      const qrData = JSON.stringify({
+        email: employee.email,
+        name: employee.name,
+        type: "PPA_ATTENDANCE",
+      });
+
+      await QRCode.toCanvas(canvas, qrData, {
+        width: size,
+        margin: 2,
+        errorCorrectionLevel: "H",
+        color: {
+          dark: "#1e3a5f",
+          light: "#ffffff",
+        },
+      });
+
+      // Load and draw logo
+      const logo = new Image();
+      logo.crossOrigin = "anonymous";
+      logo.onload = () => {
+        const logoSize = size * 0.22;
+        const logoX = (size - logoSize) / 2;
+        const logoY = (size - logoSize) / 2;
+
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, logoSize / 2 + 8, 0, 2 * Math.PI);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, logoSize / 2 + 8, 0, 2 * Math.PI);
+        ctx.strokeStyle = "#1e3a5f";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
+        setReady(true);
+      };
+      logo.onerror = () => {
+        setReady(true);
+      };
+      logo.src = "/images/download-removebg-preview.png";
+    };
+
+    generateQR();
+  }, [employee, activeCanvas]);
+
+  const handleDownload = () => {
+    const canvas = activeCanvas.current;
+    if (!canvas) return;
+    const link = document.createElement("a");
+    link.download = `${employee.name.replace(/\s+/g, "_")}_PPA_QR.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
+
+  const handlePrint = () => {
+    const canvas = activeCanvas.current;
+    if (!canvas) return;
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>PPA Attendance QR Code - ${employee.name}</title>
+          <style>
+            body {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 100vh;
+              margin: 0;
+              padding: 20px;
+              font-family: Arial, sans-serif;
+              background: #fff;
+            }
+            .qr-card {
+              border: 3px solid #1e3a5f;
+              border-radius: 16px;
+              padding: 30px;
+              text-align: center;
+              background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            }
+            .header { color: #1e3a5f; font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+            .subheader { color: #64748b; font-size: 12px; margin-bottom: 20px; }
+            .qr-image { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+            .name { margin-top: 20px; font-size: 20px; font-weight: bold; color: #1e3a5f; }
+            .email { color: #64748b; font-size: 12px; margin-top: 5px; }
+            .footer { margin-top: 15px; font-size: 10px; color: #94a3b8; }
+            @media print { body { padding: 0; } .qr-card { box-shadow: none; border: 2px solid #1e3a5f; } }
+          </style>
+        </head>
+        <body>
+          <div class="qr-card">
+            <div class="header">PHILIPPINE PORTS AUTHORITY</div>
+            <div class="subheader">Attendance Monitoring System</div>
+            <img src="${canvas.toDataURL("image/png")}" class="qr-image" />
+            <div class="name">${employee.name}</div>
+            <div class="email">${employee.email}</div>
+            <div class="footer">Scan this QR code at the attendance station</div>
+          </div>
+          <script>window.onload = function() { window.print(); }<\/script>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]" onClick={onClose}>
+      <div
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Employee QR Code</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex flex-col items-center gap-3">
+          <div className="p-3 bg-white rounded-xl shadow border-2 border-blue-100">
+            <canvas ref={activeCanvas} className="rounded-lg" />
+          </div>
+          <div className="text-center">
+            <p className="font-semibold text-gray-900 dark:text-white">{employee.name}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{employee.email}</p>
+            {employee.department && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{employee.department}</p>
+            )}
+          </div>
+          <div className="flex gap-2 w-full">
+            <button
+              onClick={handleDownload}
+              className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5 text-sm font-medium shadow-md"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+              </svg>
+              Download
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-1.5 text-sm font-medium shadow-md"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
+              </svg>
+              Print
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -31,7 +31,7 @@ export default function ActivityLogsPage() {
   const [pagination, setPagination] = useState<Pagination>({
     total: 0,
     page: 1,
-    limit: 50,
+    limit: 100,
     totalPages: 0,
   });
   

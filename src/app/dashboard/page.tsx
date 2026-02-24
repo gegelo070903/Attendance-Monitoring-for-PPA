@@ -25,7 +25,6 @@ interface DashboardData {
     totalEmployees: number;
     todayPresent: number;
     todayAbsent: number;
-    todayLate: number;
   } | null;
 }
 
@@ -102,7 +101,7 @@ export default function DashboardPage() {
 
       {/* Admin Stats */}
       {isAdmin && data?.adminStats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <StatsCard
             title="Total Employees"
             value={data.adminStats.totalEmployees}
@@ -120,12 +119,6 @@ export default function DashboardPage() {
             value={data.adminStats.todayAbsent}
             icon="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             color="red"
-          />
-          <StatsCard
-            title="Late Today"
-            value={data.adminStats.todayLate}
-            icon="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-            color="yellow"
           />
         </div>
       )}

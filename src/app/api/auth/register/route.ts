@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
+import { logActivity, ActivityActions } from "@/lib/activityLogger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,6 +38,21 @@ export async function POST(request: NextRequest) {
         role: "EMPLOYEE",
         department,
         position,
+      },
+    });
+
+    // Log new user registration
+    await logActivity({
+      userId: user.id,
+      userName: user.name,
+      action: ActivityActions.REGISTER,
+      description: `New employee ${user.name} (${user.email}) registered`,
+      type: "SUCCESS",
+      metadata: {
+        email: user.email,
+        role: user.role,
+        department: user.department || null,
+        position: user.position || null,
       },
     });
 

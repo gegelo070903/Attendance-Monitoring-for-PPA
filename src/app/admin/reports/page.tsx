@@ -15,10 +15,13 @@ interface AttendanceRecord {
   id: string;
   userId: string;
   date: string;
+  shiftType: string | null;
   amIn: string | null;
   amOut: string | null;
   pmIn: string | null;
   pmOut: string | null;
+  nightIn: string | null;
+  nightOut: string | null;
   status: string;
   workHours: number | null;
   user: {
@@ -47,7 +50,7 @@ function formatHoursAndMinutes(hours: number | undefined | null) {
   return `${h}h ${m}m`;
 }
 
-function calcWorkHours(amIn: string | null, amOut: string | null, pmIn: string | null, pmOut: string | null) {
+function calcWorkHours(amIn: string | null, amOut: string | null, pmIn: string | null, pmOut: string | null, nightIn: string | null = null, nightOut: string | null = null) {
   let total = 0;
   if (amIn && amOut) {
     total += differenceInMinutes(parseISO(amOut), parseISO(amIn));
@@ -55,7 +58,20 @@ function calcWorkHours(amIn: string | null, amOut: string | null, pmIn: string |
   if (pmIn && pmOut) {
     total += differenceInMinutes(parseISO(pmOut), parseISO(pmIn));
   }
+  if (nightIn && nightOut) {
+    total += differenceInMinutes(parseISO(nightOut), parseISO(nightIn));
+  }
   return Math.round((total / 60) * 100) / 100;
+}
+
+// Helper to compare attendance date with a local calendar date
+// Handles UTC serialization: "2026-02-24T00:00:00 PHT" -> "2026-02-23T16:00:00.000Z"
+function isSameLocalDate(attendanceDateStr: string, localDateStr: string): boolean {
+  const attendanceDate = new Date(attendanceDateStr);
+  const localYear = attendanceDate.getFullYear();
+  const localMonth = String(attendanceDate.getMonth() + 1).padStart(2, '0');
+  const localDay = String(attendanceDate.getDate()).padStart(2, '0');
+  return `${localYear}-${localMonth}-${localDay}` === localDateStr;
 }
 
 export default function AdminReportsPage() {
@@ -263,7 +279,7 @@ export default function AdminReportsPage() {
     return allDays.map(day => {
       const dateStr = format(day, "yyyy-MM-dd");
       const attendance = attendanceData.find(
-        a => a.userId === employeeId && a.date.startsWith(dateStr)
+        a => a.userId === employeeId && isSameLocalDate(a.date, dateStr)
       );
       
       return {
@@ -987,10 +1003,13 @@ export default function AdminReportsPage() {
                             <tr className="bg-ppa-navy text-white">
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-left">Date</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-left">Day</th>
+                              <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">Shift</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">AM In</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">AM Out</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">PM In</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">PM Out</th>
+                              <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">Night In</th>
+                              <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">Night Out</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">Status</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">Hours</th>
                             </tr>
@@ -1014,6 +1033,17 @@ export default function AdminReportsPage() {
                                   {format(day.date, "EEEE")}
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
+                                  {day.isWeekend ? "-" : (
+                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                      day.attendance?.shiftType === "NIGHT" 
+                                        ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400" 
+                                        : "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400"
+                                    }`}>
+                                      {day.attendance?.shiftType || (day.attendance ? "DAY" : "-")}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
                                   {day.isWeekend ? "-" : formatTime(day.attendance?.amIn || null)}
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
@@ -1024,6 +1054,12 @@ export default function AdminReportsPage() {
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
                                   {day.isWeekend ? "-" : formatTime(day.attendance?.pmOut || null)}
+                                </td>
+                                <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
+                                  {day.isWeekend ? "-" : formatTime(day.attendance?.nightIn || null)}
+                                </td>
+                                <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
+                                  {day.isWeekend ? "-" : formatTime(day.attendance?.nightOut || null)}
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
                                   {day.isWeekend ? (
@@ -1048,7 +1084,9 @@ export default function AdminReportsPage() {
                                             day.attendance?.amIn ?? null,
                                             day.attendance?.amOut ?? null,
                                             day.attendance?.pmIn ?? null,
-                                            day.attendance?.pmOut ?? null
+                                            day.attendance?.pmOut ?? null,
+                                            day.attendance?.nightIn ?? null,
+                                            day.attendance?.nightOut ?? null
                                           )
                                     )
                                   }

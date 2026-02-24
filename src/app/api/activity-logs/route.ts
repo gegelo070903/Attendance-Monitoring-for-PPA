@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (action) {
-      where.action = { contains: action };
+      where.action = { contains: action, mode: "insensitive" };
     }
 
     if (startDate || endDate) {
@@ -51,10 +51,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
+      // Use insensitive mode for case-insensitive search on SQLite
       where.OR = [
-        { userName: { contains: search } },
-        { description: { contains: search } },
-        { action: { contains: search } },
+        { userName: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+        { action: { contains: search, mode: "insensitive" } },
       ];
     }
 
