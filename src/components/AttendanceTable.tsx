@@ -1,4 +1,15 @@
-import { getStatusColor, formatDate, formatTime } from "@/lib/utils";
+import { getStatusColor, formatDate, formatTime, formatHoursAndMinutes } from "@/lib/utils";
+import { differenceInMinutes, parseISO } from "date-fns";
+function calcWorkHours(amIn: string | null | undefined, amOut: string | null | undefined, pmIn: string | null | undefined, pmOut: string | null | undefined) {
+  let total = 0;
+  if (amIn && amOut) {
+    total += differenceInMinutes(parseISO(amOut), parseISO(amIn));
+  }
+  if (pmIn && pmOut) {
+    total += differenceInMinutes(parseISO(pmOut), parseISO(pmIn));
+  }
+  return Math.round((total / 60) * 100) / 100;
+}
 import { Attendance } from "@/types";
 import { useEffect, useState } from "react";
 import { useAttendanceSocket } from "@/lib/useAttendanceSocket";
@@ -147,7 +158,18 @@ export default function AttendanceTable({
                 </>
               )}
               <td className="py-2 px-3 text-xs text-center text-gray-600 dark:text-gray-300">
-                {attendance.workHours ? `${attendance.workHours.toFixed(2)}h` : "-"}
+                {(attendance.workHours && attendance.workHours > 0)
+                  ? formatHoursAndMinutes(attendance.workHours)
+                  : (attendance.amIn && attendance.amOut) || (attendance.pmIn && attendance.pmOut)
+                    ? formatHoursAndMinutes(
+                        calcWorkHours(
+                          attendance.amIn ?? null,
+                          attendance.amOut ?? null,
+                          attendance.pmIn ?? null,
+                          attendance.pmOut ?? null
+                        )
+                      )
+                    : "-"}
               </td>
               <td className="py-2 px-3 text-center">
                 <span

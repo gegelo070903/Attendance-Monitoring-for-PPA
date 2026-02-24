@@ -1,3 +1,10 @@
+// Format hours as Xh Ym
+export function formatHoursAndMinutes(hours: number | undefined | null): string {
+  if (!hours || isNaN(hours)) return "0h 0m";
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  return `${h}h ${m}m`;
+}
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, differenceInMinutes, parseISO } from 'date-fns';
 
 export function formatDate(date: Date | string): string {

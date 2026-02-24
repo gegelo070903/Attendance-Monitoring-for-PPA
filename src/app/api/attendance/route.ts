@@ -125,8 +125,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate work hours if we have both AM and PM times
-    let workHours = attendance.workHours || 0;
+    // Calculate work hours from available time fields
+    function parseDate(val) {
+      if (!val) return null;
+      return typeof val === 'string' ? new Date(val) : val;
+    }
+    const amIn = updateData.amIn || attendance.amIn;
+    const amOut = updateData.amOut || attendance.amOut;
+    const pmIn = updateData.pmIn || attendance.pmIn;
+    const pmOut = updateData.pmOut || attendance.pmOut;
+
+    // Parse to Date objects
+    const amInDate = parseDate(amIn);
+    const amOutDate = parseDate(amOut);
+    const pmInDate = parseDate(pmIn);
+    const pmOutDate = parseDate(pmOut);
+
+    // Import calculateWorkHours
+    const { calculateWorkHours } = await import("@/lib/utils");
+    let workHours = 0;
+    if (amInDate && amOutDate) workHours += calculateWorkHours(amInDate, amOutDate);
+    if (pmInDate && pmOutDate) workHours += calculateWorkHours(pmInDate, pmOutDate);
     
     const updatedAttendance = await prisma.attendance.update({
       where: { id: attendance.id },
@@ -135,6 +154,16 @@ export async function POST(request: NextRequest) {
         workHours,
       },
     });
+
+    // Emit socket event for real-time update
+    try {
+      const res = await fetch("http://localhost:3000/api/socket_io");
+      if (res.ok && (global as any).io) {
+        (global as any).io.emit("attendance-update", { type: "attendance-update", attendance: updatedAttendance });
+      }
+    } catch (e) {
+      // Ignore socket errors
+    }
 
     return NextResponse.json(updatedAttendance);
   } catch (error) {

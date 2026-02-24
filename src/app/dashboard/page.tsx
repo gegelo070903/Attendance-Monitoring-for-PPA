@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useDashboardSocket } from "@/lib/useDashboardSocket";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -57,6 +58,10 @@ export default function DashboardPage() {
 
     return () => clearInterval(timer);
   }, []);
+
+  useDashboardSocket(() => {
+    fetchData();
+  });
 
   if (loading) {
     return (

@@ -38,6 +38,25 @@ interface MonthlyStats {
   totalWorkHours: number;
   attendanceRate: number;
 }
+// Utility function to format hours and minutes
+import { differenceInMinutes, parseISO } from "date-fns";
+function formatHoursAndMinutes(hours: number | undefined | null) {
+  if (!hours || isNaN(hours)) return "0h 0m";
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  return `${h}h ${m}m`;
+}
+
+function calcWorkHours(amIn: string | null, amOut: string | null, pmIn: string | null, pmOut: string | null) {
+  let total = 0;
+  if (amIn && amOut) {
+    total += differenceInMinutes(parseISO(amOut), parseISO(amIn));
+  }
+  if (pmIn && pmOut) {
+    total += differenceInMinutes(parseISO(pmOut), parseISO(pmIn));
+  }
+  return Math.round((total / 60) * 100) / 100;
+}
 
 export default function AdminReportsPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -858,12 +877,9 @@ export default function AdminReportsPage() {
                         {selectedDepartment === "all" && (
                           <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm">Position</th>
                         )}
-                        <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm">Present</th>
-                        <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm">Late</th>
-                        <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm">Half Day</th>
-                        <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm">Absent</th>
+                        {/* Status columns removed */}
                         <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm">Total Hours</th>
-                        <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm">Rate</th>
+                        {/* Rate column removed */}
                       </tr>
                     </thead>
                     <tbody>
@@ -886,12 +902,9 @@ export default function AdminReportsPage() {
                                   <tr key={emp.id} className={idx % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50 dark:bg-gray-700"}>
                                     <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 pl-6">{emp.name}</td>
                                     <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">{emp.position || "N/A"}</td>
-                                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-green-600 dark:text-green-400 font-medium">{stats.presentDays}</td>
-                                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-yellow-600 dark:text-yellow-400 font-medium">{stats.lateDays}</td>
-                                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-orange-600 dark:text-orange-400 font-medium">{stats.halfDays}</td>
-                                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-red-600 dark:text-red-400 font-medium">{stats.absentDays}</td>
-                                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-gray-700 dark:text-gray-300">{stats.totalWorkHours}h</td>
-                                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm font-bold text-gray-900 dark:text-gray-100">{stats.attendanceRate}%</td>
+                                    {/* Status cells removed */}
+                                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-gray-700 dark:text-gray-300">{formatHoursAndMinutes(stats.totalWorkHours)}</td>
+                                    {/* Rate cell removed */}
                                   </tr>
                                 );
                               })}
@@ -899,12 +912,9 @@ export default function AdminReportsPage() {
                               <tr className="bg-gray-100 dark:bg-gray-600 font-semibold">
                                 <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 pl-6 italic">Subtotal</td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">—</td>
-                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-green-700 dark:text-green-400">{deptStats.presentDays}</td>
-                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-yellow-700 dark:text-yellow-400">{deptStats.lateDays}</td>
-                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-orange-700 dark:text-orange-400">{deptStats.halfDays}</td>
-                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-red-700 dark:text-red-400">{deptStats.absentDays}</td>
-                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-gray-700 dark:text-gray-300">{deptStats.totalWorkHours}h</td>
-                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm font-bold text-gray-900 dark:text-gray-100">{deptStats.attendanceRate}%</td>
+                                {/* Status subtotal cells removed */}
+                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-gray-700 dark:text-gray-300">{formatHoursAndMinutes(deptStats.totalWorkHours)}</td>
+                                {/* Rate subtotal cell removed */}
                               </tr>
                             </React.Fragment>
                           );
@@ -916,12 +926,11 @@ export default function AdminReportsPage() {
                           return (
                             <tr key={emp.id} className={idx % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50 dark:bg-gray-700"}>
                               <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">{emp.name}</td>
-                              <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-green-600 dark:text-green-400 font-medium">{stats.presentDays}</td>
-                              <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-yellow-600 dark:text-yellow-400 font-medium">{stats.lateDays}</td>
-                              <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-orange-600 dark:text-orange-400 font-medium">{stats.halfDays}</td>
-                              <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-red-600 dark:text-red-400 font-medium">{stats.absentDays}</td>
-                              <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-gray-700 dark:text-gray-300">{stats.totalWorkHours}h</td>
-                              <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm font-bold text-gray-900 dark:text-gray-100">{stats.attendanceRate}%</td>
+                              {/* Status cells removed */}
+                              <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-gray-700 dark:text-gray-300">{formatHoursAndMinutes(stats.totalWorkHours)}</td>
+
+
+
                             </tr>
                           );
                         })
@@ -1031,7 +1040,18 @@ export default function AdminReportsPage() {
                                   )}
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
-                                  {day.isWeekend ? "-" : (day.attendance?.workHours?.toFixed(1) || "0") + "h"}
+                                  {day.isWeekend ? "-" :
+                                    formatHoursAndMinutes(
+                                      (day.attendance?.workHours && day.attendance?.workHours > 0)
+                                        ? day.attendance?.workHours
+                                        : calcWorkHours(
+                                            day.attendance?.amIn ?? null,
+                                            day.attendance?.amOut ?? null,
+                                            day.attendance?.pmIn ?? null,
+                                            day.attendance?.pmOut ?? null
+                                          )
+                                    )
+                                  }
                                 </td>
                               </tr>
                             ))}
