@@ -8,7 +8,7 @@ interface AttendanceTableProps {
   attendances: Attendance[];
   showUser?: boolean;
 }
-
+export default function AttendanceTable({
   attendances,
   showUser = false,
 }: AttendanceTableProps) {
