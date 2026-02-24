@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useActivityLogSocket } from "@/lib/useActivityLogSocket";
 import { format } from "date-fns";
 
 interface ActivityLog {
@@ -76,9 +77,21 @@ export default function ActivityLogsPage() {
     }
   }, [sortBy, sortOrder, filterType, filterAction, startDate, endDate, search, pagination.page, pagination.limit]);
 
+
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
+
+  useActivityLogSocket((log) => {
+    setLogs((prev) => {
+      // If log already exists, update it; else, prepend
+      if (prev.some((l) => l.id === log.id)) {
+        return prev.map((l) => (l.id === log.id ? log : l));
+      }
+      return [log, ...prev].slice(0, pagination.limit);
+    });
+    setPagination((prev) => ({ ...prev, total: prev.total + 1 }));
+  });
 
   const handleSort = (field: string) => {
     if (sortBy === field) {

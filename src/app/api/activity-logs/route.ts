@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { emitActivityLogUpdate } from "@/lib/socketServer";
 
 // GET: Fetch activity logs with optional sorting and filtering
 export async function GET(request: NextRequest) {
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
         userAgent,
       },
     });
-
+    emitActivityLogUpdate(log);
     return NextResponse.json(log);
   } catch (error) {
     console.error("Error creating activity log:", error);

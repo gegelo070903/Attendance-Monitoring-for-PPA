@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { emitAttendanceUpdate } from "@/lib/socketServer";
 
 // POST - Update attendance record with photo URL
 export async function POST(request: NextRequest) {
@@ -36,7 +37,14 @@ export async function POST(request: NextRequest) {
     const updatedAttendance = await prisma.attendance.update({
       where: { id: attendanceId },
       data: { [photoField]: photoUrl },
-      include: { user: { select: { id: true } } },
+      include: { user: { select: { id: true, name: true } } },
+    });
+    // Emit real-time update event
+    emitAttendanceUpdate({
+      type: "attendance-photo-update",
+      attendance: updatedAttendance,
+      action,
+      photoUrl,
     });
 
     // Also update the most recent activity log for this scan with the photo

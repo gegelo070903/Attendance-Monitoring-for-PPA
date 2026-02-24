@@ -1,16 +1,35 @@
 import { getStatusColor, formatDate, formatTime } from "@/lib/utils";
 import { Attendance } from "@/types";
+import { useEffect, useState } from "react";
+import { useAttendanceSocket } from "@/lib/useAttendanceSocket";
+
 
 interface AttendanceTableProps {
   attendances: Attendance[];
   showUser?: boolean;
 }
 
-export default function AttendanceTable({
   attendances,
   showUser = false,
 }: AttendanceTableProps) {
-  if (attendances.length === 0) {
+  const [liveAttendances, setLiveAttendances] = useState(attendances);
+  useEffect(() => {
+    setLiveAttendances(attendances);
+  }, [attendances]);
+  useAttendanceSocket((data) => {
+    if (data?.type === "attendance-photo-update" && data.attendance) {
+      setLiveAttendances((prev) => {
+        const idx = prev.findIndex((a) => a.id === data.attendance.id);
+        if (idx !== -1) {
+          const updated = [...prev];
+          updated[idx] = { ...prev[idx], ...data.attendance };
+          return updated;
+        }
+        return prev;
+      });
+    }
+  });
+  if (liveAttendances.length === 0) {
     return (
       <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-lg">
         <svg
@@ -32,7 +51,7 @@ export default function AttendanceTable({
   }
 
   // Check if any attendance has night shift data
-  const hasNightShift = attendances.some(
+  const hasNightShift = liveAttendances.some(
     (a) => a.shiftType === 'NIGHT' || a.nightIn || a.nightOut
   );
 
@@ -83,7 +102,7 @@ export default function AttendanceTable({
           </tr>
         </thead>
         <tbody>
-          {attendances.map((attendance) => (
+          {liveAttendances.map((attendance) => (
             <tr
               key={attendance.id}
               className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
