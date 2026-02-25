@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import QRScanner from "@/components/QRScanner";
+import FaceCapture from "@/components/FaceCapture";
 import WatercolorBackground from "@/components/WatercolorBackground";
 import { useToast } from "@/components/Toast";
 
@@ -143,6 +144,9 @@ export default function ScanStationPage() {
   const [showOverlay, setShowOverlay] = useState(false);
   const [overlayData, setOverlayData] = useState<{greeting: string; user: UserInfo; action: string; time: string} | null>(null);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [showFaceCapture, setShowFaceCapture] = useState(false);
+  const [pendingPhotoData, setPendingPhotoData] = useState<{attendanceId: string; action: string; userName: string; actionLabel: string} | null>(null);
+  const faceCaptureTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [settings, setSettings] = useState<Settings>({
     amStartTime: "08:00",
     amEndTime: "12:00",
@@ -196,6 +200,60 @@ export default function ScanStationPage() {
     return () => clearInterval(timer);
   }, []);
 
+  // Upload photo helper (used by face capture)
+  const uploadScanPhoto = useCallback((photoBlob: Blob, attendanceId: string, actionStr: string) => {
+    const formData = new FormData();
+    formData.append("photo", photoBlob, "scan.jpg");
+    formData.append("attendanceId", attendanceId);
+    formData.append("action", actionStr);
+
+    fetch("/api/attendance/photo", {
+      method: "POST",
+      body: formData,
+    })
+      .then((photoRes) => {
+        if (photoRes.ok) return photoRes.json();
+        console.error("Photo upload failed with status:", photoRes.status);
+        return null;
+      })
+      .then((photoData) => {
+        if (photoData?.photoUrl) {
+          fetch("/api/attendance/photo/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              attendanceId,
+              action: actionStr,
+              photoUrl: photoData.photoUrl,
+            }),
+          }).catch((err) => console.error("Photo update error:", err));
+        }
+      })
+      .catch((photoError) => {
+        console.error("Failed to upload scan photo:", photoError);
+      });
+  }, []);
+
+  // Handle face capture complete
+  const handleFaceCapture = useCallback((photoBlob: Blob) => {
+    if (pendingPhotoData) {
+      uploadScanPhoto(photoBlob, pendingPhotoData.attendanceId, pendingPhotoData.action);
+    }
+    // Auto-close face capture after a moment
+    if (faceCaptureTimeoutRef.current) clearTimeout(faceCaptureTimeoutRef.current);
+    faceCaptureTimeoutRef.current = setTimeout(() => {
+      setShowFaceCapture(false);
+      setPendingPhotoData(null);
+    }, 2000);
+  }, [pendingPhotoData, uploadScanPhoto]);
+
+  // Handle face capture skip
+  const handleFaceCaptureSkip = useCallback(() => {
+    setShowFaceCapture(false);
+    setPendingPhotoData(null);
+    if (faceCaptureTimeoutRef.current) clearTimeout(faceCaptureTimeoutRef.current);
+  }, []);
+
   const handleScan = useCallback(
     async (data: { email: string; name: string }, photoBlob?: Blob) => {
       if (isProcessing) return;
@@ -204,7 +262,7 @@ export default function ScanStationPage() {
       setScanResult(null);
 
       try {
-        // First, record the attendance
+        // Record the attendance
         const res = await fetch("/api/attendance/qr", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -218,50 +276,6 @@ export default function ScanStationPage() {
         const responseData = await res.json();
 
         if (res.ok && responseData.success) {
-          // Upload photo in the background (non-blocking) so scan result appears immediately
-          if (photoBlob && responseData.attendanceId && responseData.action) {
-            const bgAttendanceId = responseData.attendanceId;
-            const bgAction = responseData.action.toLowerCase().replace(" ", "-");
-            const bgFormData = new FormData();
-            bgFormData.append("photo", photoBlob, "scan.jpg");
-            bgFormData.append("attendanceId", bgAttendanceId);
-            bgFormData.append("action", bgAction);
-
-            // Fire-and-forget: upload photo without awaiting
-            fetch("/api/attendance/photo", {
-              method: "POST",
-              body: bgFormData,
-            })
-              .then((photoRes) => {
-                if (photoRes.ok) return photoRes.json();
-                console.error("Photo upload failed with status:", photoRes.status);
-                return null;
-              })
-              .then((photoData) => {
-                if (photoData?.photoUrl) {
-                  console.log("Photo uploaded, updating activity log with:", photoData.photoUrl);
-                  fetch("/api/attendance/photo/update", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      attendanceId: bgAttendanceId,
-                      action: bgAction,
-                      photoUrl: photoData.photoUrl,
-                    }),
-                  })
-                    .then((updateRes) => {
-                      if (!updateRes.ok) console.error("Photo update failed:", updateRes.status);
-                    })
-                    .catch((err) => console.error("Photo update error:", err));
-                } else {
-                  console.error("No photoUrl in response");
-                }
-              })
-              .catch((photoError) => {
-                console.error("Failed to upload scan photo:", photoError);
-              });
-          }
-
           const result: ScanResult = {
             success: true,
             message: responseData.message,
@@ -273,8 +287,6 @@ export default function ScanStationPage() {
           };
 
           setScanResult(result);
-
-          // Show toast notification
           showSuccess(responseData.message || `${responseData.action} recorded successfully!`);
 
           // Show overlay with greeting message
@@ -299,6 +311,17 @@ export default function ScanStationPage() {
             },
             ...prev.slice(0, 9),
           ]);
+
+          // Open face capture camera for photo verification
+          if (responseData.attendanceId && responseData.action) {
+            setPendingPhotoData({
+              attendanceId: responseData.attendanceId,
+              action: responseData.action.toLowerCase().replace(" ", "-"),
+              userName: responseData.user?.name || data.name,
+              actionLabel: responseData.action,
+            });
+            setShowFaceCapture(true);
+          }
         } else {
           setScanResult({
             success: false,
@@ -391,6 +414,17 @@ export default function ScanStationPage() {
     <div className="min-h-screen min-h-[100dvh] p-2 sm:p-3 overflow-x-hidden bg-white">
       {/* Instructions Popup */}
       <InstructionsPopup isOpen={showInstructions} onClose={() => setShowInstructions(false)} />
+
+      {/* Face Capture Camera - opens after QR scan */}
+      {showFaceCapture && pendingPhotoData && (
+        <FaceCapture
+          userName={pendingPhotoData.userName}
+          action={pendingPhotoData.actionLabel}
+          onCapture={handleFaceCapture}
+          onSkip={handleFaceCaptureSkip}
+          autoCaptureSecs={5}
+        />
+      )}
 
       {/* Success Overlay Message */}
       {showOverlay && overlayData && (
