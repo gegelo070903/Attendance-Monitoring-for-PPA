@@ -182,13 +182,34 @@ export default function AdminReportsPage() {
   }, [selectedMonth]);
 
   // Get effective display status for monthly report
-  // - LATE -> PRESENT
-  // - Night shift with both nightIn and nightOut -> PRESENT (even if HALF_DAY)
+  // Determines the correct status based on actual attendance data:
+  // HALF_DAY: only one session completed (AM in+out only, or PM in+out only) for DAY shift
+  // Night shift: never HALF_DAY. Completed night shift = PRESENT on report.
+  // LATE on report → displayed as PRESENT
   const getReportStatus = (a: AttendanceRecord): string => {
+    const hasCompletedAM = a.amIn && a.amOut;
+    const hasCompletedPM = a.pmIn && a.pmOut;
+    const hasAnyAM = a.amIn || a.amOut;
+    const hasAnyPM = a.pmIn || a.pmOut;
+
     // Night shift with complete in/out is always PRESENT
     if (a.nightIn && a.nightOut) return "PRESENT";
-    // LATE is displayed as PRESENT
+    // Night shift that was wrongly marked HALF_DAY but has nightIn → LATE in data, show as PRESENT
+    if ((a.shiftType === "NIGHT") && a.nightIn && a.status === "HALF_DAY") return "PRESENT";
+
+    // DAY shift HALF_DAY logic: only one session completed
+    if (a.shiftType === "DAY" || !a.shiftType) {
+      if (hasCompletedAM && !hasAnyPM) return "HALF_DAY";
+      if (hasCompletedPM && !hasAnyAM) return "HALF_DAY";
+      // First scan was during PM (missed AM entirely) → HALF_DAY
+      if (!hasAnyAM && hasAnyPM) return "HALF_DAY";
+    }
+
+    // LATE is displayed as PRESENT on report
     if (a.status === "LATE") return "PRESENT";
+    // Fix wrongly stored HALF_DAY (e.g., only amIn, no amOut, no PM = was just late)
+    if (a.status === "HALF_DAY" && a.amIn && !hasAnyPM && !hasCompletedAM) return "PRESENT";
+
     return a.status;
   };
 

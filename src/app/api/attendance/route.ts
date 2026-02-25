@@ -54,7 +54,72 @@ export async function GET(request: NextRequest) {
       orderBy: { date: "desc" },
     });
 
-    return NextResponse.json(attendances);
+    // Correct HALF_DAY statuses based on actual attendance data.
+    // HALF_DAY rules:
+    //   DAY shift: only one session completed (AM in+out without PM, or PM in+out without AM)
+    //   NIGHT shift: never HALF_DAY (single session - either complete or not)
+    // If a record is wrongly marked HALF_DAY but doesn't meet these criteria, fix it:
+    //   - Night shift with nightIn+nightOut completed → LATE (if was HALF_DAY)
+    //   - Day shift with only amIn (no amOut, no PM) → LATE (arrived late, still in progress or incomplete)
+    const today = startOfDay(new Date());
+    const updatedAttendances = attendances.map((att) => {
+      const recordDate = startOfDay(new Date(att.date));
+      const isPastDay = recordDate < today;
+
+      if (att.shiftType === "NIGHT" || (!att.shiftType && (att.nightIn || att.nightOut))) {
+        // NIGHT shift: never HALF_DAY
+        // If nightIn and nightOut are both present and status is HALF_DAY, correct to LATE
+        if (att.status === "HALF_DAY" && att.nightIn && att.nightOut) {
+          return { ...att, status: "LATE" };
+        }
+        // If nightIn and nightOut are both present and status is still HALF_DAY for some reason
+        if (att.status === "HALF_DAY" && att.nightIn) {
+          return { ...att, status: "LATE" };
+        }
+        return att;
+      }
+
+      // DAY shift logic
+      if (att.shiftType === "DAY" || !att.shiftType) {
+        const hasCompletedAM = att.amIn && att.amOut;
+        const hasCompletedPM = att.pmIn && att.pmOut;
+        const hasAnyAM = att.amIn || att.amOut;
+        const hasAnyPM = att.pmIn || att.pmOut;
+
+        // For past days: determine HALF_DAY based on completed sessions
+        if (isPastDay) {
+          if (hasCompletedAM && !hasAnyPM) {
+            return { ...att, status: "HALF_DAY" };
+          }
+          if (hasCompletedPM && !hasAnyAM) {
+            return { ...att, status: "HALF_DAY" };
+          }
+          // If status was wrongly set to HALF_DAY but both sessions exist, or neither is complete
+          // e.g., only amIn (no amOut) → not a half day, it's LATE (incomplete)
+          if (att.status === "HALF_DAY" && !hasCompletedAM && !hasCompletedPM) {
+            return { ...att, status: "LATE" };
+          }
+        }
+
+        // For today: fix records that were wrongly marked HALF_DAY by old code
+        // If only amIn exists (no amOut, no PM), the employee just arrived late — not half day
+        if (!isPastDay && att.status === "HALF_DAY") {
+          // Only keep HALF_DAY if employee first scanned during PM (missed AM entirely)
+          if (!hasAnyAM && hasAnyPM) {
+            // Correctly HALF_DAY: missed AM, only has PM
+            return att;
+          }
+          // If has AM In but no PM, and no completed AM session → was just late arrival
+          if (att.amIn && !hasAnyPM) {
+            return { ...att, status: "LATE" };
+          }
+        }
+      }
+
+      return att;
+    });
+
+    return NextResponse.json(updatedAttendances);
   } catch (error) {
     console.error("Get attendance error:", error);
     return NextResponse.json(

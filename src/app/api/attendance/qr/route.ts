@@ -6,9 +6,6 @@ import { logActivity, ActivityActions } from "@/lib/activityLogger";
 // Minimum seconds between scans for the same user (cooldown)
 const SCAN_COOLDOWN_SECONDS = 3;
 
-// Half-day threshold in minutes (arrives more than this many minutes late = half day)
-const HALF_DAY_THRESHOLD_MINUTES = 120; // 2 hours
-
 // Extended types for new schema fields (will be properly typed after Prisma regeneration)
 interface ExtendedAttendance {
   id: string;
@@ -54,7 +51,9 @@ function getScheduledStartTime(arrivalTime: Date, startTimeStr: string): Date {
 }
 
 // Helper to check if arrival is late based on start time and grace period
-// Returns: { isLate: boolean, isHalfDay: boolean, minutesLate: number }
+// Returns: { isLate: boolean, minutesLate: number }
+// NOTE: HALF_DAY is NOT determined by arrival lateness. It is determined by
+// whether only one session (AM or PM) was completed for the day.
 function checkLateStatus(
   arrivalTime: Date,
   startTimeStr: string,
@@ -71,10 +70,8 @@ function checkLateStatus(
     return { isLate: false, isHalfDay: false, minutesLate: Math.max(0, minutesLate) };
   }
   
-  // Check if half-day (more than HALF_DAY_THRESHOLD_MINUTES late)
-  const isHalfDay = minutesLate >= HALF_DAY_THRESHOLD_MINUTES;
-  
-  return { isLate: true, isHalfDay, minutesLate };
+  // Late arrival is always LATE, never HALF_DAY based on lateness alone
+  return { isLate: true, isHalfDay: false, minutesLate };
 }
 
 // GET - Check attendance status for a user
@@ -310,9 +307,7 @@ export async function POST(request: NextRequest) {
         
         // Check if late for night shift
         const lateCheck = checkLateStatus(now, settings.nightStartTime || "22:00", (settings as { nightGracePeriod?: number }).nightGracePeriod || 15);
-        if (lateCheck.isHalfDay) {
-          status = "HALF_DAY";
-        } else if (lateCheck.isLate) {
+        if (lateCheck.isLate) {
           status = "LATE";
         }
         
@@ -376,9 +371,7 @@ export async function POST(request: NextRequest) {
       if (!attendance.nightIn) {
         action = "night-in";
         const lateCheck = checkLateStatus(now, settings.nightStartTime || "22:00", (settings as { nightGracePeriod?: number }).nightGracePeriod || 15);
-        if (lateCheck.isHalfDay) {
-          updateData.status = "HALF_DAY";
-        } else if (lateCheck.isLate) {
+        if (lateCheck.isLate) {
           updateData.status = "LATE";
         } else {
           updateData.status = "PRESENT";
@@ -428,9 +421,7 @@ export async function POST(request: NextRequest) {
           // Morning arrival - record as AM In
           action = "am-in";
           const lateCheck = checkLateStatus(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15);
-          if (lateCheck.isHalfDay) {
-            status = "HALF_DAY";
-          } else if (lateCheck.isLate) {
+          if (lateCheck.isLate) {
             status = "LATE";
           }
           
@@ -449,7 +440,7 @@ export async function POST(request: NextRequest) {
             userId: user.id,
             userName: user.name || "Unknown",
             action: ActivityActions.SCAN_AM_IN,
-            description: `${user.name} scanned AM In at ${now.toLocaleTimeString()}${status === "LATE" ? " (Late)" : status === "HALF_DAY" ? " (Half Day)" : ""}`,
+            description: `${user.name} scanned AM In at ${now.toLocaleTimeString()}${status === "LATE" ? " (Late)" : ""}`,
             type: "SUCCESS",
             metadata: {
               attendanceId: attendance.id,
@@ -466,7 +457,7 @@ export async function POST(request: NextRequest) {
             action: "AM In",
             time: now,
             status,
-            message: `Good morning, ${user.name}! AM In recorded at ${now.toLocaleTimeString()}.${status === "LATE" ? " (Late)" : status === "HALF_DAY" ? " (Half Day)" : ""}`,
+            message: `Good morning, ${user.name}! AM In recorded at ${now.toLocaleTimeString()}.${status === "LATE" ? " (Late)" : ""}`,
             nextAction: "am-out",
             user: {
               name: user.name,
@@ -617,9 +608,7 @@ export async function POST(request: NextRequest) {
         if (isInAMPeriod) {
           action = "am-in";
           const lateCheck = checkLateStatus(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15);
-          if (lateCheck.isHalfDay) {
-            updateData.status = "HALF_DAY";
-          } else if (lateCheck.isLate) {
+          if (lateCheck.isLate) {
             updateData.status = "LATE";
           } else if (attendance.status === "ABSENT") {
             updateData.status = "PRESENT";
