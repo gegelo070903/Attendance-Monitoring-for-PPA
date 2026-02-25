@@ -31,9 +31,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (startDate && endDate) {
+      // Append T00:00:00 to parse as local time instead of UTC
       where.date = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
+        gte: startOfDay(new Date(startDate + 'T00:00:00')),
+        lte: endOfDay(new Date(endDate + 'T00:00:00')),
       };
     }
 

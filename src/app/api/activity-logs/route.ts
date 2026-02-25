@@ -41,10 +41,11 @@ export async function GET(request: NextRequest) {
     if (startDate || endDate) {
       where.createdAt = {};
       if (startDate) {
-        where.createdAt.gte = new Date(startDate);
+        const start = new Date(startDate + 'T00:00:00');
+        where.createdAt.gte = start;
       }
       if (endDate) {
-        const end = new Date(endDate);
+        const end = new Date(endDate + 'T00:00:00');
         end.setHours(23, 59, 59, 999);
         where.createdAt.lte = end;
       }
