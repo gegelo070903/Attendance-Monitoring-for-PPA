@@ -43,13 +43,20 @@ export default function ActivityLogsPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [search, setSearch] = useState("");
+  const [error, setError] = useState<string | null>(null);
   
   // Modal for viewing scan photo
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null);
 
+  // Helper to reset page when filter/sort changes
+  const resetPage = useCallback(() => {
+    setPagination(p => p.page === 1 ? p : { ...p, page: 1 });
+  }, []);
+
   const fetchLogs = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams();
       params.append("sortBy", sortBy);
@@ -69,9 +76,13 @@ export default function ActivityLogsPage() {
       if (res.ok) {
         setLogs(data.logs);
         setPagination(data.pagination);
+      } else {
+        console.error("API error:", data.error);
+        setError(data.error || "Failed to fetch logs");
       }
     } catch (error) {
       console.error("Failed to fetch logs:", error);
+      setError("Failed to connect to server");
     } finally {
       setLoading(false);
     }
@@ -82,16 +93,12 @@ export default function ActivityLogsPage() {
     fetchLogs();
   }, [fetchLogs]);
 
-  useActivityLogSocket((log) => {
-    setLogs((prev) => {
-      // If log already exists, update it; else, prepend
-      if (prev.some((l) => l.id === log.id)) {
-        return prev.map((l) => (l.id === log.id ? log : l));
-      }
-      return [log, ...prev].slice(0, pagination.limit);
-    });
-    setPagination((prev) => ({ ...prev, total: prev.total + 1 }));
-  });
+  // WebSocket: refetch to maintain correct sort/filter order
+  const handleSocketUpdate = useCallback(() => {
+    fetchLogs();
+  }, [fetchLogs]);
+
+  useActivityLogSocket(handleSocketUpdate);
 
   const handleSort = (field: string) => {
     if (sortBy === field) {
@@ -100,6 +107,7 @@ export default function ActivityLogsPage() {
       setSortBy(field);
       setSortOrder("desc");
     }
+    resetPage();
   };
 
   const getTypeColor = (type: string) => {
@@ -191,7 +199,7 @@ export default function ActivityLogsPage() {
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); resetPage(); }}
               placeholder="Name, action..."
               className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
@@ -200,7 +208,7 @@ export default function ActivityLogsPage() {
             <label className="block text-[10px] font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
             <select
               value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
+              onChange={(e) => { setFilterType(e.target.value); resetPage(); }}
               className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             >
               <option value="">All Types</option>
@@ -214,14 +222,17 @@ export default function ActivityLogsPage() {
             <label className="block text-[10px] font-medium text-gray-700 dark:text-gray-300 mb-1">Action</label>
             <select
               value={filterAction}
-              onChange={(e) => setFilterAction(e.target.value)}
+              onChange={(e) => { setFilterAction(e.target.value); resetPage(); }}
               className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             >
               <option value="">All Actions</option>
               <option value="SCAN">Scans</option>
               <option value="LOGIN">Logins</option>
+              <option value="LOGOUT">Logouts</option>
               <option value="EMPLOYEE">Employee Actions</option>
+              <option value="PROFILE_IMAGE_UPLOAD">Profile Uploads</option>
               <option value="SETTINGS">Settings</option>
+              <option value="PASSWORD_CHANGE">Password Changes</option>
             </select>
           </div>
           <div>
@@ -229,7 +240,7 @@ export default function ActivityLogsPage() {
             <input
               type="date"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(e) => { setStartDate(e.target.value); resetPage(); }}
               className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
           </div>
@@ -238,7 +249,7 @@ export default function ActivityLogsPage() {
             <input
               type="date"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={(e) => { setEndDate(e.target.value); resetPage(); }}
               className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
           </div>
@@ -302,6 +313,12 @@ export default function ActivityLogsPage() {
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
                       Loading...
                     </div>
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-8 text-red-500">
+                    {error}
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
