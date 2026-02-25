@@ -165,7 +165,14 @@ export default function Sidebar() {
           </div>
         </div>
         <button
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={async () => {
+            try {
+              await fetch("/api/auth/logout", { method: "POST" });
+            } catch (e) {
+              // Continue with sign out even if logging fails
+            }
+            signOut({ callbackUrl: "/" });
+          }}
           className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
         >
           <svg
