@@ -969,14 +969,7 @@ export default function AdminReportsPage() {
                                   </tr>
                                 );
                               })}
-                              {/* Department Subtotal Row */}
-                              <tr className="bg-gray-100 dark:bg-gray-600 font-semibold">
-                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 pl-6 italic">Subtotal</td>
-                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">—</td>
-                                {/* Status subtotal cells removed */}
-                                <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center text-sm text-gray-700 dark:text-gray-300">{formatHoursAndMinutes(deptStats.totalWorkHours)}</td>
-                                {/* Rate subtotal cell removed */}
-                              </tr>
+
                             </React.Fragment>
                           );
                         })
