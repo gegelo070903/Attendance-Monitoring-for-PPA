@@ -209,7 +209,20 @@ export default function AdminReportsPage() {
     const lateDays = 0; // LATE is now counted as PRESENT
     const halfDays = employeeAttendance.filter(a => getReportStatus(a) === "HALF_DAY").length;
     const absentDays = totalWorkDays - presentDays - lateDays - halfDays;
-    const totalWorkHours = employeeAttendance.reduce((sum, a) => sum + (a.workHours || 0), 0);
+    const totalWorkHours = employeeAttendance.reduce((sum, a) => {
+      // Use workHours from DB if available, otherwise calculate from time fields
+      const hours = (a.workHours && a.workHours > 0)
+        ? a.workHours
+        : calcWorkHours(
+            a.amIn ?? null,
+            a.amOut ?? null,
+            a.pmIn ?? null,
+            a.pmOut ?? null,
+            a.nightIn ?? null,
+            a.nightOut ?? null
+          );
+      return sum + (hours || 0);
+    }, 0);
     
     const attendanceRate = totalWorkDays > 0 
       ? Math.round(((presentDays + lateDays + halfDays) / totalWorkDays) * 100) 
