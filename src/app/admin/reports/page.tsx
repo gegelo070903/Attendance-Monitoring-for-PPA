@@ -181,6 +181,17 @@ export default function AdminReportsPage() {
     fetchAttendance();
   }, [selectedMonth]);
 
+  // Get effective display status for monthly report
+  // - LATE -> PRESENT
+  // - Night shift with both nightIn and nightOut -> PRESENT (even if HALF_DAY)
+  const getReportStatus = (a: AttendanceRecord): string => {
+    // Night shift with complete in/out is always PRESENT
+    if (a.nightIn && a.nightOut) return "PRESENT";
+    // LATE is displayed as PRESENT
+    if (a.status === "LATE") return "PRESENT";
+    return a.status;
+  };
+
   // Calculate stats for an employee
   const calculateEmployeeStats = (employeeId: string): MonthlyStats => {
     const [year, month] = selectedMonth.split("-");
@@ -194,9 +205,9 @@ export default function AdminReportsPage() {
 
     const employeeAttendance = attendanceData.filter(a => a.userId === employeeId);
     
-    const presentDays = employeeAttendance.filter(a => a.status === "PRESENT").length;
-    const lateDays = employeeAttendance.filter(a => a.status === "LATE").length;
-    const halfDays = employeeAttendance.filter(a => a.status === "HALF_DAY").length;
+    const presentDays = employeeAttendance.filter(a => getReportStatus(a) === "PRESENT").length;
+    const lateDays = 0; // LATE is now counted as PRESENT
+    const halfDays = employeeAttendance.filter(a => getReportStatus(a) === "HALF_DAY").length;
     const absentDays = totalWorkDays - presentDays - lateDays - halfDays;
     const totalWorkHours = employeeAttendance.reduce((sum, a) => sum + (a.workHours || 0), 0);
     
@@ -1066,12 +1077,14 @@ export default function AdminReportsPage() {
                                     <span className="text-gray-400 dark:text-gray-500">Weekend</span>
                                   ) : (
                                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                      day.attendance?.status === "PRESENT" ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400" :
-                                      day.attendance?.status === "LATE" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400" :
-                                      day.attendance?.status === "HALF_DAY" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400" :
-                                      "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400"
+                                      (() => {
+                                        const displayStatus = day.attendance ? getReportStatus(day.attendance) : "ABSENT";
+                                        return displayStatus === "PRESENT" ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400" :
+                                          displayStatus === "HALF_DAY" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400" :
+                                          "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400";
+                                      })()
                                     }`}>
-                                      {day.attendance?.status || "ABSENT"}
+                                      {day.attendance ? getReportStatus(day.attendance) : "ABSENT"}
                                     </span>
                                   )}
                                 </td>
