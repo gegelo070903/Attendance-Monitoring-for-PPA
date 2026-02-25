@@ -16,6 +16,22 @@ interface Settings {
   lateThreshold: number;
 }
 
+interface BackupInfo {
+  filename: string;
+  size: number;
+  sizeFormatted: string;
+  createdAt: string;
+}
+
+interface BackupData {
+  backups: BackupInfo[];
+  totalBackups: number;
+  currentDbSize: number;
+  currentDbSizeFormatted: string;
+  totalBackupSize: number;
+  totalBackupSizeFormatted: string;
+}
+
 export default function SettingsPage() {
   const { showSuccess, showError: showErrorToast } = useToast();
   const [settings, setSettings] = useState<Settings>({
@@ -34,6 +50,15 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+
+  // Backup state
+  const [backupData, setBackupData] = useState<BackupData | null>(null);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [creatingBackup, setCreatingBackup] = useState(false);
+  const [restoringBackup, setRestoringBackup] = useState<string | null>(null);
+  const [deletingBackup, setDeletingBackup] = useState<string | null>(null);
+  const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   // Fetch settings on load
   useEffect(() => {
@@ -62,6 +87,7 @@ export default function SettingsPage() {
       }
     }
     fetchSettings();
+    fetchBackups();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,6 +117,97 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Backup functions
+  const fetchBackups = async () => {
+    setBackupLoading(true);
+    try {
+      const res = await fetch("/api/backup");
+      if (res.ok) {
+        const data = await res.json();
+        setBackupData(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch backups:", err);
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const createBackup = async () => {
+    setCreatingBackup(true);
+    try {
+      const res = await fetch("/api/backup", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        showSuccess(`Backup created: ${data.filename} (${data.sizeFormatted})`);
+        fetchBackups();
+      } else {
+        showErrorToast(data.error || "Failed to create backup");
+      }
+    } catch (err) {
+      showErrorToast("Failed to create backup");
+    } finally {
+      setCreatingBackup(false);
+    }
+  };
+
+  const deleteBackup = async (filename: string) => {
+    setDeletingBackup(filename);
+    try {
+      const res = await fetch("/api/backup", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showSuccess(`Backup deleted: ${filename}`);
+        setConfirmDelete(null);
+        fetchBackups();
+      } else {
+        showErrorToast(data.error || "Failed to delete backup");
+      }
+    } catch (err) {
+      showErrorToast("Failed to delete backup");
+    } finally {
+      setDeletingBackup(null);
+    }
+  };
+
+  const restoreBackup = async (filename: string) => {
+    setRestoringBackup(filename);
+    try {
+      const res = await fetch("/api/backup", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showSuccess(data.message);
+        setConfirmRestore(null);
+        fetchBackups();
+      } else {
+        showErrorToast(data.error || "Failed to restore backup");
+      }
+    } catch (err) {
+      showErrorToast("Failed to restore backup");
+    } finally {
+      setRestoringBackup(null);
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   if (loading) {
@@ -331,6 +448,178 @@ export default function SettingsPage() {
           </button>
         </div>
       </form>
+
+      {/* Database Backup & Storage Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-800/50 rounded-lg flex items-center justify-center">
+              <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">Database Backup & Storage</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Create, manage, and restore database backups</p>
+            </div>
+          </div>
+          <button
+            onClick={createBackup}
+            disabled={creatingBackup}
+            className="px-3 py-1.5 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+          >
+            {creatingBackup ? (
+              <>
+                <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
+                Creating...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                </svg>
+                Create Backup Now
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Storage Info */}
+        {backupData && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Current Database Size</p>
+              <p className="text-lg font-bold text-blue-700 dark:text-blue-300">{backupData.currentDbSizeFormatted}</p>
+            </div>
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Total Backups</p>
+              <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">{backupData.totalBackups}</p>
+            </div>
+            <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Backup Storage Used</p>
+              <p className="text-lg font-bold text-purple-700 dark:text-purple-300">{backupData.totalBackupSizeFormatted}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Backup List */}
+        {backupLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600"></div>
+          </div>
+        ) : backupData && backupData.backups.length > 0 ? (
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {backupData.backups.map((backup) => (
+              <div
+                key={backup.filename}
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{backup.filename}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {formatDate(backup.createdAt)} · {backup.sizeFormatted}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {/* Restore button */}
+                  {confirmRestore === backup.filename ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-orange-600 dark:text-orange-400 mr-1">Restore?</span>
+                      <button
+                        onClick={() => restoreBackup(backup.filename)}
+                        disabled={restoringBackup === backup.filename}
+                        className="px-2 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50"
+                      >
+                        {restoringBackup === backup.filename ? "..." : "Yes"}
+                      </button>
+                      <button
+                        onClick={() => setConfirmRestore(null)}
+                        className="px-2 py-1 text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-400"
+                      >
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmRestore(backup.filename)}
+                      className="p-1.5 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-colors"
+                      title="Restore this backup"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                      </svg>
+                    </button>
+                  )}
+
+                  {/* Delete button */}
+                  {confirmDelete === backup.filename ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-red-600 dark:text-red-400 mr-1">Delete?</span>
+                      <button
+                        onClick={() => deleteBackup(backup.filename)}
+                        disabled={deletingBackup === backup.filename}
+                        className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                      >
+                        {deletingBackup === backup.filename ? "..." : "Yes"}
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(null)}
+                        className="px-2 py-1 text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-400"
+                      >
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDelete(backup.filename)}
+                      className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                      title="Delete this backup"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+            <svg className="w-10 h-10 mx-auto mb-2 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375" />
+            </svg>
+            <p className="text-sm">No backups yet</p>
+            <p className="text-xs mt-1">Click &quot;Create Backup Now&quot; to create your first backup</p>
+          </div>
+        )}
+
+        {/* Backup Info */}
+        <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+          <div className="flex items-start gap-2">
+            <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <div className="text-xs text-amber-700 dark:text-amber-300">
+              <p className="font-medium mb-1">Backup Information:</p>
+              <ul className="space-y-0.5 list-disc list-inside">
+                <li>Backups are stored in the <strong>backups/</strong> folder inside the project directory</li>
+                <li>The system automatically keeps the <strong>latest 20 backups</strong> — older ones are auto-deleted</li>
+                <li>Before restoring, a <strong>safety backup</strong> of the current database is automatically created</li>
+                <li>After restoring, <strong>restart the server</strong> for changes to take full effect</li>
+                <li>For extra safety, also copy backup files to a <strong>USB drive</strong> periodically</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
