@@ -326,6 +326,7 @@ export async function POST(request: NextRequest) {
           attendance = await prisma.attendance.create({
             data: {
               userId: user.id,
+              userName: user.name,
               date: attendanceDate,
               shiftType: "NIGHT",
               nightIn: now,
@@ -428,6 +429,7 @@ export async function POST(request: NextRequest) {
           attendance = await prisma.attendance.create({
             data: {
               userId: user.id,
+              userName: user.name,
               date: attendanceDate,
               shiftType: "DAY",
               amIn: now,
@@ -473,6 +475,7 @@ export async function POST(request: NextRequest) {
           attendance = await prisma.attendance.create({
             data: {
               userId: user.id,
+              userName: user.name,
               date: attendanceDate,
               shiftType: "DAY",
               pmIn: now,
@@ -519,6 +522,7 @@ export async function POST(request: NextRequest) {
           attendance = await prisma.attendance.create({
             data: {
               userId: user.id,
+              userName: user.name,
               date: attendanceDate,
               shiftType: "DAY",
               pmIn: now,

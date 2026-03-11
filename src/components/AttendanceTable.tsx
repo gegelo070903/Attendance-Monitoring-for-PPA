@@ -1,16 +1,18 @@
 import { getStatusColor, formatDate, formatTime, formatHoursAndMinutes } from "@/lib/utils";
 import { differenceInMinutes, parseISO } from "date-fns";
-function calcWorkHours(amIn: string | null | undefined, amOut: string | null | undefined, pmIn: string | null | undefined, pmOut: string | null | undefined, nightIn: string | null | undefined = null, nightOut: string | null | undefined = null) {
+function toDate(val: string | Date | null | undefined): Date | null {
+  if (!val) return null;
+  return typeof val === 'string' ? parseISO(val) : val;
+}
+
+function calcWorkHours(amIn: string | Date | null | undefined, amOut: string | Date | null | undefined, pmIn: string | Date | null | undefined, pmOut: string | Date | null | undefined, nightIn: string | Date | null | undefined = null, nightOut: string | Date | null | undefined = null) {
   let total = 0;
-  if (amIn && amOut) {
-    total += differenceInMinutes(parseISO(amOut), parseISO(amIn));
-  }
-  if (pmIn && pmOut) {
-    total += differenceInMinutes(parseISO(pmOut), parseISO(pmIn));
-  }
-  if (nightIn && nightOut) {
-    total += differenceInMinutes(parseISO(nightOut), parseISO(nightIn));
-  }
+  const ai = toDate(amIn), ao = toDate(amOut);
+  const pi = toDate(pmIn), po = toDate(pmOut);
+  const ni = toDate(nightIn), no_ = toDate(nightOut);
+  if (ai && ao) total += differenceInMinutes(ao, ai);
+  if (pi && po) total += differenceInMinutes(po, pi);
+  if (ni && no_) total += differenceInMinutes(no_, ni);
   return Math.round((total / 60) * 100) / 100;
 }
 import { Attendance } from "@/types";

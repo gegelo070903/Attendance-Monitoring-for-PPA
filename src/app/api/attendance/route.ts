@@ -166,6 +166,7 @@ export async function POST(request: NextRequest) {
       attendance = await prisma.attendance.create({
         data: {
           userId: session.user.id,
+          userName: session.user.name || session.user.email || "Unknown",
           date: today,
           shiftType: shiftType,
           status: "PRESENT",

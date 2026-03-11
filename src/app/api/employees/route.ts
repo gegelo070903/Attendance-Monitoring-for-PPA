@@ -156,6 +156,15 @@ export async function DELETE(request: NextRequest) {
       select: { name: true, email: true },
     });
 
+    // Preserve attendance records: store userName and detach from user
+    await prisma.attendance.updateMany({
+      where: { userId },
+      data: {
+        userName: userToDelete?.name || "Deleted User",
+        userId: null,
+      },
+    });
+
     await prisma.user.delete({
       where: { id: userId },
     });

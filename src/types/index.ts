@@ -13,8 +13,9 @@ export interface User {
 
 export interface Attendance {
   id: string;
-  userId: string;
-  user?: User;
+  userId: string | null;
+  user?: User | null;
+  userName?: string | null;
   date: Date;
   amIn: Date | null;
   amOut: Date | null;
