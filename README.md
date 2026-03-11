@@ -365,7 +365,7 @@ The database is a single file: `prisma/dev.db`
 
 ### Step 5: Access from Other PCs
 
-1. Note the **Network URL** shown in the terminal (e.g., `http://192.168.1.100:3000`)
+1. Note the **Network URL** shown in the terminal (e.g., `http://bypassip:3000`)
 2. On other PCs, open a browser and enter that URL
 3. If Windows Firewall asks, click **"Allow access"**
 
