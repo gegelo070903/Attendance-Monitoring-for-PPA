@@ -1124,7 +1124,7 @@ function IDCardModal({
       ".user-position { font-size: 9px; color: #CE1126; font-weight: 600; }",
       ".id-badge { margin-top: 12px; display: inline-block; background: linear-gradient(135deg, #0038A8, #1e4d8c); color: #fff; padding: 5px 16px; border-radius: 12px; font-size: 8px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }",
       ".accent-line { width: 40px; height: 3px; background: #FCD116; margin: 12px auto 0; border-radius: 2px; }",
-      ".card-back { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 16px; }",
+      ".card-back { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; }",
       ".back-company { font-size: 10px; font-weight: 700; color: #0038A8; }",
       ".back-title { font-size: 8px; color: #0038A8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 500; position: relative; z-index: 1; }",
       ".qr-container { background: #fff; padding: 10px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 2px solid #0038A8; position: relative; z-index: 1; }",
@@ -1139,8 +1139,8 @@ function IDCardModal({
       ".card-wrapper { display: flex; flex-direction: column; align-items: center; }" +
       ".card-label { text-align: center; font-size: 12px; color: #64748b; margin-bottom: 8px; font-weight: 500; }" +
       css + "\n" +
-      ".cut-border { border: 2px dashed #999; border-radius: 14px; padding: 2px; }" +
-      "@media print { @page { margin: 10mm; } body { background: #fff; padding: 0; } .cards-container { gap: 30px; } .card { box-shadow: none; } .card-label { display: none; } .no-print { display: none !important; } .cut-border { border: 2px dashed #666; } }" +
+      ".cut-border { border: 2px solid #000; border-radius: 14px; padding: 2px; }" +
+      "@media print { @page { margin: 10mm; } body { background: #fff; padding: 0; } .cards-container { gap: 30px; } .card { box-shadow: none; } .card-label { display: none; } .no-print { display: none !important; } .cut-border { border: 2px solid #000; } }" +
       ".no-print { position: fixed; top: 12px; right: 16px; z-index: 100; }" +
       ".no-print button { padding: 8px 24px; font-size: 12pt; cursor: pointer; background: #0d3a5c; color: #fff; border: none; border-radius: 6px; }" +
       "</style></head><body>" +
@@ -1227,7 +1227,7 @@ function IDCardModal({
             {/* Back Card */}
             <div className="flex flex-col items-center">
               <span className="text-xs text-gray-500 dark:text-gray-400 mb-2">Back</span>
-              <div className="bg-gradient-to-b from-white to-slate-50 rounded-xl overflow-hidden shadow-xl relative border border-slate-200 flex flex-col items-center justify-center" style={{ width: "170px", height: "270px" }}>
+              <div className="bg-gradient-to-b from-white to-slate-50 rounded-xl overflow-hidden shadow-xl relative border border-slate-200 flex flex-col items-center justify-center" style={{ width: "170px", height: "270px", minHeight: "270px" }}>
                 <div className="absolute top-0 right-0 w-0 h-0 border-r-[40px] border-r-[#CE1126] border-b-[40px] border-b-transparent"></div>
                 <div className="absolute bottom-0 left-0 w-0 h-0 border-l-[40px] border-l-[#0038A8] border-t-[40px] border-t-transparent"></div>
                 <p className="text-[9px] text-[#0038A8] font-bold mb-1 relative z-10">Philippine Ports Authority</p>
