@@ -53,6 +53,7 @@ export default function SettingsPage() {
   const [deletingBackup, setDeletingBackup] = useState<string | null>(null);
   const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [uploadingBackup, setUploadingBackup] = useState(false);
 
   // Fetch settings on load
   useEffect(() => {
@@ -187,6 +188,43 @@ export default function SettingsPage() {
       showErrorToast("Failed to restore backup");
     } finally {
       setRestoringBackup(null);
+    }
+  };
+
+  const downloadBackup = (filename: string) => {
+    const a = document.createElement("a");
+    a.href = "/api/backup?action=download&filename=" + encodeURIComponent(filename);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const uploadBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith(".db")) {
+      showErrorToast("Invalid file type. Only .db files are accepted.");
+      e.target.value = "";
+      return;
+    }
+    setUploadingBackup(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/backup", { method: "PATCH", body: formData });
+      const data = await res.json();
+      if (res.ok) {
+        showSuccess(data.message);
+        fetchBackups();
+      } else {
+        showErrorToast(data.error || "Failed to upload backup");
+      }
+    } catch (err) {
+      showErrorToast("Failed to upload backup");
+    } finally {
+      setUploadingBackup(false);
+      e.target.value = "";
     }
   };
 
@@ -389,11 +427,34 @@ export default function SettingsPage() {
               <p className="text-xs text-gray-500 dark:text-gray-400">Create, manage, and restore database backups</p>
             </div>
           </div>
-          <button
-            onClick={createBackup}
-            disabled={creatingBackup}
-            className="px-3 py-1.5 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-          >
+          <div className="flex items-center gap-2">
+            <label className={`px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 cursor-pointer ${uploadingBackup ? "opacity-50 pointer-events-none" : ""}`}>
+              {uploadingBackup ? (
+                <>
+                  <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15m0-3l-3-3m0 0l-3 3m3-3v11.25" />
+                  </svg>
+                  Upload Backup
+                </>
+              )}
+              <input
+                type="file"
+                accept=".db"
+                onChange={uploadBackup}
+                className="hidden"
+                disabled={uploadingBackup}
+              />
+            </label>
+            <button
+              onClick={createBackup}
+              disabled={creatingBackup}
+              className="px-3 py-1.5 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+            >
             {creatingBackup ? (
               <>
                 <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
@@ -407,7 +468,8 @@ export default function SettingsPage() {
                 Create Backup Now
               </>
             )}
-          </button>
+            </button>
+          </div>
         </div>
 
         {/* Storage Info */}
@@ -454,6 +516,16 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {/* Download button */}
+                  <button
+                    onClick={() => downloadBackup(backup.filename)}
+                    className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                    title="Download this backup"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                  </button>
                   {/* Restore button */}
                   {confirmRestore === backup.filename ? (
                     <div className="flex items-center gap-1">
@@ -537,7 +609,7 @@ export default function SettingsPage() {
               <p className="font-medium mb-1">Backup Information:</p>
               <ul className="space-y-0.5 list-disc list-inside">
                 <li>Backups are stored in the <strong>backups/</strong> folder inside the project directory</li>
-                <li>The system automatically keeps the <strong>latest 20 backups</strong> — older ones are auto-deleted</li>
+                <li>The system automatically keeps the <strong>latest 100 backups</strong> — older ones are auto-deleted</li>
                 <li>Before restoring, a <strong>safety backup</strong> of the current database is automatically created</li>
                 <li>After restoring, <strong>restart the server</strong> for changes to take full effect</li>
                 <li>For extra safety, also copy backup files to a <strong>USB drive</strong> periodically</li>

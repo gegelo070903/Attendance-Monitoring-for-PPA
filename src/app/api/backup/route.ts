@@ -15,12 +15,36 @@ function ensureBackupDir() {
   }
 }
 
-// GET - List all backups
-export async function GET() {
+// GET - List all backups OR download a specific backup
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get("action");
+    const filename = searchParams.get("filename");
+
+    // Download a specific backup file
+    if (action === "download" && filename) {
+      const safeName = path.basename(filename);
+      if (!safeName.endsWith(".db")) {
+        return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
+      }
+      const filePath = path.join(BACKUP_DIR, safeName);
+      if (!fs.existsSync(filePath)) {
+        return NextResponse.json({ error: "Backup file not found" }, { status: 404 });
+      }
+      const fileBuffer = fs.readFileSync(filePath);
+      return new NextResponse(fileBuffer, {
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "Content-Disposition": "attachment; filename=\"" + safeName + "\"",
+          "Content-Length": String(fileBuffer.length),
+        },
+      });
     }
 
     ensureBackupDir();
@@ -112,14 +136,14 @@ export async function POST() {
       },
     });
 
-    // Auto-cleanup: keep only the latest 20 backups
+    // Auto-cleanup: keep only the latest 100 backups
     const allBackups = fs.readdirSync(BACKUP_DIR)
       .filter(f => f.endsWith(".db") && f.startsWith("backup_"))
       .sort()
       .reverse();
 
-    if (allBackups.length > 20) {
-      const toDelete = allBackups.slice(20);
+    if (allBackups.length > 100) {
+      const toDelete = allBackups.slice(100);
       for (const file of toDelete) {
         fs.unlinkSync(path.join(BACKUP_DIR, file));
       }
@@ -231,6 +255,72 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error("Restore backup error:", error);
     return NextResponse.json({ error: "Failed to restore backup" }, { status: 500 });
+  }
+}
+
+// PATCH - Upload a backup file
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const formData = await request.formData();
+    const file = formData.get("file") as File | null;
+
+    if (!file) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    if (!file.name.endsWith(".db")) {
+      return NextResponse.json({ error: "Invalid file type. Only .db files are accepted." }, { status: 400 });
+    }
+
+    // Max 500MB
+    if (file.size > 500 * 1024 * 1024) {
+      return NextResponse.json({ error: "File too large. Maximum size is 500MB." }, { status: 400 });
+    }
+
+    ensureBackupDir();
+
+    // Generate a safe filename with upload prefix
+    const now = new Date();
+    const timestamp = now.toISOString()
+      .replace(/[:.]/g, "-")
+      .replace("T", "_")
+      .slice(0, 19);
+    const uploadFilename = "uploaded_" + timestamp + ".db";
+    const uploadPath = path.join(BACKUP_DIR, uploadFilename);
+
+    const arrayBuffer = await file.arrayBuffer();
+    fs.writeFileSync(uploadPath, Buffer.from(arrayBuffer));
+
+    const stats = fs.statSync(uploadPath);
+
+    await logActivity({
+      userId: session.user.id,
+      userName: session.user.name || session.user.email || "Admin",
+      action: "DATABASE_BACKUP_UPLOAD",
+      description: "Backup file uploaded: " + uploadFilename + " (" + formatFileSize(stats.size) + ")",
+      type: "INFO",
+      metadata: {
+        originalFilename: file.name,
+        savedAs: uploadFilename,
+        size: stats.size,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      filename: uploadFilename,
+      size: stats.size,
+      sizeFormatted: formatFileSize(stats.size),
+      message: "Backup uploaded successfully as " + uploadFilename,
+    });
+  } catch (error) {
+    console.error("Upload backup error:", error);
+    return NextResponse.json({ error: "Failed to upload backup" }, { status: 500 });
   }
 }
 

@@ -1,8 +1,12 @@
 @echo off
+setlocal enabledelayedexpansion
 title PPA Attendance - Database Backup
 echo ========================================
 echo   PPA Attendance - Database Backup
 echo ========================================
+echo.
+echo   This tool works even if the server is
+echo   NOT running. No internet required.
 echo.
 
 cd /d "%~dp0"
@@ -37,46 +41,99 @@ echo.
 
 copy /Y "%DB_FILE%" "%BACKUP_FILE%" >nul
 
-if %errorlevel% == 0 (
-    echo ========================================
-    echo   Backup created successfully!
-    echo ========================================
-    echo.
-    echo   File: %BACKUP_FILE%
-    
-    REM Show file size
-    for %%A in ("%BACKUP_FILE%") do (
-        set SIZE=%%~zA
-    )
-    echo   Size: %SIZE% bytes
-    echo.
-    
-    REM Count total backups
-    set COUNT=0
-    for %%F in (%BACKUP_DIR%\backup_*.db) do set /a COUNT+=1
-    echo   Total backups: %COUNT%
-    echo.
-    
-    REM Auto-cleanup: keep only latest 20 backups
-    if %COUNT% gtr 20 (
-        echo Cleaning up old backups (keeping latest 20^)...
-        set /a TO_DELETE=%COUNT%-20
-        for /f "skip=20 delims=" %%F in ('dir /b /o-d "%BACKUP_DIR%\backup_*.db"') do (
-            del "%BACKUP_DIR%\%%F"
-            echo   Deleted: %%F
-        )
-        echo.
-    )
-    
-    echo ========================================
-    echo   Done! Your data is safe.
-    echo ========================================
-) else (
+if %errorlevel% neq 0 (
     echo ========================================
     echo   ERROR: Backup failed!
     echo ========================================
     echo   Please check disk space and permissions.
+    echo.
+    pause
+    exit /b 1
 )
 
+echo ========================================
+echo   Backup created successfully!
+echo ========================================
+echo.
+echo   File: %BACKUP_FILE%
+
+REM Show file size
+for %%A in ("%BACKUP_FILE%") do (
+    set SIZE=%%~zA
+)
+echo   Size: %SIZE% bytes
+echo.
+
+REM Count total backups
+set COUNT=0
+for %%F in (%BACKUP_DIR%\backup_*.db) do set /a COUNT+=1
+echo   Total backups: %COUNT%
+echo.
+
+REM Auto-cleanup: keep only latest 100 backups
+if !COUNT! gtr 100 (
+    echo Cleaning up old backups (keeping latest 100^)...
+    for /f "skip=100 delims=" %%F in ('dir /b /o-d "%BACKUP_DIR%\backup_*.db"') do (
+        del "%BACKUP_DIR%\%%F"
+        echo   Deleted: %%F
+    )
+    echo.
+)
+
+echo ========================================
+echo   COPY TO USB / EXTERNAL DRIVE
+echo ========================================
+echo.
+echo   Do you want to also copy this backup
+echo   to a USB drive or external folder?
+echo.
+echo   [1] Yes - let me choose a folder
+echo   [2] No  - local backup is enough
+echo.
+set /p USBCHOICE="   Enter choice (1 or 2): "
+
+if "%USBCHOICE%"=="1" (
+    echo.
+    echo   Enter the full path to copy the backup to.
+    echo   Examples:
+    echo     D:\PPA-Backups
+    echo     E:\
+    echo     F:\Backups\PPA
+    echo.
+    set /p EXTPATH="   Path: "
+
+    if not defined EXTPATH (
+        echo   No path entered. Skipping external copy.
+        goto done
+    )
+
+    REM Create the directory if it doesn't exist
+    if not exist "!EXTPATH!" (
+        mkdir "!EXTPATH!" 2>nul
+        if !errorlevel! neq 0 (
+            echo.
+            echo   ERROR: Could not create folder: !EXTPATH!
+            echo   Make sure the drive is connected and the path is valid.
+            goto done
+        )
+    )
+
+    copy /Y "%BACKUP_FILE%" "!EXTPATH!\backup_%TIMESTAMP%.db" >nul
+    if !errorlevel! == 0 (
+        echo.
+        echo   External copy successful!
+        echo   Saved to: !EXTPATH!\backup_%TIMESTAMP%.db
+    ) else (
+        echo.
+        echo   ERROR: Failed to copy to external location.
+        echo   Make sure the drive is connected and writable.
+    )
+)
+
+:done
+echo.
+echo ========================================
+echo   Done! Your data is safe.
+echo ========================================
 echo.
 pause

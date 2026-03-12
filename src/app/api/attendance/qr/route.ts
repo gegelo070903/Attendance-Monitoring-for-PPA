@@ -99,6 +99,44 @@ export async function GET(request: NextRequest) {
     }
 
     const today = new Date();
+    const currentHourGET = today.getHours();
+    const currentMinuteGET = today.getMinutes();
+    const currentTimeMinGET = currentHourGET * 60 + currentMinuteGET;
+
+    // Get settings for overnight detection
+    const settingsGET = await prisma.settings.findFirst() || {
+      amEndTime: "12:00",
+      pmEndTime: "17:00",
+    };
+    const amEndGET = parseTimeString(settingsGET.amEndTime);
+    const pmEndGET = parseTimeString(settingsGET.pmEndTime || "17:00");
+    const amEndMinGET = amEndGET.hour * 60 + amEndGET.minute;
+    const pmEndMinGET = pmEndGET.hour * 60 + pmEndGET.minute;
+
+    // Check for open overnight shift from yesterday (morning scan = overnight out)
+    if (currentTimeMinGET < amEndMinGET) {
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const overnightRecord = await prisma.attendance.findFirst({
+        where: {
+          userId: user.id,
+          date: { gte: startOfDay(yesterday), lte: endOfDay(yesterday) },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (overnightRecord && overnightRecord.pmIn && !overnightRecord.pmOut && !overnightRecord.amOut) {
+        const pmInH = new Date(overnightRecord.pmIn).getHours();
+        const pmInM = new Date(overnightRecord.pmIn).getMinutes();
+        if (pmInH * 60 + pmInM >= pmEndMinGET) {
+          return NextResponse.json({
+            attendance: overnightRecord as ExtendedAttendance,
+            nextAction: "am-out",
+            overnight: true,
+          });
+        }
+      }
+    }
+
     const attendanceRaw = await prisma.attendance.findFirst({
       where: {
         userId: user.id,
@@ -196,6 +234,79 @@ export async function POST(request: NextRequest) {
       pmGracePeriod: 15,
       lateThreshold: 15,
     };
+
+    // Parse PM end time for overnight shift detection
+    const pmEnd = parseTimeString(settings.pmEndTime || "17:00");
+    const pmEndMinutes = pmEnd.hour * 60 + pmEnd.minute;
+    const amEndCheck = parseTimeString(settings.amEndTime);
+    const amEndMinutes = amEndCheck.hour * 60 + amEndCheck.minute;
+    const currentTimeMinutes = currentHour * 60 + currentMinute;
+
+    // === OVERNIGHT SHIFT CHECK ===
+    // If it's morning, check for an open overnight shift from yesterday.
+    // An overnight shift is identified by: pmIn set (at/after pmEndTime), no out recorded.
+    if (currentTimeMinutes < amEndMinutes) {
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const openOvernight = await prisma.attendance.findFirst({
+        where: {
+          userId: user.id,
+          date: { gte: startOfDay(yesterday), lte: endOfDay(yesterday) },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (openOvernight && openOvernight.pmIn && !openOvernight.pmOut && !openOvernight.amOut) {
+        const pmInDate = new Date(openOvernight.pmIn);
+        const pmInMinutes = pmInDate.getHours() * 60 + pmInDate.getMinutes();
+
+        if (pmInMinutes >= pmEndMinutes) {
+          // Confirmed overnight shift - record AM Out on yesterday's record
+          const totalHours = (now.getTime() - pmInDate.getTime()) / (1000 * 60 * 60);
+
+          const updatedOvernight = await prisma.attendance.update({
+            where: { id: openOvernight.id },
+            data: {
+              amOut: now,
+              workHours: Math.round(totalHours * 100) / 100,
+              status: "PRESENT",
+            },
+          });
+
+          await logActivity({
+            userId: user.id,
+            userName: user.name || "Unknown",
+            action: ActivityActions.SCAN_AM_OUT,
+            description: `${user.name} scanned AM Out (overnight shift) at ${fmtTime(now)}`,
+            type: "SUCCESS",
+            metadata: {
+              attendanceId: updatedOvernight.id,
+              time: now.toISOString(),
+              status: "PRESENT",
+              overnight: true,
+            },
+            scanPhoto: scanPhoto || undefined,
+          });
+
+          return NextResponse.json({
+            success: true,
+            attendanceId: updatedOvernight.id,
+            action: "AM Out",
+            time: now,
+            status: "PRESENT",
+            message: `Good morning, ${user.name}! AM Out (overnight shift) recorded at ${fmtTime(now)}.`,
+            nextAction: "complete",
+            workHours: updatedOvernight.workHours,
+            user: {
+              name: user.name,
+              department: user.department,
+              position: user.position,
+              profileImage: user.profileImage,
+            },
+          });
+        }
+      }
+    }
 
     const attendanceDate = startOfDay(now);
 
@@ -347,6 +458,50 @@ export async function POST(request: NextRequest) {
           status: "HALF_DAY",
           message: `Good afternoon, ${user.name}! PM In recorded at ${fmtTime(now)}. (Morning session missed - Half Day)`,
           nextAction: "pm-out",
+          user: {
+            name: user.name,
+            department: user.department,
+            position: user.position,
+            profileImage: user.profileImage,
+          },
+        });
+      } else if (currentTimeMinutes > pmEndMinutes) {
+        // After PM end time - this is an overnight shift start
+        action = "pm-in";
+        
+        attendance = await prisma.attendance.create({
+          data: {
+            userId: user.id,
+            userName: user.name,
+            date: attendanceDate,
+            pmIn: now,
+            status: "PRESENT",
+          },
+        });
+
+        await logActivity({
+          userId: user.id,
+          userName: user.name || "Unknown",
+          action: ActivityActions.SCAN_PM_IN,
+          description: `${user.name} scanned PM In (overnight shift) at ${fmtTime(now)}`,
+          type: "SUCCESS",
+          metadata: {
+            attendanceId: attendance.id,
+            time: now.toISOString(),
+            status: "PRESENT",
+            overnight: true,
+          },
+          scanPhoto: scanPhoto || undefined,
+        });
+
+        return NextResponse.json({
+          success: true,
+          attendanceId: attendance.id,
+          action: "PM In",
+          time: now,
+          status: "PRESENT",
+          message: `Good evening, ${user.name}! PM In (overnight shift) recorded at ${fmtTime(now)}.`,
+          nextAction: "am-out",
           user: {
             name: user.name,
             department: user.department,
