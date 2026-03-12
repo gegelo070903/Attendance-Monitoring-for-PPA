@@ -15,7 +15,6 @@ model User {
   role         String
   department   String?
   position     String?
-  shiftType    String?
   profileImage String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
@@ -27,13 +26,10 @@ model Attendance {
   userId    String?
   userName  String?
   date      DateTime
-  shiftType String?
   amIn      DateTime?
   amOut     DateTime?
   pmIn      DateTime?
   pmOut     DateTime?
-  nightIn   DateTime?
-  nightOut  DateTime?
   status    String
   workHours Float?
   notes     String?
@@ -70,11 +66,8 @@ model Settings {
   amEndTime        String   @default("12:00")
   pmStartTime      String   @default("13:00")
   pmEndTime        String   @default("17:00")
-  nightStartTime   String   @default("22:00")
-  nightEndTime     String   @default("06:00")
   amGracePeriod    Int      @default(15)
   pmGracePeriod    Int      @default(15)
-  nightGracePeriod Int      @default(15)
   lateThreshold    Int      @default(15)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

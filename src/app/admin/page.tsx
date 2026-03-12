@@ -137,7 +137,7 @@ export default function AdminDashboard() {
             </div>
             <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
               <span className="text-gray-600 text-sm">Last Updated</span>
-              <span className="text-gray-800 text-sm">{new Date().toLocaleTimeString()}</span>
+              <span className="text-gray-800 text-sm">{new Date().toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" })}</span>
             </div>
           </div>
         </div>

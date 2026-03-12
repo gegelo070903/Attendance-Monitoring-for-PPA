@@ -15,13 +15,10 @@ interface AttendanceRecord {
   id: string;
   userId: string;
   date: string;
-  shiftType: string | null;
   amIn: string | null;
   amOut: string | null;
   pmIn: string | null;
   pmOut: string | null;
-  nightIn: string | null;
-  nightOut: string | null;
   status: string;
   workHours: number | null;
   user: {
@@ -50,16 +47,13 @@ function formatHoursAndMinutes(hours: number | undefined | null) {
   return `${h}h ${m}m`;
 }
 
-function calcWorkHours(amIn: string | null, amOut: string | null, pmIn: string | null, pmOut: string | null, nightIn: string | null = null, nightOut: string | null = null) {
+function calcWorkHours(amIn: string | null, amOut: string | null, pmIn: string | null, pmOut: string | null) {
   let total = 0;
   if (amIn && amOut) {
     total += differenceInMinutes(parseISO(amOut), parseISO(amIn));
   }
   if (pmIn && pmOut) {
     total += differenceInMinutes(parseISO(pmOut), parseISO(pmIn));
-  }
-  if (nightIn && nightOut) {
-    total += differenceInMinutes(parseISO(nightOut), parseISO(nightIn));
   }
   return Math.round((total / 60) * 100) / 100;
 }
@@ -83,7 +77,6 @@ export default function AdminReportsPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [individualDepartment, setIndividualDepartment] = useState<string>("all");
-  const [generating, setGenerating] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   // Get unique departments from employees
@@ -183,8 +176,8 @@ export default function AdminReportsPage() {
 
   // Get effective display status for monthly report
   // Determines the correct status based on actual attendance data:
-  // HALF_DAY: only one session completed (AM in+out only, or PM in+out only) for DAY shift
-  // Night shift: never HALF_DAY. Completed night shift = PRESENT on report.
+  // Determines the correct status based on actual attendance data:
+  // HALF_DAY: only one session completed (AM in+out only, or PM in+out only)
   // LATE on report → displayed as PRESENT
   const getReportStatus = (a: AttendanceRecord): string => {
     const hasCompletedAM = a.amIn && a.amOut;
@@ -192,18 +185,11 @@ export default function AdminReportsPage() {
     const hasAnyAM = a.amIn || a.amOut;
     const hasAnyPM = a.pmIn || a.pmOut;
 
-    // Night shift with complete in/out is always PRESENT
-    if (a.nightIn && a.nightOut) return "PRESENT";
-    // Night shift that was wrongly marked HALF_DAY but has nightIn → LATE in data, show as PRESENT
-    if ((a.shiftType === "NIGHT") && a.nightIn && a.status === "HALF_DAY") return "PRESENT";
-
-    // DAY shift HALF_DAY logic: only one session completed
-    if (a.shiftType === "DAY" || !a.shiftType) {
-      if (hasCompletedAM && !hasAnyPM) return "HALF_DAY";
-      if (hasCompletedPM && !hasAnyAM) return "HALF_DAY";
-      // First scan was during PM (missed AM entirely) → HALF_DAY
-      if (!hasAnyAM && hasAnyPM) return "HALF_DAY";
-    }
+    // HALF_DAY logic: only one session completed
+    if (hasCompletedAM && !hasAnyPM) return "HALF_DAY";
+    if (hasCompletedPM && !hasAnyAM) return "HALF_DAY";
+    // First scan was during PM (missed AM entirely) → HALF_DAY
+    if (!hasAnyAM && hasAnyPM) return "HALF_DAY";
 
     // LATE is displayed as PRESENT on report
     if (a.status === "LATE") return "PRESENT";
@@ -238,9 +224,7 @@ export default function AdminReportsPage() {
             a.amIn ?? null,
             a.amOut ?? null,
             a.pmIn ?? null,
-            a.pmOut ?? null,
-            a.nightIn ?? null,
-            a.nightOut ?? null
+            a.pmOut ?? null
           );
       return sum + (hours || 0);
     }, 0);
@@ -336,23 +320,198 @@ export default function AdminReportsPage() {
     });
   };
 
-  // Format time for display
+  // Format time for display (shorthand: 8a, 1:30p)
   const formatTime = (dateStr: string | null) => {
     if (!dateStr) return "-";
     try {
-      return format(new Date(dateStr), "hh:mm a");
+      const d = new Date(dateStr);
+      const hours = d.getHours();
+      const minutes = d.getMinutes();
+      const period = hours >= 12 ? 'p' : 'a';
+      const hours12 = hours % 12 || 12;
+      return minutes === 0 ? `${hours12}${period}` : `${hours12}:${minutes.toString().padStart(2, '0')}${period}`;
     } catch {
       return "-";
     }
   };
 
-  // Print function
-  const handlePrint = () => {
-    setGenerating(true);
-    setTimeout(() => {
-      window.print();
-      setGenerating(false);
-    }, 500);
+  // Build DTR HTML for a single employee (reusable for individual + batch)
+  const buildDTRPage = (employee: Employee) => {
+    const monthlyData = getEmployeeMonthlyAttendance(employee.id);
+    const [year, month] = selectedMonth.split("-");
+    const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+    const daysInMonth = getDaysInMonth(startDate);
+    const monthLabel = format(startDate, "MMMM");
+    const monthRange = monthLabel + " 1-" + daysInMonth + ", " + year;
+
+    const calcLateMins = (arrivalStr: string | null | undefined, expectedHour: number, expectedMin: number): number => {
+      if (!arrivalStr) return 0;
+      const arrival = new Date(arrivalStr);
+      const expected = new Date(arrival);
+      expected.setHours(expectedHour, expectedMin, 0, 0);
+      const diff = Math.floor((arrival.getTime() - expected.getTime()) / 60000);
+      return diff > 0 ? diff : 0;
+    };
+
+    let grandTotalLateMins = 0;
+
+    const rows = monthlyData.map(day => {
+      const mm = format(day.date, "MM");
+      const dd = format(day.date, "dd");
+      const dateLabel = mm + "-" + dd;
+      const dayName = format(day.date, "EEE");
+      const a = day.attendance;
+      const amIn = a?.amIn ? formatTime(a.amIn) : "";
+      const amOut = a?.amOut ? formatTime(a.amOut) : "";
+      const pmIn = a?.pmIn ? formatTime(a.pmIn) : "";
+      const pmOut = a?.pmOut ? formatTime(a.pmOut) : "";
+      let lateMins = 0;
+      if (!day.isWeekend && a) {
+        lateMins += calcLateMins(a.amIn, 8, 0);
+        lateMins += calcLateMins(a.pmIn, 13, 0);
+      }
+      grandTotalLateMins += lateMins;
+      const lateStr = lateMins > 0 ? String(lateMins) : "";
+      const lateDaysVal = lateMins > 0 ? (lateMins / 480).toFixed(3) : "";
+      return "<tr>" +
+        '<td class="date-col"><b>' + dateLabel + "</b></td>" +
+        '<td class="day-col">' + dayName + "</td>" +
+        "<td>" + amIn + "</td>" +
+        "<td>" + amOut + "</td>" +
+        "<td>" + pmIn + "</td>" +
+        "<td>" + pmOut + "</td>" +
+        "<td></td>" +
+        "<td></td>" +
+        "<td>" + lateStr + "</td>" +
+        "<td>" + lateDaysVal + "</td>" +
+        "<td></td>" +
+        "</tr>";
+    });
+
+    const grandTotalLateDays = grandTotalLateMins > 0 ? (grandTotalLateMins / 480).toFixed(3) : "";
+    const stats = calculateEmployeeStats(employee.id);
+    const totalHoursStr = formatHoursAndMinutes(stats.totalWorkHours);
+
+    const totalRow = '<tr class="total-row">' +
+      "<td colspan=\"4\"></td>" +
+      '<td colspan="2" style="text-align:right;padding-right:6px;"><b>Total:</b></td>' +
+      "<td colspan=\"2\">" + totalHoursStr + "</td>" +
+      "<td>" + (grandTotalLateMins > 0 ? grandTotalLateMins : "") + "</td>" +
+      "<td>" + grandTotalLateDays + "</td>" +
+      "<td></td></tr>";
+
+    return '<div class="page">' +
+      '<div class="header">' +
+        "<h1>PHILIPPINE PORTS AUTHORITY</h1>" +
+        "<h2>Employee Daily Time Record</h2>" +
+        "<h3>Month of " + monthRange + "</h3>" +
+      "</div>" +
+      '<div class="info">' +
+        '<div class="info-row"><span class="info-label">Name</span><span>: </span><span class="info-value">' + employee.name + "</span></div>" +
+        '<div class="info-row"><span class="info-label">Position</span><span>: </span><span class="info-value">' + (employee.position || "N/A") + "</span></div>" +
+      "</div>" +
+      "<table><thead>" +
+        "<tr>" +
+          '<th rowspan="2" style="width:50px;">Date</th>' +
+          '<th rowspan="2" style="width:50px;">Day</th>' +
+          '<th colspan="2">AM</th>' +
+          '<th colspan="2">PM</th>' +
+          '<th colspan="2">Overtime</th>' +
+          '<th rowspan="2">Total Late<br>in Mins</th>' +
+          '<th rowspan="2">Total Late<br>in Days</th>' +
+          '<th rowspan="2">Remarks</th>' +
+        "</tr><tr>" +
+          "<th>In</th><th>Out</th><th>In</th><th>Out</th><th>In</th><th>Out</th>" +
+        "</tr></thead><tbody>" +
+      rows.join("\n") +
+      totalRow +
+      "</tbody></table>" +
+      '<div class="signatures">' +
+        '<div class="sig-right"><div class="sig-line">Signature of Employee</div></div>' +
+        '<div class="verified">Verified as to the prescribed office hours</div>' +
+        '<div class="sig-right"><div class="sig-line">Signature of Immediate Supervisor</div></div>' +
+      "</div>" +
+      "</div>";
+  };
+
+  const getDTRCss = () => {
+    return [
+      "@page { size: A4 landscape; margin: 0; }",
+      "* { margin: 0; padding: 0; box-sizing: border-box; }",
+      "body { font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #000; }",
+      ".page { width: 100%; max-width: 297mm; margin: 0 auto; padding: 8mm 12mm; page-break-after: always; }",
+      ".page:last-child { page-break-after: auto; }",
+      ".header { text-align: center; margin-bottom: 6px; }",
+      ".header h1 { font-size: 12pt; font-weight: bold; margin: 0; letter-spacing: 1px; }",
+      ".header h2 { font-size: 10pt; font-weight: normal; margin: 1px 0; }",
+      ".header h3 { font-size: 9pt; font-weight: normal; margin: 1px 0; }",
+      ".info { margin-bottom: 5px; }",
+      ".info-row { display: flex; gap: 8px; margin-bottom: 2px; font-size: 9pt; }",
+      ".info-label { min-width: 60px; font-weight: normal; }",
+      ".info-value { font-weight: bold; }",
+      "table { width: 100%; border-collapse: collapse; font-size: 7.5pt; }",
+      "th { background: #fff; color: #000; font-weight: bold; border: 1px solid #000; padding: 1px 2px; text-align: center; font-size: 7.5pt; }",
+      "td { border: 1px solid #000; padding: 0 2px; text-align: center; font-size: 7.5pt; height: 13px; line-height: 13px; }",
+      '.date-col { text-align: left; padding-left: 4px; width: 44px; }',
+      ".day-col { text-align: left; width: 36px; }",
+      ".total-row td { font-weight: bold; border-top: 2px solid #000; }",
+      ".signatures { margin-top: 30px; }",
+      ".sig-right { text-align: right; margin-right: 60px; }",
+      ".sig-line { display: inline-block; border-top: 1px solid #000; min-width: 200px; padding-top: 2px; font-size: 8pt; text-align: center; }",
+      ".verified { text-align: center; margin: 25px 0 20px; font-size: 8pt; }",
+      "@media print { body { padding: 0; } .page { padding: 8mm 12mm; max-width: none; } .no-print { display: none !important; } }",
+      ".no-print { position: fixed; top: 12px; right: 16px; z-index: 100; }",
+      ".no-print button { padding: 8px 24px; font-size: 12pt; cursor: pointer; background: #0d3a5c; color: #fff; border: none; border-radius: 6px; margin: 0 4px; }",
+    ].join("\n  ");
+  };
+
+  // Download DTR (PPA format) for individual employee
+  const handleDownloadDTR = () => {
+    const employee = employees.find(e => e.id === selectedEmployee);
+    if (!employee) return;
+
+    const [year, month] = selectedMonth.split("-");
+    const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+    const daysInMonth = getDaysInMonth(startDate);
+    const monthLabel = format(startDate, "MMMM");
+    const monthRange = monthLabel + " 1-" + daysInMonth + ", " + year;
+
+    const css = getDTRCss();
+    const html = "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>DTR - " + employee.name + " - " + monthRange + "</title>" +
+      "<style>" + css + "</style></head><body>" +
+      '<div class="no-print"><button onclick="window.print()">Print / Save as PDF</button></div>' +
+      buildDTRPage(employee) +
+      "</body></html>";
+
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    }
+  };
+
+  // Download DTR for ALL employees (one page per employee)
+  const handleDownloadAllDTR = () => {
+    if (employees.length === 0) return;
+    const [year, month] = selectedMonth.split("-");
+    const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+    const daysInMonth = getDaysInMonth(startDate);
+    const monthLabel = format(startDate, "MMMM");
+    const monthRange = monthLabel + " 1-" + daysInMonth + ", " + year;
+
+    const css = getDTRCss();
+    const pages = employees.map(emp => buildDTRPage(emp)).join("\n");
+    const html = "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>All DTR - " + monthRange + "</title>" +
+      "<style>" + css + "</style></head><body>" +
+      '<div class="no-print"><button onclick="window.print()">Print All / Save as PDF</button></div>' +
+      pages +
+      "</body></html>";
+
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    }
   };
 
   const monthName = format(new Date(selectedMonth + "-01"), "MMMM yyyy");
@@ -788,16 +947,28 @@ export default function AdminReportsPage() {
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Monthly Reports</h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate and print attendance reports</p>
             </div>
-            <button
-              onClick={handlePrint}
-              disabled={generating}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-ppa-navy text-white rounded-lg hover:bg-ppa-blue transition-colors disabled:opacity-50"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
-              </svg>
-              {generating ? "Preparing..." : "Print Report"}
-            </button>
+            <div className="flex gap-2">
+              {reportType === "individual" && selectedEmployee && (
+                <button
+                  onClick={handleDownloadDTR}
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                  </svg>
+                  Download DTR
+                </button>
+              )}
+              <button
+                onClick={handleDownloadAllDTR}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+                Download All DTR
+              </button>
+            </div>
           </div>
 
           {/* Filters */}
@@ -1041,13 +1212,10 @@ export default function AdminReportsPage() {
                             <tr className="bg-ppa-navy text-white">
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-left">Date</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-left">Day</th>
-                              <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">Shift</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">AM In</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">AM Out</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">PM In</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">PM Out</th>
-                              <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">Night In</th>
-                              <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">Night Out</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">Status</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">Hours</th>
                             </tr>
@@ -1071,17 +1239,6 @@ export default function AdminReportsPage() {
                                   {format(day.date, "EEEE")}
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
-                                  {day.isWeekend ? "-" : (
-                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                                      day.attendance?.shiftType === "NIGHT" 
-                                        ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400" 
-                                        : "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400"
-                                    }`}>
-                                      {day.attendance?.shiftType || (day.attendance ? "DAY" : "-")}
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
                                   {day.isWeekend ? "-" : formatTime(day.attendance?.amIn || null)}
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
@@ -1092,12 +1249,6 @@ export default function AdminReportsPage() {
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
                                   {day.isWeekend ? "-" : formatTime(day.attendance?.pmOut || null)}
-                                </td>
-                                <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
-                                  {day.isWeekend ? "-" : formatTime(day.attendance?.nightIn || null)}
-                                </td>
-                                <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
-                                  {day.isWeekend ? "-" : formatTime(day.attendance?.nightOut || null)}
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
                                   {day.isWeekend ? (
@@ -1124,9 +1275,7 @@ export default function AdminReportsPage() {
                                             day.attendance?.amIn ?? null,
                                             day.attendance?.amOut ?? null,
                                             day.attendance?.pmIn ?? null,
-                                            day.attendance?.pmOut ?? null,
-                                            day.attendance?.nightIn ?? null,
-                                            day.attendance?.nightOut ?? null
+                                            day.attendance?.pmOut ?? null
                                           )
                                     )
                                   }

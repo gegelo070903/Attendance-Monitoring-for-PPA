@@ -91,6 +91,7 @@ export default function DashboardPage() {
         <div className="text-right">
           <p className="text-2xl font-bold text-ppa-navy dark:text-blue-400">
             {currentTime.toLocaleTimeString("en-US", {
+              hour12: false,
               hour: "2-digit",
               minute: "2-digit",
             })}
@@ -139,7 +140,7 @@ export default function DashboardPage() {
                   <p className="text-[10px] text-green-600 dark:text-green-400 font-medium">AM In</p>
                   <p className={`text-xs font-semibold ${data?.todayAttendance?.amIn ? 'text-green-700 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
                     {data?.todayAttendance?.amIn 
-                      ? new Date(data.todayAttendance.amIn).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                      ? (() => { const d = new Date(data.todayAttendance.amIn); const h = d.getHours(); const m = d.getMinutes(); const p = h >= 12 ? 'p' : 'a'; const h12 = h % 12 || 12; return m === 0 ? `${h12}${p}` : `${h12}:${m.toString().padStart(2,'0')}${p}`; })()
                       : '--:--'}
                   </p>
                 </div>
@@ -147,7 +148,7 @@ export default function DashboardPage() {
                   <p className="text-[10px] text-yellow-600 dark:text-yellow-400 font-medium">AM Out</p>
                   <p className={`text-xs font-semibold ${data?.todayAttendance?.amOut ? 'text-yellow-700 dark:text-yellow-400' : 'text-gray-400 dark:text-gray-500'}`}>
                     {data?.todayAttendance?.amOut 
-                      ? new Date(data.todayAttendance.amOut).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                      ? (() => { const d = new Date(data.todayAttendance.amOut); const h = d.getHours(); const m = d.getMinutes(); const p = h >= 12 ? 'p' : 'a'; const h12 = h % 12 || 12; return m === 0 ? `${h12}${p}` : `${h12}:${m.toString().padStart(2,'0')}${p}`; })()
                       : '--:--'}
                   </p>
                 </div>
@@ -155,7 +156,7 @@ export default function DashboardPage() {
                   <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">PM In</p>
                   <p className={`text-xs font-semibold ${data?.todayAttendance?.pmIn ? 'text-blue-700 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>
                     {data?.todayAttendance?.pmIn 
-                      ? new Date(data.todayAttendance.pmIn).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                      ? (() => { const d = new Date(data.todayAttendance.pmIn); const h = d.getHours(); const m = d.getMinutes(); const p = h >= 12 ? 'p' : 'a'; const h12 = h % 12 || 12; return m === 0 ? `${h12}${p}` : `${h12}:${m.toString().padStart(2,'0')}${p}`; })()
                       : '--:--'}
                   </p>
                 </div>
@@ -163,7 +164,7 @@ export default function DashboardPage() {
                   <p className="text-[10px] text-purple-600 dark:text-purple-400 font-medium">PM Out</p>
                   <p className={`text-xs font-semibold ${data?.todayAttendance?.pmOut ? 'text-purple-700 dark:text-purple-400' : 'text-gray-400 dark:text-gray-500'}`}>
                     {data?.todayAttendance?.pmOut 
-                      ? new Date(data.todayAttendance.pmOut).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                      ? (() => { const d = new Date(data.todayAttendance.pmOut); const h = d.getHours(); const m = d.getMinutes(); const p = h >= 12 ? 'p' : 'a'; const h12 = h % 12 || 12; return m === 0 ? `${h12}${p}` : `${h12}:${m.toString().padStart(2,'0')}${p}`; })()
                       : '--:--'}
                   </p>
                 </div>

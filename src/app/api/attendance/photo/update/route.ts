@@ -21,8 +21,6 @@ export async function POST(request: NextRequest) {
       "am-out": "SCAN_AM_OUT",
       "pm-in": "SCAN_PM_IN",
       "pm-out": "SCAN_PM_OUT",
-      "night-in": "SCAN_NIGHT_IN",
-      "night-out": "SCAN_NIGHT_OUT",
     };
 
     const scanAction = actionMap[action];

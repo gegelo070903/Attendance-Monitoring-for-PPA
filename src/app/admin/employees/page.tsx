@@ -35,7 +35,6 @@ export default function EmployeesPage() {
     role: "EMPLOYEE",
     department: "",
     position: "",
-    shiftType: "DAY",
   });
   const [editFormData, setEditFormData] = useState({
     id: "",
@@ -45,13 +44,17 @@ export default function EmployeesPage() {
     role: "EMPLOYEE",
     department: "",
     position: "",
-    shiftType: "DAY",
   });
   const [error, setError] = useState("");
   const [editError, setEditError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [qrEmployee, setQrEmployee] = useState<User | null>(null);
+  const [idCardEmployee, setIdCardEmployee] = useState<User | null>(null);
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+  const [editProfilePreview, setEditProfilePreview] = useState<string | null>(null);
+  const [editProfileFile, setEditProfileFile] = useState<File | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const fetchEmployees = async () => {
     try {
@@ -122,7 +125,6 @@ export default function EmployeesPage() {
           role: "EMPLOYEE",
           department: "",
           position: "",
-          shiftType: "DAY",
         });
         fetchEmployees();
       }
@@ -147,7 +149,6 @@ export default function EmployeesPage() {
         department: editFormData.department,
         position: editFormData.position,
         role: editFormData.role,
-        shiftType: editFormData.shiftType,
       };
 
       if (editFormData.password) {
@@ -166,9 +167,15 @@ export default function EmployeesPage() {
         setEditError(data.error || "Failed to update employee");
         showError(data.error || "Failed to update employee");
       } else {
+        // Upload profile photo if one was selected
+        if (editProfileFile) {
+          await uploadProfilePhoto(editFormData.id);
+        }
         showSuccess(`Employee ${editFormData.name} updated successfully!`);
         setShowEditModal(false);
         setEditingEmployee(null);
+        setEditProfilePreview(null);
+        setEditProfileFile(null);
         fetchEmployees();
       }
     } catch (err) {
@@ -189,10 +196,49 @@ export default function EmployeesPage() {
       role: employee.role,
       department: employee.department || "",
       position: employee.position || "",
-      shiftType: (employee as any).shiftType || "DAY",
     });
     setEditError("");
+    setEditProfilePreview(null);
+    setEditProfileFile(null);
     setShowEditModal(true);
+  };
+
+  const handleEditProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      showError("Please select a JPEG, PNG, or WebP image");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showError("Image must be less than 5MB");
+      return;
+    }
+    setEditProfileFile(file);
+    setEditProfilePreview(URL.createObjectURL(file));
+  };
+
+  const uploadProfilePhoto = async (userId: string): Promise<boolean> => {
+    if (!editProfileFile) return true;
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", editProfileFile);
+      formData.append("userId", userId);
+      const res = await fetch("/api/profile/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        const data = await res.json();
+        showError(data.error || "Failed to upload photo");
+        return false;
+      }
+      return true;
+    } catch {
+      showError("Failed to upload photo");
+      return false;
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -270,9 +316,6 @@ export default function EmployeesPage() {
                   Position
                 </th>
                 <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 dark:text-gray-300">
-                  Shift
-                </th>
-                <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 dark:text-gray-300">
                   Role
                 </th>
                 <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 dark:text-gray-300">
@@ -315,31 +358,6 @@ export default function EmployeesPage() {
                   </td>
                   <td className="py-2.5 px-4">
                     <span
-                      className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${
-                        (employee as any).shiftType === "NIGHT"
-                          ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300"
-                          : "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300"
-                      }`}
-                    >
-                      {(employee as any).shiftType === "NIGHT" ? (
-                        <>
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
-                          </svg>
-                          Night
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
-                          </svg>
-                          Day
-                        </>
-                      )}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-4">
-                    <span
                       className={`inline-flex px-2 py-0.5 text-[10px] font-medium rounded-full ${
                         employee.role === "ADMIN"
                           ? "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
@@ -373,6 +391,15 @@ export default function EmployeesPage() {
                             strokeLinejoin="round"
                             d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"
                           />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => setIdCardEmployee(employee)}
+                        className="p-1 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+                        title="ID Card"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
                         </svg>
                       </button>
                       <button
@@ -569,25 +596,6 @@ export default function EmployeesPage() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Default Shift Type
-                </label>
-                <select
-                  value={formData.shiftType}
-                  onChange={(e) =>
-                    setFormData({ ...formData, shiftType: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                >
-                  <option value="DAY">Day Shift</option>
-                  <option value="NIGHT">Night Shift</option>
-                </select>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  This sets the default shift for the employee&apos;s attendance
-                </p>
-              </div>
-
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
@@ -645,6 +653,46 @@ export default function EmployeesPage() {
             )}
 
             <form onSubmit={handleEditSubmit} className="space-y-4" autoComplete="off">
+              {/* Profile Photo Upload */}
+              <div className="flex flex-col items-center gap-2">
+                <div
+                  className="relative w-20 h-20 rounded-full border-2 border-gray-300 dark:border-gray-600 overflow-hidden cursor-pointer group"
+                  onClick={() => editFileInputRef.current?.click()}
+                >
+                  {editProfilePreview ? (
+                    <img src={editProfilePreview} alt="Preview" className="w-full h-full object-cover" />
+                  ) : editingEmployee?.profileImage ? (
+                    <img src={editingEmployee.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-primary-100 dark:bg-ppa-navy/30 flex items-center justify-center">
+                      <span className="text-primary-700 dark:text-blue-300 font-bold text-2xl">
+                        {editingEmployee?.name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <input
+                  ref={editFileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleEditProfileChange}
+                />
+                <button
+                  type="button"
+                  onClick={() => editFileInputRef.current?.click()}
+                  className="text-xs text-primary-600 dark:text-blue-400 hover:underline"
+                >
+                  {editingEmployee?.profileImage || editProfilePreview ? "Change Photo" : "Upload Photo"}
+                </button>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Full Name *
@@ -759,25 +807,6 @@ export default function EmployeesPage() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Default Shift Type
-                </label>
-                <select
-                  value={editFormData.shiftType}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, shiftType: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                >
-                  <option value="DAY">Day Shift</option>
-                  <option value="NIGHT">Night Shift</option>
-                </select>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  This sets the default shift for the employee&apos;s attendance
-                </p>
-              </div>
-
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
@@ -808,6 +837,14 @@ export default function EmployeesPage() {
           employee={qrEmployee}
           onClose={() => setQrEmployee(null)}
           canvasRef={qrCanvasRef}
+        />
+      )}
+
+      {/* ID Card Modal */}
+      {idCardEmployee && (
+        <IDCardModal
+          employee={idCardEmployee}
+          onClose={() => setIdCardEmployee(null)}
         />
       )}
     </div>
@@ -968,7 +1005,7 @@ function QRCodeModal({
 
         <div className="flex flex-col items-center gap-3">
           <div className="p-3 bg-white rounded-xl shadow border-2 border-blue-100">
-            <canvas ref={activeCanvas} className="rounded-lg" />
+            <canvas ref={activeCanvas as React.RefObject<HTMLCanvasElement>} className="rounded-lg" />
           </div>
           <div className="text-center">
             <p className="font-semibold text-gray-900 dark:text-white">{employee.name}</p>
@@ -997,6 +1034,228 @@ function QRCodeModal({
               Print
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IDCardModal({
+  employee,
+  onClose,
+}: {
+  employee: User;
+  onClose: () => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+
+  useEffect(() => {
+    const generateQR = async () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const size = 200;
+      canvas.width = size;
+      canvas.height = size;
+
+      const qrData = JSON.stringify({
+        email: employee.email,
+        name: employee.name,
+        type: "PPA_ATTENDANCE",
+      });
+
+      await QRCode.toCanvas(canvas, qrData, {
+        width: size,
+        margin: 2,
+        errorCorrectionLevel: "H",
+        color: { dark: "#0038A8", light: "#ffffff" },
+      });
+
+      const logo = new Image();
+      logo.crossOrigin = "anonymous";
+      logo.onload = () => {
+        const logoSize = size * 0.22;
+        const logoX = (size - logoSize) / 2;
+        const logoY = (size - logoSize) / 2;
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, logoSize / 2 + 6, 0, 2 * Math.PI);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, logoSize / 2 + 6, 0, 2 * Math.PI);
+        ctx.strokeStyle = "#0038A8";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
+        setQrDataUrl(canvas.toDataURL("image/png"));
+      };
+      logo.onerror = () => setQrDataUrl(canvas.toDataURL("image/png"));
+      logo.src = "/images/ppa-logo-nobg.png";
+    };
+    generateQR();
+  }, [employee]);
+
+  const handlePrint = () => {
+    if (!qrDataUrl) return;
+    const profileImg = employee.profileImage;
+    const profileHTML = profileImg
+      ? '<img src="' + profileImg + '" alt="Profile" class="profile-image" />'
+      : '<div class="profile-placeholder">' + employee.name.charAt(0).toUpperCase() + "</div>";
+
+    const css = [
+      ".card { width: 2.125in; height: 3.375in; border-radius: 12px; overflow: hidden; position: relative; background: linear-gradient(180deg, #fff 0%, #f8fafc 100%); border: 1px solid #e2e8f0; }",
+      ".corner-tl { position: absolute; top: 0; left: 0; width: 0; height: 0; border-left: 50px solid #0038A8; border-bottom: 50px solid transparent; }",
+      ".corner-br { position: absolute; bottom: 0; right: 0; width: 0; height: 0; border-right: 50px solid #CE1126; border-top: 50px solid transparent; }",
+      ".corner-tr { position: absolute; top: 0; right: 0; width: 0; height: 0; border-right: 50px solid #CE1126; border-bottom: 50px solid transparent; }",
+      ".corner-bl { position: absolute; bottom: 0; left: 0; width: 0; height: 0; border-left: 50px solid #0038A8; border-top: 50px solid transparent; }",
+      ".card-header { padding: 16px 12px 8px; display: flex; align-items: center; justify-content: center; gap: 8px; position: relative; z-index: 1; }",
+      ".logo { width: 36px; height: 36px; object-fit: contain; }",
+      ".company-name { font-size: 9px; font-weight: 700; color: #0038A8; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1.3; text-align: left; }",
+      ".profile-section { display: flex; flex-direction: column; align-items: center; padding: 8px 12px; position: relative; z-index: 1; }",
+      ".profile-image-container { width: 80px; height: 80px; border-radius: 50%; border: 3px solid #0038A8; overflow: hidden; background: linear-gradient(135deg, #f1f5f9, #e2e8f0); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }",
+      ".profile-image { width: 100%; height: 100%; object-fit: cover; }",
+      ".profile-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #64748b; background: linear-gradient(135deg, #e2e8f0, #cbd5e1); }",
+      ".user-info { text-align: center; margin-top: 10px; padding: 0 8px; }",
+      ".user-name { font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 4px; line-height: 1.2; }",
+      ".user-department { font-size: 9px; color: #64748b; margin-bottom: 2px; }",
+      ".user-position { font-size: 9px; color: #CE1126; font-weight: 600; }",
+      ".id-badge { margin-top: 12px; display: inline-block; background: linear-gradient(135deg, #0038A8, #1e4d8c); color: #fff; padding: 5px 16px; border-radius: 12px; font-size: 8px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }",
+      ".accent-line { width: 40px; height: 3px; background: #FCD116; margin: 12px auto 0; border-radius: 2px; }",
+      ".card-back { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 16px; }",
+      ".back-company { font-size: 10px; font-weight: 700; color: #0038A8; }",
+      ".back-title { font-size: 8px; color: #0038A8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 500; position: relative; z-index: 1; }",
+      ".qr-container { background: #fff; padding: 10px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 2px solid #0038A8; position: relative; z-index: 1; }",
+      ".qr-code { width: 110px; height: 110px; display: block; }",
+    ].join("\n  ");
+
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>PPA ID Card - ' + employee.name + "</title>" +
+      "<style>@page { margin: 0; }" +
+      "* { margin: 0; padding: 0; box-sizing: border-box; }" +
+      "body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; background: #f1f5f9; }" +
+      ".cards-container { display: flex; gap: 40px; flex-wrap: wrap; justify-content: center; }" +
+      ".card-wrapper { display: flex; flex-direction: column; align-items: center; }" +
+      ".card-label { text-align: center; font-size: 12px; color: #64748b; margin-bottom: 8px; font-weight: 500; }" +
+      css + "\n" +
+      ".cut-border { border: 2px dashed #999; border-radius: 14px; padding: 2px; }" +
+      "@media print { @page { margin: 10mm; } body { background: #fff; padding: 0; } .cards-container { gap: 30px; } .card { box-shadow: none; } .card-label { display: none; } .no-print { display: none !important; } .cut-border { border: 2px dashed #666; } }" +
+      ".no-print { position: fixed; top: 12px; right: 16px; z-index: 100; }" +
+      ".no-print button { padding: 8px 24px; font-size: 12pt; cursor: pointer; background: #0d3a5c; color: #fff; border: none; border-radius: 6px; }" +
+      "</style></head><body>" +
+      '<div class="no-print"><button onclick="window.print()">Print ID Card</button></div>' +
+      '<div class="cards-container">' +
+      '<div class="card-wrapper"><div class="card-label">Front</div><div class="cut-border"><div class="card">' +
+        '<div class="corner-tl"></div><div class="corner-br"></div>' +
+        '<div class="card-header"><img src="/images/ppa-logo-nobg.png" alt="PPA Logo" class="logo" /><div class="company-name">Philippine<br/>Ports Authority</div></div>' +
+        '<div class="profile-section"><div class="profile-image-container">' + profileHTML + '</div>' +
+        '<div class="user-info"><div class="user-name">' + employee.name + "</div>" +
+        (employee.department ? '<div class="user-department">' + employee.department + "</div>" : "") +
+        (employee.position ? '<div class="user-position">' + employee.position + "</div>" : "") +
+        '</div><span class="id-badge">Employee ID</span><div class="accent-line"></div></div>' +
+      "</div></div></div>" +
+      '<div class="card-wrapper"><div class="card-label">Back</div><div class="cut-border"><div class="card card-back">' +
+        '<div class="corner-tr"></div><div class="corner-bl"></div>' +
+        '<div style="text-align:center;margin-bottom:4px;position:relative;z-index:1"><span class="back-company">Philippine Ports Authority</span></div>' +
+        '<div class="back-title">Scan for Attendance</div>' +
+        '<div class="qr-container"><img src="' + qrDataUrl + '" class="qr-code" alt="QR Code" /></div>' +
+      "</div></div></div>" +
+      "</div>" +
+      '<script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }<\/script>' +
+      "</body></html>";
+
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]" onClick={onClose}>
+      <div
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-lg mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Employee ID Card</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Hidden canvas for QR generation */}
+        <canvas ref={canvasRef} className="hidden" />
+
+        {/* Card Preview */}
+        <div className="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            {/* Front Card */}
+            <div className="flex flex-col items-center">
+              <span className="text-xs text-gray-500 dark:text-gray-400 mb-2">Front</span>
+              <div className="bg-gradient-to-b from-white to-slate-50 rounded-xl overflow-hidden shadow-xl relative border border-slate-200" style={{ width: "170px", height: "270px" }}>
+                <div className="absolute top-0 left-0 w-0 h-0 border-l-[40px] border-l-[#0038A8] border-b-[40px] border-b-transparent"></div>
+                <div className="absolute bottom-0 right-0 w-0 h-0 border-r-[40px] border-r-[#CE1126] border-t-[40px] border-t-transparent"></div>
+                <div className="flex items-center justify-center gap-2 pt-4 px-3 relative z-10">
+                  <img src="/images/ppa-logo-nobg.png" alt="PPA" className="w-9 h-9 object-contain" />
+                  <p className="text-[8px] font-bold text-[#0038A8] leading-tight uppercase">Philippine<br/>Ports Authority</p>
+                </div>
+                <div className="flex flex-col items-center pt-2 relative z-10">
+                  <div className="w-[72px] h-[72px] rounded-full border-[3px] border-[#0038A8] overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 shadow-lg">
+                    {employee.profileImage ? (
+                      <img src={employee.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-500 font-bold text-2xl bg-gradient-to-br from-slate-200 to-slate-300">
+                        {employee.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-center mt-2 px-3">
+                    <p className="text-[11px] font-bold text-slate-800 leading-tight">{employee.name}</p>
+                    {employee.department && <p className="text-[7px] text-slate-500 mt-1">{employee.department}</p>}
+                    {employee.position && <p className="text-[8px] text-[#CE1126] font-semibold">{employee.position}</p>}
+                  </div>
+                  <span className="mt-3 text-[7px] bg-gradient-to-r from-[#0038A8] to-[#1e4d8c] text-white px-4 py-1.5 rounded-xl font-semibold uppercase tracking-wide">Employee ID</span>
+                  <div className="w-10 h-1 bg-[#FCD116] rounded-full mt-3"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Back Card */}
+            <div className="flex flex-col items-center">
+              <span className="text-xs text-gray-500 dark:text-gray-400 mb-2">Back</span>
+              <div className="bg-gradient-to-b from-white to-slate-50 rounded-xl overflow-hidden shadow-xl relative border border-slate-200 flex flex-col items-center justify-center" style={{ width: "170px", height: "270px" }}>
+                <div className="absolute top-0 right-0 w-0 h-0 border-r-[40px] border-r-[#CE1126] border-b-[40px] border-b-transparent"></div>
+                <div className="absolute bottom-0 left-0 w-0 h-0 border-l-[40px] border-l-[#0038A8] border-t-[40px] border-t-transparent"></div>
+                <p className="text-[9px] text-[#0038A8] font-bold mb-1 relative z-10">Philippine Ports Authority</p>
+                <p className="text-[7px] text-[#0038A8] uppercase tracking-wider font-medium mb-3 relative z-10">Scan for Attendance</p>
+                <div className="bg-white p-2 rounded-xl shadow-md border-2 border-[#0038A8] relative z-10">
+                  {qrDataUrl ? (
+                    <img src={qrDataUrl} alt="QR Code" className="w-[100px] h-[100px]" />
+                  ) : (
+                    <div className="w-[100px] h-[100px] bg-slate-100 animate-pulse rounded-lg"></div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Print Button */}
+        <div className="mt-4">
+          <button
+            onClick={handlePrint}
+            disabled={!qrDataUrl}
+            className="w-full px-4 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium shadow-md disabled:opacity-50"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
+            </svg>
+            Print ID Card (Front & Back)
+          </button>
         </div>
       </div>
     </div>

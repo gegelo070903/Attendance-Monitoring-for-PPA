@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
         role: true,
         department: true,
         position: true,
-        shiftType: true,
         profileImage: true,
         createdAt: true,
       },
@@ -52,7 +51,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { email, password, name, role, department, position, shiftType } =
+    const { email, password, name, role, department, position } =
       await request.json();
 
     if (!email || !password || !name) {
@@ -83,7 +82,6 @@ export async function POST(request: NextRequest) {
         role: role || "EMPLOYEE",
         department,
         position,
-        shiftType: shiftType || "DAY",
       },
       select: {
         id: true,
@@ -92,7 +90,6 @@ export async function POST(request: NextRequest) {
         role: true,
         department: true,
         position: true,
-        shiftType: true,
       },
     });
 
@@ -202,7 +199,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { id, name, email, department, position, role, password, shiftType } = await request.json();
+    const { id, name, email, department, position, role, password } = await request.json();
 
     if (!id) {
       return NextResponse.json(
@@ -234,7 +231,6 @@ export async function PUT(request: NextRequest) {
     if (department !== undefined) updateData.department = department;
     if (position !== undefined) updateData.position = position;
     if (role) updateData.role = role;
-    if (shiftType) updateData.shiftType = shiftType;
     if (password) {
       updateData.password = await bcrypt.hash(password, 10);
     }
@@ -249,7 +245,6 @@ export async function PUT(request: NextRequest) {
         role: true,
         department: true,
         position: true,
-        shiftType: true,
       },
     });
 

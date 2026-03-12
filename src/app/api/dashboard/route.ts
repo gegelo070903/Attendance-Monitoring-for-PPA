@@ -15,11 +15,9 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const today = startOfDay(now);
     const todayEnd = endOfDay(now);
-    const yesterday = startOfDay(subDays(now, 1));
-    const yesterdayEnd = endOfDay(subDays(now, 1));
 
-    // Get today's attendance for current user (DAY shift today OR NIGHT shift from yesterday)
-    let todayAttendance = await prisma.attendance.findFirst({
+    // Get today's attendance for current user
+    const todayAttendance = await prisma.attendance.findFirst({
       where: {
         userId: session.user.id,
         date: {
@@ -28,21 +26,6 @@ export async function GET(request: NextRequest) {
         },
       },
     });
-
-    // If no day shift attendance found, check for night shift from yesterday
-    if (!todayAttendance) {
-      todayAttendance = await prisma.attendance.findFirst({
-        where: {
-          userId: session.user.id,
-          shiftType: "NIGHT",
-          date: {
-            gte: yesterday,
-            lte: yesterdayEnd,
-          },
-          nightIn: { not: null },
-        },
-      });
-    }
 
     // Get this month's stats for current user
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -77,14 +60,12 @@ export async function GET(request: NextRequest) {
         where: { role: "EMPLOYEE" },
       });
 
-      // Count DAY shift employees present today
-      const dayShiftPresentCount = await prisma.attendance.count({
+      const todayPresentCount = await prisma.attendance.count({
         where: {
           date: {
             gte: today,
             lte: todayEnd,
           },
-          shiftType: { not: "NIGHT" },
           status: { in: ["PRESENT", "LATE", "HALF_DAY"] },
           user: {
             role: "EMPLOYEE",
@@ -92,25 +73,6 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      // Count NIGHT shift employees present (attendance dated yesterday with nightIn set)
-      const nightShiftPresentCount = await prisma.attendance.count({
-        where: {
-          date: {
-            gte: yesterday,
-            lte: yesterdayEnd,
-          },
-          shiftType: "NIGHT",
-          nightIn: { not: null },
-          status: { in: ["PRESENT", "LATE", "HALF_DAY"] },
-          user: {
-            role: "EMPLOYEE",
-          },
-        },
-      });
-
-      const todayPresentCount = dayShiftPresentCount + nightShiftPresentCount;
-
-      // Ensure absent count is never negative
       const todayAbsent = Math.max(0, totalEmployees - todayPresentCount);
 
       adminStats = {

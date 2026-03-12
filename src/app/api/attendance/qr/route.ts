@@ -1,23 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { startOfDay, endOfDay, subDays } from "date-fns";
+import { startOfDay, endOfDay } from "date-fns";
 import { logActivity, ActivityActions } from "@/lib/activityLogger";
 
 // Minimum seconds between scans for the same user (cooldown)
 const SCAN_COOLDOWN_SECONDS = 3;
 
-// Extended types for new schema fields (will be properly typed after Prisma regeneration)
+// Extended types for schema fields
 interface ExtendedAttendance {
   id: string;
   userId: string;
   date: Date;
-  shiftType?: string;
   amIn: Date | null;
   amOut: Date | null;
   pmIn: Date | null;
   pmOut: Date | null;
-  nightIn?: Date | null;
-  nightOut?: Date | null;
   status: string;
   workHours: number | null;
   notes: string | null;
@@ -28,11 +25,8 @@ interface ExtendedSettings {
   amEndTime: string;
   pmStartTime: string;
   pmEndTime: string;
-  nightStartTime?: string;
-  nightEndTime?: string;
   amGracePeriod?: number;
   pmGracePeriod?: number;
-  nightGracePeriod?: number;
   lateThreshold: number;
 }
 
@@ -40,6 +34,15 @@ interface ExtendedSettings {
 function parseTimeString(timeStr: string): { hour: number; minute: number } {
   const [hour, minute] = timeStr.split(":").map(Number);
   return { hour, minute };
+}
+
+// Helper to format a Date to shorthand time like "8a" or "1:30p"
+function fmtTime(d: Date): string {
+  const hours = d.getHours();
+  const minutes = d.getMinutes();
+  const period = hours >= 12 ? 'p' : 'a';
+  const hours12 = hours % 12 || 12;
+  return minutes === 0 ? `${hours12}${period}` : `${hours12}:${minutes.toString().padStart(2, '0')}${period}`;
 }
 
 // Helper to get the scheduled start time as a Date object for the given arrival date
@@ -79,7 +82,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const email = searchParams.get("email");
-    const shiftType = searchParams.get("shiftType") || "DAY";
 
     if (!email) {
       return NextResponse.json(
@@ -107,30 +109,21 @@ export async function GET(request: NextRequest) {
       },
     });
     
-    // Cast to extended type
     const attendance = attendanceRaw as ExtendedAttendance | null;
 
-    // Determine next action based on shift type
-    let nextAction: string = shiftType === "NIGHT" ? "night-in" : "am-in";
+    let nextAction: string = "am-in";
     
     if (attendance) {
-      if (shiftType === "DAY") {
-        if (!attendance.amIn) nextAction = "am-in";
-        else if (!attendance.amOut) nextAction = "am-out";
-        else if (!attendance.pmIn) nextAction = "pm-in";
-        else if (!attendance.pmOut) nextAction = "pm-out";
-        else nextAction = "complete";
-      } else {
-        if (!attendance.nightIn) nextAction = "night-in";
-        else if (!attendance.nightOut) nextAction = "night-out";
-        else nextAction = "complete";
-      }
+      if (!attendance.amIn) nextAction = "am-in";
+      else if (!attendance.amOut) nextAction = "am-out";
+      else if (!attendance.pmIn) nextAction = "pm-in";
+      else if (!attendance.pmOut) nextAction = "pm-out";
+      else nextAction = "complete";
     }
 
     return NextResponse.json({
       attendance,
       nextAction,
-      shiftType,
     });
   } catch (error) {
     console.error("Error checking attendance:", error);
@@ -145,7 +138,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, userId, shiftType = "DAY", scanPhoto } = body;
+    const { email, userId, scanPhoto } = body;
 
     const identifier = email || userId;
 
@@ -156,7 +149,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("QR Scan - Looking up user with identifier:", identifier, "Shift:", shiftType);
+    console.log("QR Scan - Looking up user with identifier:", identifier);
 
     // Find user by email or ID
     let user = await prisma.user.findUnique({
@@ -199,44 +192,17 @@ export async function POST(request: NextRequest) {
       amEndTime: "12:00",
       pmStartTime: "13:00",
       pmEndTime: "17:00",
-      nightStartTime: "22:00",
-      nightEndTime: "06:00",
       amGracePeriod: 15,
       pmGracePeriod: 15,
-      nightGracePeriod: 15,
       lateThreshold: 15,
     };
 
-    // Determine the attendance date
-    // For night shift starting before midnight, use that date
-    // For night shift after midnight (continuing from previous night), use previous date
-    let attendanceDate = startOfDay(now);
-    
-    if (shiftType === "NIGHT" && currentHour < 12) {
-      // If it's early morning and night shift, this might be continuing from yesterday
-      const yesterdayAttendance = await prisma.attendance.findFirst({
-        where: {
-          userId: user.id,
-          shiftType: "NIGHT",
-          date: {
-            gte: startOfDay(subDays(now, 1)),
-            lte: endOfDay(subDays(now, 1)),
-          },
-          nightIn: { not: null },
-          nightOut: null,
-        },
-      });
-      
-      if (yesterdayAttendance) {
-        attendanceDate = startOfDay(subDays(now, 1));
-      }
-    }
+    const attendanceDate = startOfDay(now);
 
-    // Find or create today's attendance record for this shift
+    // Find today's attendance record
     let attendance = await prisma.attendance.findFirst({
       where: {
         userId: user.id,
-        shiftType,
         date: {
           gte: attendanceDate,
           lte: endOfDay(attendanceDate),
@@ -246,9 +212,7 @@ export async function POST(request: NextRequest) {
 
     // Check for scan cooldown
     if (attendance) {
-      const lastScanTime = shiftType === "NIGHT"
-        ? (attendance.nightOut || attendance.nightIn)
-        : (attendance.pmOut || attendance.pmIn || attendance.amOut || attendance.amIn);
+      const lastScanTime = attendance.pmOut || attendance.pmIn || attendance.amOut || attendance.amIn;
       
       if (lastScanTime) {
         const secondsSinceLastScan = (now.getTime() - new Date(lastScanTime).getTime()) / 1000;
@@ -269,368 +233,230 @@ export async function POST(request: NextRequest) {
     let updateData: Record<string, unknown> = {};
     let status = "PRESENT";
 
-    // Parse all time boundaries from settings
-    const amStart = parseTimeString(settings.amStartTime);
+    // Parse time boundaries from settings
     const amEnd = parseTimeString(settings.amEndTime);
     const pmStart = parseTimeString(settings.pmStartTime);
-    const pmEnd = parseTimeString(settings.pmEndTime);
-    const nightStart = parseTimeString(settings.nightStartTime || "22:00");
-    const nightEnd = parseTimeString(settings.nightEndTime || "06:00");
 
-    // Helper function to check if current time is within a time range
-    const isWithinTimeRange = (startHour: number, startMin: number, endHour: number, endMin: number): boolean => {
-      const currentMinutes = currentHour * 60 + currentMinute;
-      const startMinutes = startHour * 60 + startMin;
-      const endMinutes = endHour * 60 + endMin;
-      return currentMinutes >= startMinutes && currentMinutes < endMinutes;
-    };
-
-    // Helper function to check if time is before a given time
+    // Helper functions
     const isBeforeTime = (hour: number, minute: number): boolean => {
-      const currentMinutes = currentHour * 60 + currentMinute;
-      const targetMinutes = hour * 60 + minute;
-      return currentMinutes < targetMinutes;
+      return currentHour * 60 + currentMinute < hour * 60 + minute;
     };
 
-    // Helper function to check if time is after or at a given time
     const isAfterOrAtTime = (hour: number, minute: number): boolean => {
-      const currentMinutes = currentHour * 60 + currentMinute;
-      const targetMinutes = hour * 60 + minute;
-      return currentMinutes >= targetMinutes;
+      return currentHour * 60 + currentMinute >= hour * 60 + minute;
     };
 
-    if (shiftType === "NIGHT") {
-      // Night shift logic
-      if (!attendance) {
-        // First scan - Night In
-        action = "night-in";
-        
-        // Check if late for night shift
-        const lateCheck = checkLateStatus(now, settings.nightStartTime || "22:00", (settings as { nightGracePeriod?: number }).nightGracePeriod || 15);
+    const isInAMPeriod = isBeforeTime(amEnd.hour, amEnd.minute);
+    const isInLunchPeriod = isAfterOrAtTime(amEnd.hour, amEnd.minute) && isBeforeTime(pmStart.hour, pmStart.minute);
+    const isInPMPeriod = isAfterOrAtTime(pmStart.hour, pmStart.minute);
+    
+    if (!attendance) {
+      // Double-check to prevent race condition duplicates
+      const existingCheck = await prisma.attendance.findFirst({
+        where: {
+          userId: user.id,
+          date: { gte: attendanceDate, lte: endOfDay(attendanceDate) },
+        },
+      });
+      if (existingCheck) {
+        attendance = existingCheck;
+      }
+    }
+
+    if (!attendance) {
+      // First scan of the day - create new attendance record
+      
+      if (isInAMPeriod) {
+        action = "am-in";
+        const lateCheck = checkLateStatus(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15);
         if (lateCheck.isLate) {
           status = "LATE";
         }
         
-        // Double-check: re-query to prevent race condition duplicates
-        const existingCheck = await prisma.attendance.findFirst({
-          where: {
-            userId: user.id,
-            shiftType: "NIGHT",
-            date: { gte: attendanceDate, lte: endOfDay(attendanceDate) },
-          },
-        });
-        if (existingCheck) {
-          attendance = existingCheck;
-          // Fall through to the existing attendance update logic below
-        } else {
-          attendance = await prisma.attendance.create({
-            data: {
-              userId: user.id,
-              userName: user.name,
-              date: attendanceDate,
-              shiftType: "NIGHT",
-              nightIn: now,
-              status,
-            },
-          });
-
-          // Log the scan activity
-          await logActivity({
+        attendance = await prisma.attendance.create({
+          data: {
             userId: user.id,
             userName: user.name,
-            action: ActivityActions.SCAN_NIGHT_IN,
-            description: `${user.name} scanned Night In at ${now.toLocaleTimeString()}`,
-            type: "SUCCESS",
-            metadata: {
-              attendanceId: attendance.id,
-              shiftType: "NIGHT",
-              status,
-              department: user.department,
-              position: user.position,
-            },
-            scanPhoto,
-          });
-
-          return NextResponse.json({
-            success: true,
-            attendanceId: attendance.id,
-            action: "Night In",
-            time: now,
+            date: attendanceDate,
+            amIn: now,
             status,
-            message: `Good evening, ${user.name}! Night In recorded at ${now.toLocaleTimeString()}.`,
-            nextAction: "night-out",
-            user: {
-              name: user.name,
-              department: user.department,
-              position: user.position,
-              profileImage: user.profileImage,
-            },
-          });
-        }
-      }
-
-      if (!attendance.nightIn) {
-        action = "night-in";
-        const lateCheck = checkLateStatus(now, settings.nightStartTime || "22:00", (settings as { nightGracePeriod?: number }).nightGracePeriod || 15);
-        if (lateCheck.isLate) {
-          updateData.status = "LATE";
-        } else {
-          updateData.status = "PRESENT";
-        }
-        updateData.nightIn = now;
-      } else if (!attendance.nightOut) {
-        action = "night-out";
-        updateData.nightOut = now;
-        
-        // Calculate work hours
-        const nightHours = (now.getTime() - new Date(attendance.nightIn).getTime()) / (1000 * 60 * 60);
-        updateData.workHours = Math.round(nightHours * 100) / 100;
-      } else {
-        return NextResponse.json({
-          success: false,
-          message: `${user.name} has already completed all attendance for tonight's shift.`,
-          nextAction: "complete",
-        });
-      }
-    } else {
-      // Day shift logic with strict time-based restrictions
-      
-      // Determine which time period we're in
-      const isInAMPeriod = isBeforeTime(amEnd.hour, amEnd.minute); // Before AM End (e.g., before 12:00)
-      const isInLunchPeriod = isAfterOrAtTime(amEnd.hour, amEnd.minute) && isBeforeTime(pmStart.hour, pmStart.minute); // Between AM End and PM Start
-      const isInPMPeriod = isAfterOrAtTime(pmStart.hour, pmStart.minute); // PM Start or later (e.g., 1:00 PM onwards)
-      
-      if (!attendance) {
-        // First scan of the day - but double-check to prevent race condition duplicates
-        const existingDayCheck = await prisma.attendance.findFirst({
-          where: {
-            userId: user.id,
-            shiftType: "DAY",
-            date: { gte: attendanceDate, lte: endOfDay(attendanceDate) },
           },
         });
-        if (existingDayCheck) {
-          // Record already exists from a concurrent scan, use it instead of creating a duplicate
-          attendance = existingDayCheck;
-        }
-      }
 
-      if (!attendance) {
-        // Truly first scan of the day - create new attendance record
-        
-        if (isInAMPeriod) {
-          // Morning arrival - record as AM In
-          action = "am-in";
-          const lateCheck = checkLateStatus(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15);
-          if (lateCheck.isLate) {
-            status = "LATE";
-          }
-          
-          attendance = await prisma.attendance.create({
-            data: {
-              userId: user.id,
-              userName: user.name,
-              date: attendanceDate,
-              shiftType: "DAY",
-              amIn: now,
-              status,
-            },
-          });
-
-          // Log activity for AM In
-          await logActivity({
-            userId: user.id,
-            userName: user.name || "Unknown",
-            action: ActivityActions.SCAN_AM_IN,
-            description: `${user.name} scanned AM In at ${now.toLocaleTimeString()}${status === "LATE" ? " (Late)" : ""}`,
-            type: "SUCCESS",
-            metadata: {
-              attendanceId: attendance.id,
-              time: now.toISOString(),
-              status,
-              shiftType: "DAY",
-            },
-            scanPhoto: scanPhoto || undefined,
-          });
-
-          return NextResponse.json({
-            success: true,
+        await logActivity({
+          userId: user.id,
+          userName: user.name || "Unknown",
+          action: ActivityActions.SCAN_AM_IN,
+          description: `${user.name} scanned AM In at ${fmtTime(now)}${status === "LATE" ? " (Late)" : ""}`,
+          type: "SUCCESS",
+          metadata: {
             attendanceId: attendance.id,
-            action: "AM In",
-            time: now,
+            time: now.toISOString(),
             status,
-            message: `Good morning, ${user.name}! AM In recorded at ${now.toLocaleTimeString()}.${status === "LATE" ? " (Late)" : ""}`,
-            nextAction: "am-out",
-            user: {
-              name: user.name,
-              department: user.department,
-              position: user.position,
-              profileImage: user.profileImage,
-            },
-          });
-        } else if (isInLunchPeriod) {
-          // During lunch period - first arrival is recorded as PM In (missed AM = half day)
-          action = "pm-in";
-          
-          attendance = await prisma.attendance.create({
-            data: {
-              userId: user.id,
-              userName: user.name,
-              date: attendanceDate,
-              shiftType: "DAY",
-              pmIn: now,
-              status: "HALF_DAY", // Missing AM session = half day
-            },
-          });
+          },
+          scanPhoto: scanPhoto || undefined,
+        });
 
-          // Log activity for PM In during lunch
-          await logActivity({
-            userId: user.id,
-            userName: user.name || "Unknown",
-            action: ActivityActions.SCAN_PM_IN,
-            description: `${user.name} scanned PM In at ${now.toLocaleTimeString()} (Morning session missed - Half Day)`,
-            type: "SUCCESS",
-            metadata: {
-              attendanceId: attendance.id,
-              time: now.toISOString(),
-              status: "HALF_DAY",
-              shiftType: "DAY",
-            },
-            scanPhoto: scanPhoto || undefined,
-          });
-
-          return NextResponse.json({
-            success: true,
-            attendanceId: attendance.id,
-            action: "PM In",
-            time: now,
-            status: "HALF_DAY",
-            message: `Good afternoon, ${user.name}! PM In recorded at ${now.toLocaleTimeString()}. (Morning session missed - Half Day)`,
-            nextAction: "pm-out",
-            user: {
-              name: user.name,
-              department: user.department,
-              position: user.position,
-              profileImage: user.profileImage,
-            },
-          });
-        } else {
-          // PM period - employee missed AM, record as PM In (half day)
-          action = "pm-in";
-          const lateCheck = checkLateStatus(now, settings.pmStartTime, (settings as { pmGracePeriod?: number }).pmGracePeriod || 15);
-          
-          attendance = await prisma.attendance.create({
-            data: {
-              userId: user.id,
-              userName: user.name,
-              date: attendanceDate,
-              shiftType: "DAY",
-              pmIn: now,
-              status: "HALF_DAY", // Missing AM session = half day
-            },
-          });
-
-          let statusMsg = " (Morning session missed - Half Day)";
-          if (lateCheck.isLate) {
-            statusMsg = " (Morning missed + Late PM arrival - Half Day)";
-          }
-
-          // Log activity for PM In during PM period
-          await logActivity({
-            userId: user.id,
-            userName: user.name || "Unknown",
-            action: ActivityActions.SCAN_PM_IN,
-            description: `${user.name} scanned PM In at ${now.toLocaleTimeString()}.${statusMsg}`,
-            type: "SUCCESS",
-            metadata: {
-              attendanceId: attendance.id,
-              time: now.toISOString(),
-              status: "HALF_DAY",
-              shiftType: "DAY",
-              lateForPM: lateCheck.isLate,
-            },
-            scanPhoto: scanPhoto || undefined,
-          });
-
-          return NextResponse.json({
-            success: true,
-            attendanceId: attendance.id,
-            action: "PM In",
-            time: now,
-            status: "HALF_DAY",
-            message: `Good afternoon, ${user.name}! PM In recorded at ${now.toLocaleTimeString()}.${statusMsg}`,
-            nextAction: "pm-out",
-            user: {
-              name: user.name,
-              department: user.department,
-              position: user.position,
-              profileImage: user.profileImage,
-            },
-          });
-        }
-      }
-
-      // Existing attendance record - determine next action based on current time and record state
-      
-      if (attendance.amIn && !attendance.amOut && !attendance.pmIn && !attendance.pmOut) {
-        // Has AM In only - next could be AM Out or PM In depending on time
+        return NextResponse.json({
+          success: true,
+          attendanceId: attendance.id,
+          action: "AM In",
+          time: now,
+          status,
+          message: `Good morning, ${user.name}! AM In recorded at ${fmtTime(now)}.${status === "LATE" ? " (Late)" : ""}`,
+          nextAction: "am-out",
+          user: {
+            name: user.name,
+            department: user.department,
+            position: user.position,
+            profileImage: user.profileImage,
+          },
+        });
+      } else if (isInLunchPeriod) {
+        action = "pm-in";
         
-        if (isInAMPeriod || isInLunchPeriod) {
-          // Still in AM period or lunch - record as AM Out
-          action = "am-out";
-          updateData.amOut = now;
-        } else {
-          // Already in PM period - skip AM Out, go to PM In
-          action = "pm-in";
-          updateData.pmIn = now;
-        }
-      } else if (attendance.amIn && attendance.amOut && !attendance.pmIn && !attendance.pmOut) {
-        // Has AM In and AM Out - needs PM In
+        attendance = await prisma.attendance.create({
+          data: {
+            userId: user.id,
+            userName: user.name,
+            date: attendanceDate,
+            pmIn: now,
+            status: "HALF_DAY",
+          },
+        });
+
+        await logActivity({
+          userId: user.id,
+          userName: user.name || "Unknown",
+          action: ActivityActions.SCAN_PM_IN,
+          description: `${user.name} scanned PM In at ${fmtTime(now)} (Morning session missed - Half Day)`,
+          type: "SUCCESS",
+          metadata: {
+            attendanceId: attendance.id,
+            time: now.toISOString(),
+            status: "HALF_DAY",
+          },
+          scanPhoto: scanPhoto || undefined,
+        });
+
+        return NextResponse.json({
+          success: true,
+          attendanceId: attendance.id,
+          action: "PM In",
+          time: now,
+          status: "HALF_DAY",
+          message: `Good afternoon, ${user.name}! PM In recorded at ${fmtTime(now)}. (Morning session missed - Half Day)`,
+          nextAction: "pm-out",
+          user: {
+            name: user.name,
+            department: user.department,
+            position: user.position,
+            profileImage: user.profileImage,
+          },
+        });
+      } else {
         action = "pm-in";
         const lateCheck = checkLateStatus(now, settings.pmStartTime, (settings as { pmGracePeriod?: number }).pmGracePeriod || 15);
-        // Only mark late for PM if they were on time for AM but late returning from lunch
-        if (lateCheck.isLate && attendance.status === "PRESENT") {
-          updateData.status = "LATE";
-        }
-        updateData.pmIn = now;
-      } else if (attendance.pmIn && !attendance.pmOut) {
-        // Has PM In (with or without AM) - needs PM Out
-        action = "pm-out";
-        updateData.pmOut = now;
         
-        // Calculate total work hours
-        let totalHours = 0;
-        if (attendance.amIn && attendance.amOut) {
-          totalHours += (new Date(attendance.amOut).getTime() - new Date(attendance.amIn).getTime()) / (1000 * 60 * 60);
+        attendance = await prisma.attendance.create({
+          data: {
+            userId: user.id,
+            userName: user.name,
+            date: attendanceDate,
+            pmIn: now,
+            status: "HALF_DAY",
+          },
+        });
+
+        let statusMsg = " (Morning session missed - Half Day)";
+        if (lateCheck.isLate) {
+          statusMsg = " (Morning missed + Late PM arrival - Half Day)";
         }
-        if (attendance.pmIn) {
-          totalHours += (now.getTime() - new Date(attendance.pmIn).getTime()) / (1000 * 60 * 60);
-        }
-        updateData.workHours = Math.round(totalHours * 100) / 100;
-      } else if (!attendance.amIn && !attendance.pmIn) {
-        // No check-in yet (edge case - record exists but no times)
-        if (isInAMPeriod) {
-          action = "am-in";
-          const lateCheck = checkLateStatus(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15);
-          if (lateCheck.isLate) {
-            updateData.status = "LATE";
-          } else if (attendance.status === "ABSENT") {
-            updateData.status = "PRESENT";
-          }
-          updateData.amIn = now;
-        } else {
-          // PM period - missed AM = half day
-          action = "pm-in";
-          updateData.status = "HALF_DAY";
-          updateData.pmIn = now;
-        }
-      } else {
+
+        await logActivity({
+          userId: user.id,
+          userName: user.name || "Unknown",
+          action: ActivityActions.SCAN_PM_IN,
+          description: `${user.name} scanned PM In at ${fmtTime(now)}.${statusMsg}`,
+          type: "SUCCESS",
+          metadata: {
+            attendanceId: attendance.id,
+            time: now.toISOString(),
+            status: "HALF_DAY",
+            lateForPM: lateCheck.isLate,
+          },
+          scanPhoto: scanPhoto || undefined,
+        });
+
         return NextResponse.json({
-          success: false,
-          message: `${user.name} has already completed all attendance for today.`,
-          nextAction: "complete",
+          success: true,
+          attendanceId: attendance.id,
+          action: "PM In",
+          time: now,
+          status: "HALF_DAY",
+          message: `Good afternoon, ${user.name}! PM In recorded at ${fmtTime(now)}.${statusMsg}`,
+          nextAction: "pm-out",
+          user: {
+            name: user.name,
+            department: user.department,
+            position: user.position,
+            profileImage: user.profileImage,
+          },
         });
       }
+    }
+
+    // Existing attendance record - determine next action
+    
+    if (attendance.amIn && !attendance.amOut && !attendance.pmIn && !attendance.pmOut) {
+      if (isInAMPeriod || isInLunchPeriod) {
+        action = "am-out";
+        updateData.amOut = now;
+      } else {
+        action = "pm-in";
+        updateData.pmIn = now;
+      }
+    } else if (attendance.amIn && attendance.amOut && !attendance.pmIn && !attendance.pmOut) {
+      action = "pm-in";
+      const lateCheck = checkLateStatus(now, settings.pmStartTime, (settings as { pmGracePeriod?: number }).pmGracePeriod || 15);
+      if (lateCheck.isLate && attendance.status === "PRESENT") {
+        updateData.status = "LATE";
+      }
+      updateData.pmIn = now;
+    } else if (attendance.pmIn && !attendance.pmOut) {
+      action = "pm-out";
+      updateData.pmOut = now;
+      
+      // Calculate total work hours
+      let totalHours = 0;
+      if (attendance.amIn && attendance.amOut) {
+        totalHours += (new Date(attendance.amOut).getTime() - new Date(attendance.amIn).getTime()) / (1000 * 60 * 60);
+      }
+      if (attendance.pmIn) {
+        totalHours += (now.getTime() - new Date(attendance.pmIn).getTime()) / (1000 * 60 * 60);
+      }
+      updateData.workHours = Math.round(totalHours * 100) / 100;
+    } else if (!attendance.amIn && !attendance.pmIn) {
+      if (isInAMPeriod) {
+        action = "am-in";
+        const lateCheck = checkLateStatus(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15);
+        if (lateCheck.isLate) {
+          updateData.status = "LATE";
+        } else if (attendance.status === "ABSENT") {
+          updateData.status = "PRESENT";
+        }
+        updateData.amIn = now;
+      } else {
+        action = "pm-in";
+        updateData.status = "HALF_DAY";
+        updateData.pmIn = now;
+      }
+    } else {
+      return NextResponse.json({
+        success: false,
+        message: `${user.name} has already completed all attendance for today.`,
+        nextAction: "complete",
+      });
     }
 
     // Update attendance record
@@ -645,8 +471,6 @@ export async function POST(request: NextRequest) {
       "am-out": "AM Out",
       "pm-in": "PM In",
       "pm-out": "PM Out",
-      "night-in": "Night In",
-      "night-out": "Night Out",
     };
 
     const activityActionMap: Record<string, string> = {
@@ -654,17 +478,13 @@ export async function POST(request: NextRequest) {
       "am-out": ActivityActions.SCAN_AM_OUT,
       "pm-in": ActivityActions.SCAN_PM_IN,
       "pm-out": ActivityActions.SCAN_PM_OUT,
-      "night-in": ActivityActions.SCAN_NIGHT_IN,
-      "night-out": ActivityActions.SCAN_NIGHT_OUT,
     };
 
     const messages: Record<string, string> = {
-      "am-in": `Good morning, ${user.name}! AM In recorded at ${now.toLocaleTimeString()}.`,
-      "am-out": `See you later, ${user.name}! AM Out recorded at ${now.toLocaleTimeString()}.`,
-      "pm-in": `Welcome back, ${user.name}! PM In recorded at ${now.toLocaleTimeString()}.`,
-      "pm-out": `Goodbye, ${user.name}! PM Out recorded at ${now.toLocaleTimeString()}. Have a great evening!`,
-      "night-in": `Good evening, ${user.name}! Night In recorded at ${now.toLocaleTimeString()}.`,
-      "night-out": `Good morning, ${user.name}! Night Out recorded at ${now.toLocaleTimeString()}. Rest well!`,
+      "am-in": `Good morning, ${user.name}! AM In recorded at ${fmtTime(now)}.`,
+      "am-out": `See you later, ${user.name}! AM Out recorded at ${fmtTime(now)}.`,
+      "pm-in": `Welcome back, ${user.name}! PM In recorded at ${fmtTime(now)}.`,
+      "pm-out": `Goodbye, ${user.name}! PM Out recorded at ${fmtTime(now)}. Have a great evening!`,
     };
 
     const nextActions: Record<string, string> = {
@@ -672,8 +492,6 @@ export async function POST(request: NextRequest) {
       "am-out": "pm-in",
       "pm-in": "pm-out",
       "pm-out": "complete",
-      "night-in": "night-out",
-      "night-out": "complete",
     };
 
     // Log the scan activity
@@ -681,11 +499,10 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       userName: user.name,
       action: activityActionMap[action] || action.toUpperCase().replace("-", "_"),
-      description: `${user.name} scanned ${actionLabels[action]} at ${now.toLocaleTimeString()}`,
+      description: `${user.name} scanned ${actionLabels[action]} at ${fmtTime(now)}`,
       type: "SUCCESS",
       metadata: {
         attendanceId: updatedAttendance.id,
-        shiftType,
         status: updatedAttendance.status,
         department: user.department,
         position: user.position,

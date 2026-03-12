@@ -21,7 +21,6 @@ interface ScanResult {
   time?: string;
   nextAction?: string;
   user?: UserInfo;
-  shiftType?: string;
 }
 
 interface RecentScan {
@@ -29,7 +28,6 @@ interface RecentScan {
   action: string;
   time: string;
   profileImage?: string;
-  shiftType: string;
 }
 
 interface Settings {
@@ -37,17 +35,9 @@ interface Settings {
   amEndTime: string;
   pmStartTime: string;
   pmEndTime: string;
-  nightStartTime: string;
-  nightEndTime: string;
   amGracePeriod: number;
   pmGracePeriod: number;
-  nightGracePeriod: number;
 }
-
-type ShiftType = "DAY" | "NIGHT";
-
-const DAY_SHIFT_ACTIONS = ["AM In", "AM Out", "PM In", "PM Out"];
-const NIGHT_SHIFT_ACTIONS = ["Night In", "Night Out"];
 
 // Instructions popup component
 function InstructionsPopup({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -74,7 +64,6 @@ function InstructionsPopup({ isOpen, onClose }: { isOpen: boolean; onClose: () =
         </div>
         
         <ol className="list-decimal list-inside space-y-2 text-gray-700 text-sm mb-4">
-          <li>Select your shift type (Day/Night)</li>
           <li>Click &quot;Start Camera Scanner&quot; to activate the webcam</li>
           <li>Hold your QR code in front of the camera</li>
           <li>Wait for the confirmation message</li>
@@ -82,13 +71,7 @@ function InstructionsPopup({ isOpen, onClose }: { isOpen: boolean; onClose: () =
         
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
           <p className="text-sm text-gray-600">
-            <strong className="text-[#0038A8]">Day Shift:</strong> AM In → AM Out → PM In → PM Out
-          </p>
-          <p className="text-sm text-gray-600 mt-2">
-            <strong className="text-[#0038A8]">Night Shift:</strong> Night In → Night Out
-          </p>
-          <p className="text-xs text-gray-400 mt-3">
-            * Night shift attendance is recorded for the shift start date even if it crosses midnight.
+            <strong className="text-[#0038A8]">Sequence:</strong> AM In → AM Out → PM In → PM Out
           </p>
         </div>
         
@@ -115,21 +98,26 @@ function getGreetingMessage(action: string, userName: string): string {
       return `Welcome back, ${firstName}!`;
     case "PM Out":
       return `Have a great day ahead, ${firstName}!`;
-    case "Night In":
-      return `Good evening, ${firstName}!`;
-    case "Night Out":
-      return `Good night, ${firstName}! Rest well.`;
     default:
       return `Welcome, ${firstName}!`;
   }
 }
 
-// Helper function to format time from "HH:MM" to "h:mm A"
+// Helper function to format time from "HH:MM" to shorthand like "8a" or "1:30p"
 function formatTimeDisplay(time24: string): string {
   const [hours, minutes] = time24.split(":").map(Number);
-  const period = hours >= 12 ? "PM" : "AM";
+  const period = hours >= 12 ? "p" : "a";
   const hours12 = hours % 12 || 12;
-  return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`;
+  return minutes === 0 ? `${hours12}${period}` : `${hours12}:${minutes.toString().padStart(2, "0")}${period}`;
+}
+
+// Helper to format a Date to shorthand time like "8a" or "1:30p"
+function formatShortTime(date: Date): string {
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const period = hours >= 12 ? "p" : "a";
+  const hours12 = hours % 12 || 12;
+  return minutes === 0 ? `${hours12}${period}` : `${hours12}:${minutes.toString().padStart(2, "0")}${period}`;
 }
 
 export default function ScanStationPage() {
@@ -138,7 +126,7 @@ export default function ScanStationPage() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
-  const [selectedShift, setSelectedShift] = useState<ShiftType>("DAY");
+
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [mounted, setMounted] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
@@ -152,11 +140,8 @@ export default function ScanStationPage() {
     amEndTime: "12:00",
     pmStartTime: "13:00",
     pmEndTime: "17:00",
-    nightStartTime: "22:00",
-    nightEndTime: "06:00",
     amGracePeriod: 15,
     pmGracePeriod: 15,
-    nightGracePeriod: 15,
   });
 
   // Fetch settings from API
@@ -171,11 +156,8 @@ export default function ScanStationPage() {
             amEndTime: data.amEndTime || "12:00",
             pmStartTime: data.pmStartTime || "13:00",
             pmEndTime: data.pmEndTime || "17:00",
-            nightStartTime: data.nightStartTime || "22:00",
-            nightEndTime: data.nightEndTime || "06:00",
             amGracePeriod: data.amGracePeriod || 15,
             pmGracePeriod: data.pmGracePeriod || 15,
-            nightGracePeriod: data.nightGracePeriod || 15,
           });
         }
       } catch (err) {
@@ -190,12 +172,6 @@ export default function ScanStationPage() {
     setMounted(true);
     setCurrentTime(new Date());
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    
-    // Auto-detect shift based on time
-    const hour = new Date().getHours();
-    if (hour >= 22 || hour < 6) {
-      setSelectedShift("NIGHT");
-    }
     
     return () => clearInterval(timer);
   }, []);
@@ -268,8 +244,7 @@ export default function ScanStationPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
             email: data.email, 
-            userId: data.email,
-            shiftType: selectedShift 
+            userId: data.email
           }),
         });
 
@@ -283,7 +258,6 @@ export default function ScanStationPage() {
             time: responseData.time,
             nextAction: responseData.nextAction,
             user: responseData.user,
-            shiftType: selectedShift,
           };
 
           setScanResult(result);
@@ -307,7 +281,6 @@ export default function ScanStationPage() {
               action: responseData.action,
               time: responseData.time,
               profileImage: responseData.user?.profileImage,
-              shiftType: selectedShift,
             },
             ...prev.slice(0, 9),
           ]);
@@ -340,7 +313,7 @@ export default function ScanStationPage() {
         setIsProcessing(false);
       }
     },
-    [isProcessing, selectedShift]
+    [isProcessing]
   );
 
   const handleError = (error: string) => {
@@ -360,10 +333,6 @@ export default function ScanStationPage() {
         return "bg-sky-50 border-sky-400 text-sky-700";
       case "PM Out":
         return "bg-violet-50 border-violet-400 text-violet-700";
-      case "Night In":
-        return "bg-indigo-50 border-indigo-400 text-indigo-700";
-      case "Night Out":
-        return "bg-slate-50 border-slate-400 text-slate-700";
       default:
         return "bg-gray-50 border-gray-200 text-gray-800";
     }
@@ -380,19 +349,9 @@ export default function ScanStationPage() {
         return "bg-gradient-to-br from-sky-500 to-sky-600";
       case "PM Out":
         return "bg-gradient-to-br from-violet-500 to-violet-600";
-      case "Night In":
-        return "bg-gradient-to-br from-indigo-600 to-indigo-700";
-      case "Night Out":
-        return "bg-gradient-to-br from-slate-600 to-slate-700";
       default:
         return "bg-gray-500";
     }
-  };
-
-  const getShiftBadgeColor = (shiftType: string) => {
-    return shiftType === "NIGHT" 
-      ? "bg-indigo-100 text-indigo-800 border-indigo-300" 
-      : "bg-amber-100 text-amber-800 border-amber-300";
   };
 
   // Define mode tiles with icons - using settings for time display
@@ -402,13 +361,6 @@ export default function ScanStationPage() {
     { action: "PM In", label: "After Lunch", description: "Return from break", time: `${formatTimeDisplay(settings.pmStartTime)} (Start)`, icon: "M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" },
     { action: "PM Out", label: "End of Day", description: "Work day complete", time: `${formatTimeDisplay(settings.pmEndTime)} (End)`, icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
   ];
-
-  const nightShiftTiles = [
-    { action: "Night In", label: "Night Arrival", description: "Start of night shift", time: `${formatTimeDisplay(settings.nightStartTime)} (Start)`, icon: "M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" },
-    { action: "Night Out", label: "Night End", description: "Night shift complete", time: `${formatTimeDisplay(settings.nightEndTime)} (End)`, icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
-  ];
-
-  const activeTiles = selectedShift === "DAY" ? dayShiftTiles : nightShiftTiles;
 
   return (
     <div className="min-h-screen min-h-[100dvh] p-2 sm:p-3 overflow-x-hidden bg-white">
@@ -469,7 +421,7 @@ export default function ScanStationPage() {
                 {overlayData.action}
               </span>
               <span className="text-gray-500 font-mono text-sm">
-                {new Date(overlayData.time).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                {formatShortTime(new Date(overlayData.time))}
               </span>
             </div>
           </div>
@@ -509,7 +461,7 @@ export default function ScanStationPage() {
                 {mounted && currentTime ? currentTime.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "--"}
               </span>
               <span className="bg-[#FCD116]/30 px-2 py-1 rounded text-[#0038A8] text-xs font-mono font-bold" suppressHydrationWarning>
-                {mounted && currentTime ? currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : "--:--"}
+                {mounted && currentTime ? currentTime.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" }) : "--:--"}
               </span>
             </div>
             <button
@@ -525,46 +477,15 @@ export default function ScanStationPage() {
           </div>
         </div>
 
-        {/* Shift Selector - Compact Inline */}
+        {/* Schedule Info - Compact Inline */}
         <div className="bg-white/80 backdrop-blur-md rounded-xl p-2 mb-2 border border-gray-200 shadow flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-600 text-xs font-medium">Shift:</span>
-            <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
-              <button
-                onClick={() => setSelectedShift("DAY")}
-                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                  selectedShift === "DAY" ? "bg-[#FCD116] text-[#0038A8] shadow" : "text-gray-500 hover:bg-gray-200"
-                }`}
-              >
-                Day
-              </button>
-              <button
-                onClick={() => setSelectedShift("NIGHT")}
-                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                  selectedShift === "NIGHT" ? "bg-indigo-500 text-white shadow" : "text-gray-500 hover:bg-gray-200"
-                }`}
-              >
-                Night
-              </button>
-            </div>
-          </div>
-          
-          {/* Schedule info inline */}
           <div className="flex items-center gap-2 text-[10px]">
-            {selectedShift === "DAY" ? (
-              <>
-                <span className="bg-green-50 px-1.5 py-0.5 rounded border border-green-200 text-green-700">
-                  AM: {formatTimeDisplay(settings.amStartTime)}-{formatTimeDisplay(settings.amEndTime)}
-                </span>
-                <span className="bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 text-blue-700">
-                  PM: {formatTimeDisplay(settings.pmStartTime)}-{formatTimeDisplay(settings.pmEndTime)}
-                </span>
-              </>
-            ) : (
-              <span className="bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 text-indigo-700">
-                Night: {formatTimeDisplay(settings.nightStartTime)}-{formatTimeDisplay(settings.nightEndTime)}
-              </span>
-            )}
+            <span className="bg-green-50 px-1.5 py-0.5 rounded border border-green-200 text-green-700">
+              AM: {formatTimeDisplay(settings.amStartTime)}-{formatTimeDisplay(settings.amEndTime)}
+            </span>
+            <span className="bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 text-blue-700">
+              PM: {formatTimeDisplay(settings.pmStartTime)}-{formatTimeDisplay(settings.pmEndTime)}
+            </span>
             <span className="text-gray-400">Grace: {settings.amGracePeriod}min</span>
           </div>
         </div>
@@ -649,7 +570,7 @@ export default function ScanStationPage() {
                         </div>
                       </div>
                       <span className="text-xs font-mono text-gray-600">
-                        {new Date(scan.time).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                        {formatShortTime(new Date(scan.time))}
                       </span>
                     </div>
                   </div>
@@ -665,34 +586,26 @@ export default function ScanStationPage() {
             <span className="w-2 h-2 bg-[#FCD116] rounded-full"></span>
             Attendance Actions
           </h2>
-          <div className={`grid gap-3 ${selectedShift === "DAY" ? "grid-cols-4" : "grid-cols-2 max-w-md mx-auto"}`}>
-            {activeTiles.map((tile) => {
-              const isActive = selectedShift === "DAY" 
-                ? DAY_SHIFT_ACTIONS.includes(tile.action) 
-                : NIGHT_SHIFT_ACTIONS.includes(tile.action);
-              
+          <div className="grid gap-3 grid-cols-4">
+            {dayShiftTiles.map((tile) => {
               return (
                 <div
                   key={tile.action}
-                  className={`relative overflow-hidden rounded-xl p-3 transition-all duration-300 ${
-                    isActive ? `${getTileBgColor(tile.action, true)} shadow-lg hover:shadow-xl hover:scale-[1.02]` : "bg-gray-400/30 opacity-50"
-                  }`}
+                  className={`relative overflow-hidden rounded-xl p-3 transition-all duration-300 ${getTileBgColor(tile.action, true)} shadow-lg hover:shadow-xl hover:scale-[1.02]`}
                 >
-                  <div className={`w-8 h-8 rounded-lg mb-2 flex items-center justify-center ${isActive ? "bg-white/20" : "bg-gray-300/30"}`}>
-                    <svg className={`w-5 h-5 ${isActive ? "text-white" : "text-gray-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <div className="w-8 h-8 rounded-lg mb-2 flex items-center justify-center bg-white/20">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d={tile.icon} />
                     </svg>
                   </div>
                   
-                  <h3 className={`font-bold text-sm ${isActive ? "text-white" : "text-gray-500"}`}>{tile.action}</h3>
-                  <p className={`text-xs ${isActive ? "text-white/80" : "text-gray-400"}`}>{tile.label}</p>
-                  <p className={`text-[10px] mt-1 ${isActive ? "text-white/60" : "text-gray-400"}`}>{tile.time}</p>
+                  <h3 className="font-bold text-sm text-white">{tile.action}</h3>
+                  <p className="text-xs text-white/80">{tile.label}</p>
+                  <p className="text-[10px] mt-1 text-white/60">{tile.time}</p>
                   
-                  {isActive && (
-                    <div className="absolute top-2 right-2">
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                    </div>
-                  )}
+                  <div className="absolute top-2 right-2">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                  </div>
                 </div>
               );
             })}

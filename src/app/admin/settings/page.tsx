@@ -8,11 +8,8 @@ interface Settings {
   amEndTime: string;
   pmStartTime: string;
   pmEndTime: string;
-  nightStartTime: string;
-  nightEndTime: string;
   amGracePeriod: number;
   pmGracePeriod: number;
-  nightGracePeriod: number;
   lateThreshold: number;
 }
 
@@ -39,11 +36,8 @@ export default function SettingsPage() {
     amEndTime: "12:00",
     pmStartTime: "13:00",
     pmEndTime: "17:00",
-    nightStartTime: "22:00",
-    nightEndTime: "06:00",
     amGracePeriod: 15,
     pmGracePeriod: 15,
-    nightGracePeriod: 15,
     lateThreshold: 15,
   });
   const [loading, setLoading] = useState(true);
@@ -72,11 +66,8 @@ export default function SettingsPage() {
             amEndTime: data.amEndTime || "12:00",
             pmStartTime: data.pmStartTime || "13:00",
             pmEndTime: data.pmEndTime || "17:00",
-            nightStartTime: data.nightStartTime || "22:00",
-            nightEndTime: data.nightEndTime || "06:00",
             amGracePeriod: data.amGracePeriod || 15,
             pmGracePeriod: data.pmGracePeriod || 15,
-            nightGracePeriod: data.nightGracePeriod || 15,
             lateThreshold: data.lateThreshold || 15,
           });
         }
@@ -222,7 +213,7 @@ export default function SettingsPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">Settings</h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400">Configure attendance system settings and shift schedules</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Configure attendance system settings</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -252,8 +243,8 @@ export default function SettingsPage() {
               </svg>
             </div>
             <div>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white">Day Shift Schedule</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Configure morning and afternoon shift times</p>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">Schedule Settings</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Configure morning and afternoon session times</p>
             </div>
           </div>
 
@@ -356,71 +347,6 @@ export default function SettingsPage() {
                   Employees arriving within {settings.pmGracePeriod} minutes after {settings.pmStartTime} are on-time
                 </p>
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Night Shift Settings */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-800/50 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white">Night Shift Schedule</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Configure overnight shift times (may cross midnight)</p>
-            </div>
-          </div>
-
-          <div className="space-y-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Night Shift Start Time
-                </label>
-                <input
-                  type="time"
-                  value={settings.nightStartTime}
-                  onChange={(e) => setSettings({ ...settings, nightStartTime: e.target.value })}
-                  className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Night Shift End Time (Next Day)
-                </label>
-                <input
-                  type="time"
-                  value={settings.nightEndTime}
-                  onChange={(e) => setSettings({ ...settings, nightEndTime: e.target.value })}
-                  className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Night Shift Grace Period (minutes)
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="60"
-                value={settings.nightGracePeriod}
-                onChange={(e) => setSettings({ ...settings, nightGracePeriod: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              />
-              <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
-                Employees arriving within {settings.nightGracePeriod} minutes after {settings.nightStartTime} are on-time
-              </p>
-            </div>
-            <div className="bg-indigo-100 dark:bg-indigo-800/30 p-2 rounded-lg">
-              <p className="text-xs text-indigo-700 dark:text-indigo-300">
-                <strong>Note:</strong> Night shift attendance is anchored to the shift start date. 
-                If a shift starts at {settings.nightStartTime} and ends at {settings.nightEndTime} the next day, 
-                the attendance will be recorded for the date when the shift started.
-              </p>
             </div>
           </div>
         </div>

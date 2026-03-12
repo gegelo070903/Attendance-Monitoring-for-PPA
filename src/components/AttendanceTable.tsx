@@ -5,14 +5,12 @@ function toDate(val: string | Date | null | undefined): Date | null {
   return typeof val === 'string' ? parseISO(val) : val;
 }
 
-function calcWorkHours(amIn: string | Date | null | undefined, amOut: string | Date | null | undefined, pmIn: string | Date | null | undefined, pmOut: string | Date | null | undefined, nightIn: string | Date | null | undefined = null, nightOut: string | Date | null | undefined = null) {
+function calcWorkHours(amIn: string | Date | null | undefined, amOut: string | Date | null | undefined, pmIn: string | Date | null | undefined, pmOut: string | Date | null | undefined) {
   let total = 0;
   const ai = toDate(amIn), ao = toDate(amOut);
   const pi = toDate(pmIn), po = toDate(pmOut);
-  const ni = toDate(nightIn), no_ = toDate(nightOut);
   if (ai && ao) total += differenceInMinutes(ao, ai);
   if (pi && po) total += differenceInMinutes(po, pi);
-  if (ni && no_) total += differenceInMinutes(no_, ni);
   return Math.round((total / 60) * 100) / 100;
 }
 import { Attendance } from "@/types";
@@ -66,11 +64,6 @@ export default function AttendanceTable({
     );
   }
 
-  // Check if any attendance has night shift data
-  const hasNightShift = liveAttendances.some(
-    (a) => a.shiftType === 'NIGHT' || a.nightIn || a.nightOut
-  );
-
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -84,9 +77,6 @@ export default function AttendanceTable({
                 Employee
               </th>
             )}
-            <th className="text-center py-2 px-3 text-xs font-semibold text-gray-600 dark:text-gray-300">
-              Shift
-            </th>
             <th className="text-center py-2 px-3 text-xs font-semibold text-green-600 dark:text-green-400">
               AM In
             </th>
@@ -99,16 +89,6 @@ export default function AttendanceTable({
             <th className="text-center py-2 px-3 text-xs font-semibold text-purple-600 dark:text-purple-400">
               PM Out
             </th>
-            {hasNightShift && (
-              <>
-                <th className="text-center py-2 px-3 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                  Night In
-                </th>
-                <th className="text-center py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-400">
-                  Night Out
-                </th>
-              </>
-            )}
             <th className="text-center py-2 px-3 text-xs font-semibold text-gray-600 dark:text-gray-300">
               Hours
             </th>
@@ -131,15 +111,6 @@ export default function AttendanceTable({
                   {attendance.user?.name || "Unknown"}
                 </td>
               )}
-              <td className="py-2 px-3 text-xs text-center">
-                <span className={`inline-flex px-1.5 py-0.5 text-[10px] font-medium rounded-full ${
-                  attendance.shiftType === 'NIGHT' 
-                    ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' 
-                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                }`}>
-                  {attendance.shiftType || 'DAY'}
-                </span>
-              </td>
               <td className="py-2 px-3 text-xs text-center text-green-600 dark:text-green-400 font-medium">
                 {formatTime(attendance.amIn)}
               </td>
@@ -152,28 +123,16 @@ export default function AttendanceTable({
               <td className="py-2 px-3 text-xs text-center text-purple-600 dark:text-purple-400 font-medium">
                 {formatTime(attendance.pmOut)}
               </td>
-              {hasNightShift && (
-                <>
-                  <td className="py-2 px-3 text-xs text-center text-indigo-600 dark:text-indigo-400 font-medium">
-                    {formatTime(attendance.nightIn)}
-                  </td>
-                  <td className="py-2 px-3 text-xs text-center text-slate-600 dark:text-slate-400 font-medium">
-                    {formatTime(attendance.nightOut)}
-                  </td>
-                </>
-              )}
               <td className="py-2 px-3 text-xs text-center text-gray-600 dark:text-gray-300">
                 {(attendance.workHours && attendance.workHours > 0)
                   ? formatHoursAndMinutes(attendance.workHours)
-                  : (attendance.amIn && attendance.amOut) || (attendance.pmIn && attendance.pmOut) || (attendance.nightIn && attendance.nightOut)
+                  : (attendance.amIn && attendance.amOut) || (attendance.pmIn && attendance.pmOut)
                     ? formatHoursAndMinutes(
                         calcWorkHours(
                           attendance.amIn ?? null,
                           attendance.amOut ?? null,
                           attendance.pmIn ?? null,
-                          attendance.pmOut ?? null,
-                          attendance.nightIn ?? null,
-                          attendance.nightOut ?? null
+                          attendance.pmOut ?? null
                         )
                       )
                     : "-"}

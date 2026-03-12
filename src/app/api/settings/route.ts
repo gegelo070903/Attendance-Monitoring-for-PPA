@@ -23,11 +23,8 @@ export async function GET() {
           amEndTime: "12:00",
           pmStartTime: "13:00",
           pmEndTime: "17:00",
-          nightStartTime: "22:00",
-          nightEndTime: "06:00",
           amGracePeriod: 15,
           pmGracePeriod: 15,
-          nightGracePeriod: 15,
           lateThreshold: 15,
         },
       });
@@ -58,11 +55,8 @@ export async function PUT(request: NextRequest) {
       amEndTime,
       pmStartTime,
       pmEndTime,
-      nightStartTime,
-      nightEndTime,
       amGracePeriod,
       pmGracePeriod,
-      nightGracePeriod,
       lateThreshold,
     } = body;
 
@@ -77,11 +71,8 @@ export async function PUT(request: NextRequest) {
           amEndTime: amEndTime || settings.amEndTime,
           pmStartTime: pmStartTime || settings.pmStartTime,
           pmEndTime: pmEndTime || settings.pmEndTime,
-          nightStartTime: nightStartTime || settings.nightStartTime,
-          nightEndTime: nightEndTime || settings.nightEndTime,
           amGracePeriod: amGracePeriod !== undefined ? amGracePeriod : settings.amGracePeriod,
           pmGracePeriod: pmGracePeriod !== undefined ? pmGracePeriod : settings.pmGracePeriod,
-          nightGracePeriod: nightGracePeriod !== undefined ? nightGracePeriod : settings.nightGracePeriod,
           lateThreshold: lateThreshold !== undefined ? lateThreshold : settings.lateThreshold,
         },
       });
@@ -92,11 +83,8 @@ export async function PUT(request: NextRequest) {
           amEndTime: amEndTime || "12:00",
           pmStartTime: pmStartTime || "13:00",
           pmEndTime: pmEndTime || "17:00",
-          nightStartTime: nightStartTime || "22:00",
-          nightEndTime: nightEndTime || "06:00",
           amGracePeriod: amGracePeriod || 15,
           pmGracePeriod: pmGracePeriod || 15,
-          nightGracePeriod: nightGracePeriod || 15,
           lateThreshold: lateThreshold || 15,
         },
       });
@@ -114,8 +102,6 @@ export async function PUT(request: NextRequest) {
         amEndTime: settings.amEndTime,
         pmStartTime: settings.pmStartTime,
         pmEndTime: settings.pmEndTime,
-        nightStartTime: settings.nightStartTime,
-        nightEndTime: settings.nightEndTime,
       },
     });
 

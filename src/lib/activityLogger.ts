@@ -44,8 +44,6 @@ export const ActivityActions = {
   SCAN_AM_OUT: "SCAN_AM_OUT",
   SCAN_PM_IN: "SCAN_PM_IN",
   SCAN_PM_OUT: "SCAN_PM_OUT",
-  SCAN_NIGHT_IN: "SCAN_NIGHT_IN",
-  SCAN_NIGHT_OUT: "SCAN_NIGHT_OUT",
   
   // Auth actions
   LOGIN: "LOGIN",

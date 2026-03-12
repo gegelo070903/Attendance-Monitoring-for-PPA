@@ -69,7 +69,6 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           department: user.department,
           position: user.position,
-          shiftType: user.shiftType,
           profileImage: user.profileImage,
         };
       },
@@ -82,7 +81,6 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.department = user.department;
         token.position = user.position;
-        token.shiftType = user.shiftType;
         token.profileImage = user.profileImage;
       }
       // Refresh user data on session update
@@ -93,14 +91,12 @@ export const authOptions: NextAuthOptions = {
             profileImage: true, 
             department: true, 
             position: true,
-            shiftType: true,
           },
         });
         if (dbUser) {
           token.profileImage = dbUser.profileImage;
           token.department = dbUser.department;
           token.position = dbUser.position;
-          token.shiftType = dbUser.shiftType;
         }
       }
       return token;
@@ -111,7 +107,6 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as string;
         session.user.department = token.department as string | null;
         session.user.position = token.position as string | null;
-        session.user.shiftType = token.shiftType as string;
         session.user.profileImage = token.profileImage as string | null;
       }
       return session;

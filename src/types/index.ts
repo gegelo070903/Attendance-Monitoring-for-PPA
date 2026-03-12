@@ -5,7 +5,6 @@ export interface User {
   role: 'ADMIN' | 'EMPLOYEE';
   department?: string;
   position?: string;
-  shiftType?: 'DAY' | 'NIGHT';
   profileImage?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -21,9 +20,6 @@ export interface Attendance {
   amOut: Date | null;
   pmIn: Date | null;
   pmOut: Date | null;
-  nightIn: Date | null;
-  nightOut: Date | null;
-  shiftType: 'DAY' | 'NIGHT';
   status: 'PRESENT' | 'ABSENT' | 'LATE' | 'HALF_DAY';
   workHours: number | null;
   notes?: string;

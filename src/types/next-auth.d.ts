@@ -8,7 +8,6 @@ declare module 'next-auth' {
     role: string;
     department?: string | null;
     position?: string | null;
-    shiftType?: string;
     profileImage?: string | null;
   }
 
@@ -18,7 +17,6 @@ declare module 'next-auth' {
       role: string;
       department?: string | null;
       position?: string | null;
-      shiftType?: string;
       profileImage?: string | null;
     };
   }
@@ -30,7 +28,6 @@ declare module 'next-auth/jwt' {
     role: string;
     department?: string | null;
     position?: string | null;
-    shiftType?: string;
     profileImage?: string | null;
   }
 }
