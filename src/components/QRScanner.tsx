@@ -78,7 +78,7 @@ export default function QRScanner({ onScan, onError }: QRScannerProps) {
         { facingMode: "environment" },
         {
           fps: 15,
-          qrbox: { width: 250, height: 250 },
+          qrbox: { width: 280, height: 280 },
           aspectRatio: 1,
           disableFlip: false,
         },
@@ -176,7 +176,7 @@ export default function QRScanner({ onScan, onError }: QRScannerProps) {
         ref={containerRef}
         id="qr-reader"
         className={`w-full rounded-lg overflow-hidden border-2 ${isScanning ? "bg-gray-800 border-gray-700" : "bg-transparent border-transparent"}`}
-        style={{ minHeight: isScanning ? "220px" : "0px", maxWidth: "280px" }}
+        style={{ minHeight: isScanning ? "300px" : "0px", maxWidth: "380px" }}
       />
 
       {!isScanning ? (

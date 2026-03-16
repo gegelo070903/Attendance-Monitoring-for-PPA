@@ -322,48 +322,8 @@ export default function ScanStationPage() {
     setTimeout(() => setScanResult(null), 3000);
   };
 
-  const getActionColor = (action: string, isActive: boolean = true) => {
-    if (!isActive) return "bg-gray-100 border-gray-300 text-gray-400";
-    switch (action) {
-      case "AM In":
-        return "bg-emerald-50 border-emerald-400 text-emerald-700";
-      case "AM Out":
-        return "bg-amber-50 border-amber-400 text-amber-700";
-      case "PM In":
-        return "bg-sky-50 border-sky-400 text-sky-700";
-      case "PM Out":
-        return "bg-violet-50 border-violet-400 text-violet-700";
-      default:
-        return "bg-gray-50 border-gray-200 text-gray-800";
-    }
-  };
-
-  const getTileBgColor = (action: string, isActive: boolean) => {
-    if (!isActive) return "bg-gray-200/50";
-    switch (action) {
-      case "AM In":
-        return "bg-gradient-to-br from-emerald-500 to-emerald-600";
-      case "AM Out":
-        return "bg-gradient-to-br from-amber-500 to-amber-600";
-      case "PM In":
-        return "bg-gradient-to-br from-sky-500 to-sky-600";
-      case "PM Out":
-        return "bg-gradient-to-br from-violet-500 to-violet-600";
-      default:
-        return "bg-gray-500";
-    }
-  };
-
-  // Define mode tiles with icons - using settings for time display
-  const dayShiftTiles = [
-    { action: "AM In", label: "Morning Arrival", description: "Start of work day", time: `${formatTimeDisplay(settings.amStartTime)} (Start)`, icon: "M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" },
-    { action: "AM Out", label: "Lunch Break", description: "Break time out", time: `${formatTimeDisplay(settings.amEndTime)} (End)`, icon: "M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" },
-    { action: "PM In", label: "After Lunch", description: "Return from break", time: `${formatTimeDisplay(settings.pmStartTime)} (Start)`, icon: "M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" },
-    { action: "PM Out", label: "End of Day", description: "Work day complete", time: `${formatTimeDisplay(settings.pmEndTime)} (End)`, icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
-  ];
-
   return (
-    <div className="min-h-screen min-h-[100dvh] p-2 sm:p-3 overflow-x-hidden bg-white">
+    <div className="min-h-[100dvh] p-2 sm:p-3 overflow-x-hidden bg-white">
       {/* Instructions Popup */}
       <InstructionsPopup isOpen={showInstructions} onClose={() => setShowInstructions(false)} />
 
@@ -493,7 +453,7 @@ export default function ScanStationPage() {
         {/* Main Content - Scanner & Recent Activity Side by Side */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
           {/* QR Scanner */}
-          <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-200">
+          <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-200 min-h-[420px]">
             <h2 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#0038A8] to-[#1a5f8a] flex items-center justify-center">
                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -527,7 +487,7 @@ export default function ScanStationPage() {
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-200">
+          <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-200 min-h-[420px]">
             <h2 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#FCD116] to-[#d4a418] flex items-center justify-center">
                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -550,7 +510,7 @@ export default function ScanStationPage() {
             ) : (
               <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
                 {recentScans.slice(0, 6).map((scan, index) => (
-                  <div key={index} className={`p-2.5 rounded-lg border-2 transition-all hover:shadow-md ${getActionColor(scan.action)}`}>
+                  <div key={index} className="p-2.5 rounded-lg border-2 transition-all hover:shadow-md bg-gray-50 border-gray-200 text-gray-800">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
                         <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white shadow bg-gray-200 flex-shrink-0">
@@ -577,38 +537,6 @@ export default function ScanStationPage() {
                 ))}
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Attendance Actions - Full Width at Bottom */}
-        <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-gray-200 shadow-lg">
-          <h2 className="text-[#0038A8] font-bold text-sm mb-3 flex items-center gap-2">
-            <span className="w-2 h-2 bg-[#FCD116] rounded-full"></span>
-            Attendance Actions
-          </h2>
-          <div className="grid gap-3 grid-cols-4">
-            {dayShiftTiles.map((tile) => {
-              return (
-                <div
-                  key={tile.action}
-                  className={`relative overflow-hidden rounded-xl p-3 transition-all duration-300 ${getTileBgColor(tile.action, true)} shadow-lg hover:shadow-xl hover:scale-[1.02]`}
-                >
-                  <div className="w-8 h-8 rounded-lg mb-2 flex items-center justify-center bg-white/20">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d={tile.icon} />
-                    </svg>
-                  </div>
-                  
-                  <h3 className="font-bold text-sm text-white">{tile.action}</h3>
-                  <p className="text-xs text-white/80">{tile.label}</p>
-                  <p className="text-[10px] mt-1 text-white/60">{tile.time}</p>
-                  
-                  <div className="absolute top-2 right-2">
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                  </div>
-                </div>
-              );
-            })}
           </div>
         </div>
 

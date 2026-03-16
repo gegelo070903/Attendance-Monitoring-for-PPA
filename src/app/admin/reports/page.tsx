@@ -344,17 +344,6 @@ export default function AdminReportsPage() {
     const monthLabel = format(startDate, "MMMM");
     const monthRange = monthLabel + " 1-" + daysInMonth + ", " + year;
 
-    const calcLateMins = (arrivalStr: string | null | undefined, expectedHour: number, expectedMin: number): number => {
-      if (!arrivalStr) return 0;
-      const arrival = new Date(arrivalStr);
-      const expected = new Date(arrival);
-      expected.setHours(expectedHour, expectedMin, 0, 0);
-      const diff = Math.floor((arrival.getTime() - expected.getTime()) / 60000);
-      return diff > 0 ? diff : 0;
-    };
-
-    let grandTotalLateMins = 0;
-
     const rows = monthlyData.map(day => {
       const mm = format(day.date, "MM");
       const dd = format(day.date, "dd");
@@ -365,40 +354,34 @@ export default function AdminReportsPage() {
       const amOut = a?.amOut ? formatTime(a.amOut) : "";
       const pmIn = a?.pmIn ? formatTime(a.pmIn) : "";
       const pmOut = a?.pmOut ? formatTime(a.pmOut) : "";
-      let lateMins = 0;
-      if (!day.isWeekend && a) {
-        lateMins += calcLateMins(a.amIn, 8, 0);
-        lateMins += calcLateMins(a.pmIn, 13, 0);
-      }
-      grandTotalLateMins += lateMins;
-      const lateStr = lateMins > 0 ? String(lateMins) : "";
-      const lateDaysVal = lateMins > 0 ? (lateMins / 480).toFixed(3) : "";
+      const hasRecord = Boolean(a && (a.amIn || a.amOut || a.pmIn || a.pmOut));
+      const dayWorkHours = hasRecord
+        ? ((a?.workHours && a.workHours > 0)
+            ? a.workHours
+            : calcWorkHours(a?.amIn ?? null, a?.amOut ?? null, a?.pmIn ?? null, a?.pmOut ?? null))
+        : 0;
+      const dayWorkHoursStr = hasRecord ? formatHoursAndMinutes(dayWorkHours) : "";
       return "<tr>" +
         '<td class="date-col"><b>' + dateLabel + "</b></td>" +
         '<td class="day-col">' + dayName + "</td>" +
-        "<td>" + amIn + "</td>" +
-        "<td>" + amOut + "</td>" +
-        "<td>" + pmIn + "</td>" +
-        "<td>" + pmOut + "</td>" +
-        "<td></td>" +
-        "<td></td>" +
-        "<td>" + lateStr + "</td>" +
-        "<td>" + lateDaysVal + "</td>" +
-        "<td></td>" +
+        '<td class="time-col">' + amIn + "</td>" +
+        '<td class="time-col">' + amOut + "</td>" +
+        '<td class="time-col">' + pmIn + "</td>" +
+        '<td class="time-col">' + pmOut + "</td>" +
+        '<td class="overtime-col"></td>' +
+        '<td class="overtime-col"></td>' +
+        '<td class="hours-col">' + dayWorkHoursStr + "</td>" +
         "</tr>";
     });
 
-    const grandTotalLateDays = grandTotalLateMins > 0 ? (grandTotalLateMins / 480).toFixed(3) : "";
     const stats = calculateEmployeeStats(employee.id);
     const totalHoursStr = formatHoursAndMinutes(stats.totalWorkHours);
 
     const totalRow = '<tr class="total-row">' +
-      "<td colspan=\"4\"></td>" +
-      '<td colspan="2" style="text-align:right;padding-right:6px;"><b>Total:</b></td>' +
-      "<td colspan=\"2\">" + totalHoursStr + "</td>" +
-      "<td>" + (grandTotalLateMins > 0 ? grandTotalLateMins : "") + "</td>" +
-      "<td>" + grandTotalLateDays + "</td>" +
-      "<td></td></tr>";
+      "<td colspan=\"6\"></td>" +
+      '<td class="overtime-col" style="text-align:right;padding-right:6px;"><b>Total:</b></td>' +
+      '<td class="overtime-col"></td>' +
+      '<td class="hours-col">' + totalHoursStr + "</td></tr>";
 
     return '<div class="page">' +
       '<div class="header">' +
@@ -410,16 +393,24 @@ export default function AdminReportsPage() {
         '<div class="info-row"><span class="info-label">Name</span><span>: </span><span class="info-value">' + employee.name + "</span></div>" +
         '<div class="info-row"><span class="info-label">Position</span><span>: </span><span class="info-value">' + (employee.position || "N/A") + "</span></div>" +
       "</div>" +
-      "<table><thead>" +
+      "<table><colgroup>" +
+        '<col class="date-col" />' +
+        '<col class="day-col" />' +
+        '<col class="time-col" />' +
+        '<col class="time-col" />' +
+        '<col class="time-col" />' +
+        '<col class="time-col" />' +
+        '<col class="overtime-col" />' +
+        '<col class="overtime-col" />' +
+        '<col class="hours-col" />' +
+      "</colgroup><thead>" +
         "<tr>" +
           '<th rowspan="2" style="width:50px;">Date</th>' +
           '<th rowspan="2" style="width:50px;">Day</th>' +
           '<th colspan="2">AM</th>' +
           '<th colspan="2">PM</th>' +
           '<th colspan="2">Overtime</th>' +
-          '<th rowspan="2">Total Late<br>in Mins</th>' +
-          '<th rowspan="2">Total Late<br>in Days</th>' +
-          '<th rowspan="2">Remarks</th>' +
+          '<th rowspan="2">Working<br>Hours</th>' +
         "</tr><tr>" +
           "<th>In</th><th>Out</th><th>In</th><th>Out</th><th>In</th><th>Out</th>" +
         "</tr></thead><tbody>" +
@@ -449,11 +440,14 @@ export default function AdminReportsPage() {
       ".info-row { display: flex; gap: 8px; margin-bottom: 2px; font-size: 9pt; }",
       ".info-label { min-width: 60px; font-weight: normal; }",
       ".info-value { font-weight: bold; }",
-      "table { width: 100%; border-collapse: collapse; font-size: 7.5pt; }",
+      "table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 7.5pt; }",
       "th { background: #fff; color: #000; font-weight: bold; border: 1px solid #000; padding: 1px 2px; text-align: center; font-size: 7.5pt; }",
       "td { border: 1px solid #000; padding: 0 2px; text-align: center; font-size: 7.5pt; height: 13px; line-height: 13px; }",
-      '.date-col { text-align: left; padding-left: 4px; width: 44px; }',
-      ".day-col { text-align: left; width: 36px; }",
+      '.date-col { text-align: left; padding-left: 4px; width: 8%; }',
+      ".day-col { text-align: left; width: 7%; }",
+      ".time-col { width: 8%; text-align: center; }",
+      ".overtime-col { width: 8%; text-align: center; }",
+      ".hours-col { width: 37%; text-align: center; }",
       ".total-row td { font-weight: bold; border-top: 2px solid #000; }",
       ".signatures { margin-top: 30px; }",
       ".sig-right { text-align: right; margin-right: 60px; }",
@@ -1170,7 +1164,6 @@ export default function AdminReportsPage() {
             <>
               {(() => {
                 const employee = employees.find(e => e.id === selectedEmployee);
-                const stats = calculateEmployeeStats(selectedEmployee);
                 const monthlyData = getEmployeeMonthlyAttendance(selectedEmployee);
 
                 if (!employee) {
@@ -1216,7 +1209,6 @@ export default function AdminReportsPage() {
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">AM Out</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">PM In</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">PM Out</th>
-                              <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">Status</th>
                               <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-center">Hours</th>
                             </tr>
                           </thead>
@@ -1249,22 +1241,6 @@ export default function AdminReportsPage() {
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
                                   {day.isWeekend ? "-" : formatTime(day.attendance?.pmOut || null)}
-                                </td>
-                                <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
-                                  {day.isWeekend ? (
-                                    <span className="text-gray-400 dark:text-gray-500">Weekend</span>
-                                  ) : (
-                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                      (() => {
-                                        const displayStatus = day.attendance ? getReportStatus(day.attendance) : "ABSENT";
-                                        return displayStatus === "PRESENT" ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400" :
-                                          displayStatus === "HALF_DAY" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400" :
-                                          "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400";
-                                      })()
-                                    }`}>
-                                      {day.attendance ? getReportStatus(day.attendance) : "ABSENT"}
-                                    </span>
-                                  )}
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
                                   {day.isWeekend ? "-" :
