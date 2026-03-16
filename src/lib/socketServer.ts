@@ -1,28 +1,31 @@
 import { Server } from "socket.io";
 
-let io: Server | null = null;
+type GlobalWithIO = typeof globalThis & {
+  __io?: Server;
+};
 
-export function getIO(server: any) {
-  if (!io) {
-    io = new Server(server, {
-      path: "/api/socket_io",
-      addTrailingSlash: false,
-      cors: {
-        origin: "*",
-        methods: ["GET", "POST"],
-      },
-    });
-  }
+function getGlobalIO() {
+  return (globalThis as GlobalWithIO).__io ?? null;
+}
+
+export function setIO(io: Server) {
+  (globalThis as GlobalWithIO).__io = io;
   return io;
 }
 
+export function getIO() {
+  return getGlobalIO();
+}
+
 export function emitAttendanceUpdate(data: any) {
+  const io = getGlobalIO();
   if (io) {
     io.emit("attendance-update", data);
   }
 }
 
 export function emitActivityLogUpdate(log: any) {
+  const io = getGlobalIO();
   if (io) {
     io.emit("activity-log-update", log);
   }

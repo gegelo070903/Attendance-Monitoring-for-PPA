@@ -8,7 +8,22 @@ REM ============================================
 
 title PPA Attendance Server
 
-cd /d "c:\Users\johna\Documents\PPA ATTENDANCE\Attendance Monitoring for PPA"
+cd /d "%~dp0"
+
+REM Verify required runtime tools are available before entering restart loop
+where node >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ERROR: Node.js is not installed or not in PATH.
+    echo Install Node.js 18+ from https://nodejs.org and restart Windows.
+    exit /b 1
+)
+
+where npm >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ERROR: npm is not available in PATH.
+    echo Reinstall Node.js and restart Windows.
+    exit /b 1
+)
 
 REM Check if .next folder exists (means already built)
 if not exist ".next" (
@@ -31,17 +46,19 @@ echo ============================================
 echo   PPA Attendance Server Running
 echo ============================================
 echo.
-echo   Local:    http://localhost:3000
-echo   Network:  http://%IP%:3000
+echo   Local:    https://localhost:3000
+echo   Network:  https://%IP%:3000
 echo.
 echo   Share the Network URL with employees.
+echo   Browser may show certificate warning.
+echo   Click Advanced then Proceed.
 echo   Server will auto-restart if it stops.
 echo ============================================
 echo.
 
 :startserver
 echo [%date% %time%] Starting server...
-npm run start
+npm run start:https
 
 REM If server stops, wait 5 seconds and restart
 echo.

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { startOfDay, endOfDay } from "date-fns";
 import prisma from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
+import { emitAttendanceUpdate } from "@/lib/socketServer";
 
 // GET - Get attendance records
 export async function GET(request: NextRequest) {
@@ -158,10 +159,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate work hours from available time fields
-    function parseDate(val) {
+    const parseDate = (val: Date | string | null | undefined) => {
       if (!val) return null;
-      return typeof val === 'string' ? new Date(val) : val;
-    }
+      return typeof val === "string" ? new Date(val) : val;
+    };
     const amIn = updateData.amIn || attendance.amIn;
     const amOut = updateData.amOut || attendance.amOut;
     const pmIn = updateData.pmIn || attendance.pmIn;
@@ -187,15 +188,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Emit socket event for real-time update
-    try {
-      const res = await fetch("http://localhost:3000/api/socket_io");
-      if (res.ok && (global as any).io) {
-        (global as any).io.emit("attendance-update", { type: "attendance-update", attendance: updatedAttendance });
-      }
-    } catch (e) {
-      // Ignore socket errors
-    }
+    emitAttendanceUpdate({ type: "attendance-update", attendance: updatedAttendance });
 
     return NextResponse.json(updatedAttendance);
   } catch (error) {

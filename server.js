@@ -2,6 +2,7 @@ const { createServer } = require('https');
 const { createServer: createHttpServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
+const { Server: SocketIOServer } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
 
@@ -27,10 +28,29 @@ const httpsOptions = {
 
 app.prepare().then(() => {
   // HTTPS server (main)
-  createServer(httpsOptions, (req, res) => {
+  const httpsServer = createServer(httpsOptions, (req, res) => {
     const parsedUrl = parse(req.url, true);
     handle(req, res, parsedUrl);
-  }).listen(PORT, '0.0.0.0', () => {
+  });
+
+  const io = new SocketIOServer(httpsServer, {
+    path: '/api/socket_io',
+    addTrailingSlash: false,
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST'],
+    },
+  });
+
+  global.__io = io;
+
+  io.on('connection', (socket) => {
+    socket.on('attendance-update', (data) => {
+      socket.broadcast.emit('attendance-update', data);
+    });
+  });
+
+  httpsServer.listen(PORT, '0.0.0.0', () => {
     console.log(`> HTTPS server ready on https://0.0.0.0:${PORT}`);
   });
 

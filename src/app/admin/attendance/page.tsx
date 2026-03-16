@@ -41,7 +41,7 @@ export default function AdminAttendancePage() {
     const deptEmployeeIds = employees
       .filter(emp => emp.department === selectedDepartment)
       .map(emp => emp.id);
-    return attendances.filter(a => deptEmployeeIds.includes(a.userId));
+    return attendances.filter(a => a.userId && deptEmployeeIds.includes(a.userId));
   }, [attendances, employees, selectedDepartment]);
 
   // Fetch employees for department filtering

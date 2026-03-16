@@ -36,10 +36,11 @@ if %errorlevel% equ 0 (
     echo SUCCESS! The PPA Attendance Server will now:
     echo   - Start automatically when Windows boots
     echo   - Run in the background
-    echo   - Be available at http://localhost:3000
+    echo   - Be available at https://localhost:3000
     echo.
     echo To access from other computers on your network,
-    echo use your computer's IP address (e.g., http://192.168.x.x:3000)
+    echo use your computer's IP address (e.g., https://192.168.x.x:3000)
+    echo If browser shows certificate warning, click Advanced then Proceed.
     echo.
     echo To REMOVE auto-start, run: UNINSTALL-AUTO-START.bat
     echo.

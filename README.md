@@ -24,6 +24,7 @@ The system uses **QR code scanning** for employee check-in/check-out, supports *
 | **bcryptjs**                | Password hashing                                         |
 | **date-fns**                | Date/time formatting and calculations                    |
 | **qrcode**                  | QR code generation for employee IDs                      |
+| **node-forge**              | Self-signed HTTPS certificate generation                 |
 
 ---
 
@@ -66,6 +67,7 @@ The system uses **QR code scanning** for employee check-in/check-out, supports *
 - **Reports** — Generate reports for all employees with date filters
 - **Activity Logs** — Full audit trail of all system events (logins, scans, changes)
 - **Settings** — Configure shift times, grace periods, and late thresholds
+- **Database Backup & Restore** — Create, download, delete, and restore database backups
 - **ID Card Printing** — Generate and print PPA-branded employee ID cards with QR codes
 
 ### System Features
@@ -245,6 +247,17 @@ The database is a single file: `prisma/dev.db`
 | GET    | `/api/dashboard`     | Dashboard statistics (today + monthly) |
 | GET    | `/api/activity-logs` | Paginated activity logs with filters   |
 
+### Backup Management (Admin)
+
+| Method         | Endpoint                                         | Description                                               |
+| -------------- | ------------------------------------------------ | --------------------------------------------------------- |
+| GET            | `/api/backup`                                    | List backup files and storage stats                       |
+| POST           | `/api/backup`                                    | Create a new database backup                              |
+| PUT            | `/api/backup`                                    | Restore database from selected backup (creates safe copy) |
+| DELETE         | `/api/backup`                                    | Delete a selected backup file                             |
+| PATCH          | `/api/backup`                                    | Upload an external `.db` backup file to the backups list  |
+| GET (download) | `/api/backup?action=download&filename=<file>.db` | Download a backup file                                    |
+
 ### Profile & Settings
 
 | Method  | Endpoint                    | Description                         |
@@ -317,7 +330,7 @@ The database is a single file: `prisma/dev.db`
   │  SQLite Database         │
   │  All APIs & Logic        │
   │                          │
-  │  URL: http://192.168.x.x:3000  │
+   │  URL: https://192.168.x.x:3000 │
   └────────┬────────────────┘
            │ Local WiFi / LAN
      ┌─────┼─────┬──────────┐
@@ -359,15 +372,17 @@ The database is a single file: `prisma/dev.db`
 
 ### Step 4: Start the Server
 
-- **Option A**: Double-click `START-SERVER.bat`
-- **Option B**: Run `npm run dev` (development mode)
-- **Option C**: Run `npm run build` then `npm start` (production mode)
+- **Option A (Recommended for scanner use)**: Double-click `START-SERVER.bat` (HTTPS + auto certificate generation)
+- **Option B**: Run `npm run dev` (development mode, HTTP)
+- **Option C**: Run `npm run build` then `npm start` (production mode, HTTP)
+- **Option D**: Run `npm run start:https` (production mode, HTTPS)
 
 ### Step 5: Access from Other PCs
 
-1. Note the **Network URL** shown in the terminal (e.g., `http://bypassip:3000`)
+1. Note the **Network URL** shown in the terminal (e.g., `https://192.168.1.100:3000`)
 2. On other PCs, open a browser and enter that URL
-3. If Windows Firewall asks, click **"Allow access"**
+3. If browser shows certificate warning, click **Advanced** then **Proceed** (self-signed certificate)
+4. If Windows Firewall asks, click **"Allow access"**
 
 ### Step 6: Create Admin Account
 
@@ -398,16 +413,40 @@ The database is a single file: `prisma/dev.db`
 - Periodically copy this file to a USB drive or backup location
 - To restore: replace `prisma/dev.db` with the backup copy
 
+### Upload Backup Database (Admin)
+
+Use this when you have a backup database file from another PC, USB drive, or external storage.
+
+1. Log in as an **Admin**.
+2. Open **Admin → Settings**.
+3. Go to the **Database Backup & Storage** section.
+4. Click **Upload Backup**.
+5. Select your backup file (`.db` only).
+6. Wait for the success toast message.
+7. Confirm the uploaded file appears in the backup list (it will be saved with an `uploaded_YYYY-MM-DD_HH-MM-SS.db` style name).
+8. If you want to use it as the active database, click **Restore** on that uploaded file.
+9. Restart the server after restore so all modules use the restored data.
+
+Important notes:
+
+- Accepted file type: `.db` only.
+- Maximum upload size: `500 MB`.
+- Uploading a backup does not immediately replace the active database; only **Restore** does that.
+- The system automatically creates a safety backup before restore.
+
 ---
 
 ## Batch Files (Windows)
 
-| File                       | Purpose                                 | How to Use                           |
-| -------------------------- | --------------------------------------- | ------------------------------------ |
-| `START-SERVER.bat`         | Start the server normally               | Double-click to run                  |
-| `AUTO-START.bat`           | Start with auto-restart on crash (24/7) | Double-click for always-on operation |
-| `INSTALL-AUTO-START.bat`   | Auto-start server when PC boots         | Right-click → Run as Administrator   |
-| `UNINSTALL-AUTO-START.bat` | Remove auto-start on boot               | Right-click → Run as Administrator   |
+| File                       | Purpose                                       | How to Use                         |
+| -------------------------- | --------------------------------------------- | ---------------------------------- |
+| `START-SERVER.bat`         | Start the server in HTTPS mode                | Double-click to run                |
+| `AUTO-START.bat`           | Start HTTPS with auto-restart on crash (24/7) | Double-click to run                |
+| `INSTALL-AUTO-START.bat`   | Auto-start server when PC boots               | Right-click → Run as Administrator |
+| `UNINSTALL-AUTO-START.bat` | Remove auto-start on boot                     | Right-click → Run as Administrator |
+| `BACKUP-DATABASE.bat`      | Manual backup with optional USB copy          | Double-click to run                |
+| `RESTORE-DATABASE.bat`     | Restore from backup (with safety backup)      | Double-click to run                |
+| `SCHEDULED-BACKUP.bat`     | Silent backup script for Task Scheduler       | Use from Windows Task Scheduler    |
 
 ---
 
@@ -422,15 +461,17 @@ After fresh setup, register the first account. To make it an admin, either:
 
 ## Troubleshooting
 
-| Problem                    | Solution                                                                                |
-| -------------------------- | --------------------------------------------------------------------------------------- |
-| "npm not found"            | Install Node.js and restart the terminal                                                |
-| "Port 3000 already in use" | Close the other terminal/process using port 3000                                        |
-| Other PCs can't connect    | Check Windows Firewall — allow Node.js through. Ensure all PCs are on the same network. |
-| Server crashes             | Use `AUTO-START.bat` instead of `START-SERVER.bat` for auto-restart                     |
-| Database corrupted         | Restore from backup (`prisma/dev.db`)                                                   |
-| QR scanner not working     | Allow camera access in the browser when prompted                                        |
-| Blank page after transfer  | Run `npm run build` to rebuild the application                                          |
+| Problem                                        | Solution                                                                                |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------- |
+| "npm not found"                                | Install Node.js and restart the terminal                                                |
+| "Port 3000 already in use"                     | Close the other terminal/process using port 3000                                        |
+| Other PCs can't connect                        | Check Windows Firewall — allow Node.js through. Ensure all PCs are on the same network. |
+| Browser warns about HTTPS certificate          | This is expected for self-signed certs; click Advanced → Proceed                        |
+| Auto-start task runs but server does not start | Open `AUTO-START.bat` manually once to confirm Node/npm and certificate creation work   |
+| Server crashes                                 | Use `AUTO-START.bat` instead of `START-SERVER.bat` for auto-restart                     |
+| Database corrupted                             | Restore from backup (`prisma/dev.db`)                                                   |
+| QR scanner not working                         | Allow camera access in the browser when prompted                                        |
+| Blank page after transfer                      | Run `npm run build` to rebuild the application                                          |
 
 ---
 
@@ -450,12 +491,23 @@ After fresh setup, register the first account. To make it an admin, either:
 
 ## NPM Scripts
 
-| Script                | Command                         | Purpose                                      |
-| --------------------- | ------------------------------- | -------------------------------------------- |
-| `npm run dev`         | `next dev`                      | Start in development mode (hot reload)       |
-| `npm run build`       | `prisma generate && next build` | Build for production                         |
-| `npm start`           | `next start -H 0.0.0.0`         | Start production server (network accessible) |
-| `npm run db:generate` | `prisma generate`               | Regenerate Prisma client                     |
-| `npm run db:push`     | `prisma db push`                | Push schema to database                      |
-| `npm run db:migrate`  | `prisma migrate deploy`         | Deploy migrations                            |
-| `npm run lint`        | `next lint`                     | Run ESLint                                   |
+| Script                | Command                                   | Purpose                                      |
+| --------------------- | ----------------------------------------- | -------------------------------------------- |
+| `npm run dev`         | `next dev -H 0.0.0.0`                     | Start in development mode (hot reload)       |
+| `npm run build`       | `prisma generate && next build`           | Build for production                         |
+| `npm start`           | `next start -H 0.0.0.0`                   | Start production server (network accessible) |
+| `npm run start:https` | `node generate-cert.js && node server.js` | Start HTTPS server with HTTP redirect        |
+| `npm run db:generate` | `prisma generate`                         | Regenerate Prisma client                     |
+| `npm run db:push`     | `prisma db push`                          | Push schema to database                      |
+| `npm run db:migrate`  | `prisma migrate deploy`                   | Deploy migrations                            |
+| `npm run lint`        | `next lint`                               | Run ESLint                                   |
+
+---
+
+## System Check Snapshot (2026-03-16)
+
+- Workspace diagnostics (`TypeScript`/`ESLint` via editor): **No errors found**
+- Startup mode in `START-SERVER.bat`: **HTTPS** (recommended for camera/scanner stations)
+- HTTPS runtime script available: `npm run start:https`
+- Backup API available at `/api/backup` (list/create/download/delete/restore)
+- `AUTO-START.bat` is now portable and runs from its own project folder (`%~dp0`)

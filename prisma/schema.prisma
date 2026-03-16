@@ -19,6 +19,8 @@ model User {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   attendances  Attendance[]
+
+  @@index([role])
 }
 
 model Attendance {
@@ -36,6 +38,10 @@ model Attendance {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   user      User?     @relation(fields: [userId], references: [id])
+
+  @@index([userId, date])
+  @@index([date])
+  @@index([status])
 }
 
 model FileUpload {
@@ -58,6 +64,11 @@ model ActivityLog {
   ipAddress   String?
   userAgent   String?
   createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([type])
+  @@index([action])
+  @@index([userName])
 }
 
 model Settings {

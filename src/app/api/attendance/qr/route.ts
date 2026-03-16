@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
     const amEndMinGET = amEndGET.hour * 60 + amEndGET.minute;
     const pmEndMinGET = pmEndGET.hour * 60 + pmEndGET.minute;
 
-    // Check for open overnight shift from yesterday (morning scan = overnight out)
+    // Intended policy: any open previous-day PM In should close as AM Out on morning scan.
     if (currentTimeMinGET < amEndMinGET) {
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
@@ -125,15 +125,11 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
       });
       if (overnightRecord && overnightRecord.pmIn && !overnightRecord.pmOut && !overnightRecord.amOut) {
-        const pmInH = new Date(overnightRecord.pmIn).getHours();
-        const pmInM = new Date(overnightRecord.pmIn).getMinutes();
-        if (pmInH * 60 + pmInM >= pmEndMinGET) {
-          return NextResponse.json({
-            attendance: overnightRecord as ExtendedAttendance,
-            nextAction: "am-out",
-            overnight: true,
-          });
-        }
+        return NextResponse.json({
+          attendance: overnightRecord as ExtendedAttendance,
+          nextAction: "am-out",
+          overnight: true,
+        });
       }
     }
 
@@ -243,8 +239,8 @@ export async function POST(request: NextRequest) {
     const currentTimeMinutes = currentHour * 60 + currentMinute;
 
     // === OVERNIGHT SHIFT CHECK ===
-    // If it's morning, check for an open overnight shift from yesterday.
-    // An overnight shift is identified by: pmIn set (at/after pmEndTime), no out recorded.
+    // Intended policy: if it's morning and yesterday has an open PM In,
+    // close it as AM Out regardless of PM In clock time.
     if (currentTimeMinutes < amEndMinutes) {
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
@@ -258,53 +254,50 @@ export async function POST(request: NextRequest) {
 
       if (openOvernight && openOvernight.pmIn && !openOvernight.pmOut && !openOvernight.amOut) {
         const pmInDate = new Date(openOvernight.pmIn);
-        const pmInMinutes = pmInDate.getHours() * 60 + pmInDate.getMinutes();
 
-        if (pmInMinutes >= pmEndMinutes) {
-          // Confirmed overnight shift - record AM Out on yesterday's record
-          const totalHours = (now.getTime() - pmInDate.getTime()) / (1000 * 60 * 60);
+        // Record AM Out on yesterday's open PM session
+        const totalHours = (now.getTime() - pmInDate.getTime()) / (1000 * 60 * 60);
 
-          const updatedOvernight = await prisma.attendance.update({
-            where: { id: openOvernight.id },
-            data: {
-              amOut: now,
-              workHours: Math.round(totalHours * 100) / 100,
-              status: "PRESENT",
-            },
-          });
-
-          await logActivity({
-            userId: user.id,
-            userName: user.name || "Unknown",
-            action: ActivityActions.SCAN_AM_OUT,
-            description: `${user.name} scanned AM Out (overnight shift) at ${fmtTime(now)}`,
-            type: "SUCCESS",
-            metadata: {
-              attendanceId: updatedOvernight.id,
-              time: now.toISOString(),
-              status: "PRESENT",
-              overnight: true,
-            },
-            scanPhoto: scanPhoto || undefined,
-          });
-
-          return NextResponse.json({
-            success: true,
-            attendanceId: updatedOvernight.id,
-            action: "AM Out",
-            time: now,
+        const updatedOvernight = await prisma.attendance.update({
+          where: { id: openOvernight.id },
+          data: {
+            amOut: now,
+            workHours: Math.round(totalHours * 100) / 100,
             status: "PRESENT",
-            message: `Good morning, ${user.name}! AM Out (overnight shift) recorded at ${fmtTime(now)}.`,
-            nextAction: "complete",
-            workHours: updatedOvernight.workHours,
-            user: {
-              name: user.name,
-              department: user.department,
-              position: user.position,
-              profileImage: user.profileImage,
-            },
-          });
-        }
+          },
+        });
+
+        await logActivity({
+          userId: user.id,
+          userName: user.name || "Unknown",
+          action: ActivityActions.SCAN_AM_OUT,
+          description: `${user.name} scanned AM Out (overnight shift) at ${fmtTime(now)}`,
+          type: "SUCCESS",
+          metadata: {
+            attendanceId: updatedOvernight.id,
+            time: now.toISOString(),
+            status: "PRESENT",
+            overnight: true,
+          },
+          scanPhoto: scanPhoto || undefined,
+        });
+
+        return NextResponse.json({
+          success: true,
+          attendanceId: updatedOvernight.id,
+          action: "AM Out",
+          time: now,
+          status: "PRESENT",
+          message: `Good morning, ${user.name}! AM Out (overnight shift) recorded at ${fmtTime(now)}.`,
+          nextAction: "complete",
+          workHours: updatedOvernight.workHours,
+          user: {
+            name: user.name,
+            department: user.department,
+            position: user.position,
+            profileImage: user.profileImage,
+          },
+        });
       }
     }
 

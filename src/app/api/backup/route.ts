@@ -8,6 +8,11 @@ import path from "path";
 const DB_PATH = path.join(process.cwd(), "prisma", "dev.db");
 const BACKUP_DIR = path.join(process.cwd(), "backups");
 
+function formatLocalTimestamp(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}_${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}`;
+}
+
 // Ensure backup directory exists
 function ensureBackupDir() {
   if (!fs.existsSync(BACKUP_DIR)) {
@@ -102,10 +107,7 @@ export async function POST() {
 
     // Generate backup filename with timestamp
     const now = new Date();
-    const timestamp = now.toISOString()
-      .replace(/[:.]/g, "-")
-      .replace("T", "_")
-      .slice(0, 19);
+    const timestamp = formatLocalTimestamp(now);
     const backupFilename = `backup_${timestamp}.db`;
     const backupPath = path.join(BACKUP_DIR, backupFilename);
 
@@ -225,10 +227,7 @@ export async function PUT(request: NextRequest) {
 
     // Create a safety backup of current database before restoring
     ensureBackupDir();
-    const safetyTimestamp = new Date().toISOString()
-      .replace(/[:.]/g, "-")
-      .replace("T", "_")
-      .slice(0, 19);
+    const safetyTimestamp = formatLocalTimestamp(new Date());
     const safetyBackup = path.join(BACKUP_DIR, `pre-restore_${safetyTimestamp}.db`);
     fs.copyFileSync(DB_PATH, safetyBackup);
 
@@ -286,10 +285,7 @@ export async function PATCH(request: NextRequest) {
 
     // Generate a safe filename with upload prefix
     const now = new Date();
-    const timestamp = now.toISOString()
-      .replace(/[:.]/g, "-")
-      .replace("T", "_")
-      .slice(0, 19);
+    const timestamp = formatLocalTimestamp(now);
     const uploadFilename = "uploaded_" + timestamp + ".db";
     const uploadPath = path.join(BACKUP_DIR, uploadFilename);
 

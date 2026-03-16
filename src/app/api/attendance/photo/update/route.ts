@@ -44,6 +44,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!attendance.user) {
+      return NextResponse.json(
+        { error: "Attendance user not found" },
+        { status: 404 }
+      );
+    }
+
     // Update the most recent activity log for this scan with the photo
     const recentLog = await prisma.activityLog.findFirst({
       where: {
