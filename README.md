@@ -373,9 +373,9 @@ The database is a single file: `prisma/dev.db`
 ### Step 4: Start the Server
 
 - **Option A (Recommended for scanner use)**: Double-click `START-SERVER.bat` (HTTPS + auto certificate generation)
-- **Option B**: Run `npm run dev` (development mode, HTTP)
+- **Option B**: Run `npm run dev:clean` (development mode, HTTP, auto-clears stale Node listeners on ports 3000/3001)
 - **Option C**: Run `npm run build` then `npm start` (production mode, HTTP)
-- **Option D**: Run `npm run start:https` (production mode, HTTPS)
+- **Option D**: Run `npm run start:https:clean` (production mode, HTTPS, auto-clears stale Node listeners on ports 3000/3001)
 
 ### Step 5: Access from Other PCs
 
@@ -461,17 +461,17 @@ After fresh setup, register the first account. To make it an admin, either:
 
 ## Troubleshooting
 
-| Problem                                        | Solution                                                                                |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------- |
-| "npm not found"                                | Install Node.js and restart the terminal                                                |
-| "Port 3000 already in use"                     | Close the other terminal/process using port 3000                                        |
-| Other PCs can't connect                        | Check Windows Firewall — allow Node.js through. Ensure all PCs are on the same network. |
-| Browser warns about HTTPS certificate          | This is expected for self-signed certs; click Advanced → Proceed                        |
-| Auto-start task runs but server does not start | Open `AUTO-START.bat` manually once to confirm Node/npm and certificate creation work   |
-| Server crashes                                 | Use `AUTO-START.bat` instead of `START-SERVER.bat` for auto-restart                     |
-| Database corrupted                             | Restore from backup (`prisma/dev.db`)                                                   |
-| QR scanner not working                         | Allow camera access in the browser when prompted                                        |
-| Blank page after transfer                      | Run `npm run build` to rebuild the application                                          |
+| Problem                                        | Solution                                                                                 |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| "npm not found"                                | Install Node.js and restart the terminal                                                 |
+| "Port 3000 already in use"                     | Run `npm run dev:clean` or `npm run start:https:clean` to auto-stop stale Node listeners |
+| Other PCs can't connect                        | Check Windows Firewall — allow Node.js through. Ensure all PCs are on the same network.  |
+| Browser warns about HTTPS certificate          | This is expected for self-signed certs; click Advanced → Proceed                         |
+| Auto-start task runs but server does not start | Open `AUTO-START.bat` manually once to confirm Node/npm and certificate creation work    |
+| Server crashes                                 | Use `AUTO-START.bat` instead of `START-SERVER.bat` for auto-restart                      |
+| Database corrupted                             | Restore from backup (`prisma/dev.db`)                                                    |
+| QR scanner not working                         | Allow camera access in the browser when prompted                                         |
+| Blank page after transfer                      | Run `npm run build` to rebuild the application                                           |
 
 ---
 
@@ -491,16 +491,19 @@ After fresh setup, register the first account. To make it an admin, either:
 
 ## NPM Scripts
 
-| Script                | Command                                   | Purpose                                      |
-| --------------------- | ----------------------------------------- | -------------------------------------------- |
-| `npm run dev`         | `next dev -H 0.0.0.0`                     | Start in development mode (hot reload)       |
-| `npm run build`       | `prisma generate && next build`           | Build for production                         |
-| `npm start`           | `next start -H 0.0.0.0`                   | Start production server (network accessible) |
-| `npm run start:https` | `node generate-cert.js && node server.js` | Start HTTPS server with HTTP redirect        |
-| `npm run db:generate` | `prisma generate`                         | Regenerate Prisma client                     |
-| `npm run db:push`     | `prisma db push`                          | Push schema to database                      |
-| `npm run db:migrate`  | `prisma migrate deploy`                   | Deploy migrations                            |
-| `npm run lint`        | `next lint`                               | Run ESLint                                   |
+| Script                      | Command                                                                              | Purpose                                      |
+| --------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------- |
+| `npm run dev`               | `next dev -H 0.0.0.0`                                                                | Start in development mode (hot reload)       |
+| `npm run ports:free`        | `powershell -ExecutionPolicy Bypass -File ./scripts/free-ports.ps1 -Ports 3000,3001` | Free stale Node listeners on ports 3000/3001 |
+| `npm run dev:clean`         | `npm run ports:free && npm run dev`                                                  | Clean start in development mode              |
+| `npm run build`             | `prisma generate && next build`                                                      | Build for production                         |
+| `npm start`                 | `next start -H 0.0.0.0`                                                              | Start production server (network accessible) |
+| `npm run start:https`       | `node generate-cert.js && node server.js`                                            | Start HTTPS server with HTTP redirect        |
+| `npm run start:https:clean` | `npm run ports:free && npm run start:https`                                          | Clean start in HTTPS mode                    |
+| `npm run db:generate`       | `prisma generate`                                                                    | Regenerate Prisma client                     |
+| `npm run db:push`           | `prisma db push`                                                                     | Push schema to database                      |
+| `npm run db:migrate`        | `prisma migrate deploy`                                                              | Deploy migrations                            |
+| `npm run lint`              | `next lint`                                                                          | Run ESLint                                   |
 
 ---
 
