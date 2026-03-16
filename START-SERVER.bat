@@ -23,6 +23,13 @@ echo.
 REM Generate SSL certificate if needed
 node generate-cert.js
 
+REM Trust certificate for current Windows user to enable camera APIs on HTTPS
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\trust-cert.ps1" -CertPath "%~dp0certs\cert.pem"
+if %errorlevel% neq 0 (
+    echo WARNING: Failed to trust SSL certificate automatically.
+    echo Browser may block camera until certificate is trusted manually.
+)
+
 REM Get local IP address
 for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4"') do (
     set IP=%%a

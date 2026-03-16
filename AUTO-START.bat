@@ -33,6 +33,14 @@ if not exist ".next" (
     echo Build complete!
 )
 
+REM Ensure SSL certificate exists and is trusted for current user
+node generate-cert.js
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\trust-cert.ps1" -CertPath "%~dp0certs\cert.pem"
+if %errorlevel% neq 0 (
+    echo WARNING: Could not trust SSL certificate automatically.
+    echo Camera may be blocked until cert is trusted manually.
+)
+
 REM Get local IP for display
 for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4"') do (
     set IP=%%a

@@ -39,6 +39,11 @@ interface Settings {
   pmGracePeriod: number;
 }
 
+function toScanActionKey(actionLabel: string): string {
+  const cleaned = actionLabel.replace(/\(.*\)/g, "").trim().toLowerCase();
+  return cleaned.replace(/\s+/g, "-");
+}
+
 // Instructions popup component
 function InstructionsPopup({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   if (!isOpen) return null;
@@ -202,7 +207,14 @@ export default function ScanStationPage() {
               action: actionStr,
               photoUrl: photoData.photoUrl,
             }),
-          }).catch((err) => console.error("Photo update error:", err));
+          })
+            .then(async (updateRes) => {
+              if (!updateRes.ok) {
+                const err = await updateRes.json().catch(() => ({}));
+                console.error("Photo update failed:", updateRes.status, err);
+              }
+            })
+            .catch((err) => console.error("Photo update error:", err));
         }
       })
       .catch((photoError) => {
@@ -289,7 +301,7 @@ export default function ScanStationPage() {
           if (responseData.attendanceId && responseData.action) {
             setPendingPhotoData({
               attendanceId: responseData.attendanceId,
-              action: responseData.action.toLowerCase().replace(" ", "-"),
+              action: toScanActionKey(responseData.action),
               userName: responseData.user?.name || data.name,
               actionLabel: responseData.action,
             });
