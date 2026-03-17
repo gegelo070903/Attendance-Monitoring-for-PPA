@@ -234,6 +234,7 @@ export default function SettingsPage() {
       year: "numeric",
       month: "short",
       day: "numeric",
+      hour12: false,
       hour: "2-digit",
       minute: "2-digit",
     });

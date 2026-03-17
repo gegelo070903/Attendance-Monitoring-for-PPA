@@ -334,7 +334,7 @@ export default function ActivityLogsPage() {
                     className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                   >
                     <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                      {format(new Date(log.createdAt), "MMM d, h:mm a")}
+                      {format(new Date(log.createdAt), "MMM d, HH:mm")}
                     </td>
                     <td className="py-2 px-3 text-xs font-medium text-gray-900 dark:text-gray-100">
                       {log.userName || "System"}
@@ -422,7 +422,7 @@ export default function ActivityLogsPage() {
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Scan Photo</h3>
                 {selectedLog && (
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {selectedLog.userName} • {selectedLog.action.replace(/_/g, " ")} • {format(new Date(selectedLog.createdAt), "MMM d, yyyy h:mm a")}
+                    {selectedLog.userName} • {selectedLog.action.replace(/_/g, " ")} • {format(new Date(selectedLog.createdAt), "MMM d, yyyy HH:mm")}
                   </p>
                 )}
               </div>

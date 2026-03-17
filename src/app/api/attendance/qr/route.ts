@@ -36,13 +36,11 @@ function parseTimeString(timeStr: string): { hour: number; minute: number } {
   return { hour, minute };
 }
 
-// Helper to format a Date to shorthand time like "8a" or "1:30p"
+// Helper to format a Date in 24-hour time.
 function fmtTime(d: Date): string {
-  const hours = d.getHours();
-  const minutes = d.getMinutes();
-  const period = hours >= 12 ? 'p' : 'a';
-  const hours12 = hours % 12 || 12;
-  return minutes === 0 ? `${hours12}${period}` : `${hours12}:${minutes.toString().padStart(2, '0')}${period}`;
+  const hours = d.getHours().toString().padStart(2, '0');
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
 }
 
 // Helper to get the scheduled start time as a Date object for the given arrival date

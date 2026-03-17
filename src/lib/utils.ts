@@ -15,20 +15,14 @@ export function formatDate(date: Date | string): string {
 export function formatTime(date: Date | string | null): string {
   if (!date) return '--:--';
   const d = typeof date === 'string' ? parseISO(date) : date;
-  const hours = d.getHours();
-  const minutes = d.getMinutes();
-  const period = hours >= 12 ? 'p' : 'a';
-  const hours12 = hours % 12 || 12;
-  return minutes === 0 ? `${hours12}${period}` : `${hours12}:${minutes.toString().padStart(2, '0')}${period}`;
+  const hours = d.getHours().toString().padStart(2, '0');
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
 }
 
 export function formatDateTime(date: Date | string): string {
   const d = typeof date === 'string' ? parseISO(date) : date;
-  const hours = d.getHours();
-  const minutes = d.getMinutes();
-  const period = hours >= 12 ? 'p' : 'a';
-  const hours12 = hours % 12 || 12;
-  const timeStr = minutes === 0 ? `${hours12}${period}` : `${hours12}:${minutes.toString().padStart(2, '0')}${period}`;
+  const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
   return `${format(d, 'MMM dd, yyyy')} ${timeStr}`;
 }
 

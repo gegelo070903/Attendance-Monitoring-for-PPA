@@ -108,21 +108,17 @@ function getGreetingMessage(action: string, userName: string): string {
   }
 }
 
-// Helper function to format time from "HH:MM" to shorthand like "8a" or "1:30p"
+// Helper function to keep schedule times in 24-hour display.
 function formatTimeDisplay(time24: string): string {
   const [hours, minutes] = time24.split(":").map(Number);
-  const period = hours >= 12 ? "p" : "a";
-  const hours12 = hours % 12 || 12;
-  return minutes === 0 ? `${hours12}${period}` : `${hours12}:${minutes.toString().padStart(2, "0")}${period}`;
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
 }
 
-// Helper to format a Date to shorthand time like "8a" or "1:30p"
+// Helper to format Date values in 24-hour time.
 function formatShortTime(date: Date): string {
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const period = hours >= 12 ? "p" : "a";
-  const hours12 = hours % 12 || 12;
-  return minutes === 0 ? `${hours12}${period}` : `${hours12}:${minutes.toString().padStart(2, "0")}${period}`;
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  return `${hours}:${minutes}`;
 }
 
 export default function ScanStationPage() {
