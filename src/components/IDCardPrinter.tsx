@@ -98,7 +98,7 @@ export default function IDCardPrinter({
         box-shadow: 0 8px 24px rgba(0,0,0,0.15);
         position: relative;
         background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-        border: 1px solid #e2e8f0;
+        border: 2px solid #000;
       }
       
       /* Corner Decorations */
@@ -435,7 +435,7 @@ export default function IDCardPrinter({
           <div className="flex flex-col items-center">
             <span className="text-xs text-gray-500 dark:text-gray-400 mb-2">Front</span>
             <div 
-              className="bg-gradient-to-b from-white to-slate-50 overflow-hidden shadow-xl relative border border-slate-200"
+              className="bg-gradient-to-b from-white to-slate-50 overflow-hidden shadow-xl relative border-2 border-black"
               style={{ width: '170px', height: '270px' }}
             >
               {/* Corner decorations */}
@@ -481,7 +481,7 @@ export default function IDCardPrinter({
           <div className="flex flex-col items-center">
             <span className="text-xs text-gray-500 dark:text-gray-400 mb-2">Back</span>
             <div 
-              className="bg-gradient-to-b from-white to-slate-50 overflow-hidden shadow-xl relative border border-slate-200 flex flex-col items-center justify-center"
+              className="bg-gradient-to-b from-white to-slate-50 overflow-hidden shadow-xl relative border-2 border-black flex flex-col items-center justify-center"
               style={{ width: '170px', height: '270px' }}
             >
               {/* Corner decorations - inverted */}

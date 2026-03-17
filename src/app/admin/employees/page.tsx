@@ -1106,7 +1106,7 @@ function IDCardModal({
       : '<div class="profile-placeholder">' + employee.name.charAt(0).toUpperCase() + "</div>";
 
     const css = [
-      ".card { width: 2.125in; height: 3.375in; border-radius: 0; overflow: hidden; position: relative; background: linear-gradient(180deg, #fff 0%, #f8fafc 100%); border: 1px solid #e2e8f0; }",
+      ".card { width: 2.125in; height: 3.375in; border-radius: 0; overflow: hidden; position: relative; background: linear-gradient(180deg, #fff 0%, #f8fafc 100%); border: 2px solid #000; }",
       ".corner-tl { position: absolute; top: 0; left: 0; width: 0; height: 0; border-left: 50px solid #0038A8; border-bottom: 50px solid transparent; }",
       ".corner-br { position: absolute; bottom: 0; right: 0; width: 0; height: 0; border-right: 50px solid #CE1126; border-top: 50px solid transparent; }",
       ".corner-tr { position: absolute; top: 0; right: 0; width: 0; height: 0; border-right: 50px solid #CE1126; border-bottom: 50px solid transparent; }",
@@ -1140,7 +1140,7 @@ function IDCardModal({
       ".card-wrapper { display: flex; flex-direction: column; align-items: center; }" +
       ".card-label { text-align: center; font-size: 12px; color: #64748b; margin-bottom: 8px; font-weight: 500; }" +
       css + "\n" +
-      ".cut-border { border: 2px solid #000; border-radius: 0; padding: 2px; }" +
+      ".cut-border { border: none; border-radius: 0; padding: 0; }" +
       "@media print { @page { margin: 10mm; } body { background: #fff; padding: 0; } .cards-container { gap: 30px; } .card { box-shadow: none; } .card-label { display: none; } .no-print { display: none !important; } .cut-border { border: 2px solid #000; } }" +
       ".no-print { position: fixed; top: 12px; right: 16px; z-index: 100; }" +
       ".no-print button { padding: 8px 24px; font-size: 12pt; cursor: pointer; background: #0d3a5c; color: #fff; border: none; border-radius: 6px; }" +
@@ -1197,7 +1197,7 @@ function IDCardModal({
             {/* Front Card */}
             <div className="flex flex-col items-center">
               <span className="text-xs text-gray-500 dark:text-gray-400 mb-2">Front</span>
-              <div className="bg-gradient-to-b from-white to-slate-50 overflow-hidden shadow-xl relative border border-slate-200" style={{ width: "170px", height: "270px" }}>
+              <div className="bg-gradient-to-b from-white to-slate-50 overflow-hidden shadow-xl relative border-2 border-black" style={{ width: "170px", height: "270px" }}>
                 <div className="absolute top-0 left-0 w-0 h-0 border-l-[40px] border-l-[#0038A8] border-b-[40px] border-b-transparent"></div>
                 <div className="absolute bottom-0 right-0 w-0 h-0 border-r-[40px] border-r-[#CE1126] border-t-[40px] border-t-transparent"></div>
                 <div className="grid grid-cols-[auto,1fr,auto] items-center gap-1 pt-4 px-3 relative z-10 w-full">
@@ -1229,7 +1229,7 @@ function IDCardModal({
             {/* Back Card */}
             <div className="flex flex-col items-center">
               <span className="text-xs text-gray-500 dark:text-gray-400 mb-2">Back</span>
-              <div className="bg-gradient-to-b from-white to-slate-50 overflow-hidden shadow-xl relative border border-slate-200 flex flex-col items-center justify-center" style={{ width: "170px", height: "270px", minHeight: "270px" }}>
+              <div className="bg-gradient-to-b from-white to-slate-50 overflow-hidden shadow-xl relative border-2 border-black flex flex-col items-center justify-center" style={{ width: "170px", height: "270px", minHeight: "270px" }}>
                 <div className="absolute top-0 right-0 w-0 h-0 border-r-[40px] border-r-[#CE1126] border-b-[40px] border-b-transparent"></div>
                 <div className="absolute bottom-0 left-0 w-0 h-0 border-l-[40px] border-l-[#0038A8] border-t-[40px] border-t-transparent"></div>
                 <p className="text-[9px] text-[#0038A8] font-bold mb-1 relative z-10">Philippine Ports Authority</p>
