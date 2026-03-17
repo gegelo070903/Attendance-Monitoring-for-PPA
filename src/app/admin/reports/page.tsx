@@ -425,8 +425,6 @@ export default function AdminReportsPage() {
         '<td class="time-col">' + amOut + "</td>" +
         '<td class="time-col">' + pmIn + "</td>" +
         '<td class="time-col">' + pmOut + "</td>" +
-        '<td class="overtime-col"></td>' +
-        '<td class="overtime-col"></td>' +
         '<td class="hours-col">' + dayWorkHoursStr + "</td>" +
         "</tr>";
     });
@@ -435,9 +433,8 @@ export default function AdminReportsPage() {
     const totalHoursStr = formatHoursAndMinutes(stats.totalWorkHours);
 
     const totalRow = '<tr class="total-row">' +
-      "<td colspan=\"6\"></td>" +
-      '<td class="overtime-col" style="text-align:right;padding-right:6px;"><b>Total:</b></td>' +
-      '<td class="overtime-col"></td>' +
+      "<td colspan=\"5\"></td>" +
+      '<td class="time-col" style="text-align:right;padding-right:6px;"><b>Total:</b></td>' +
       '<td class="hours-col">' + totalHoursStr + "</td></tr>";
 
     return '<div class="page">' +
@@ -461,19 +458,16 @@ export default function AdminReportsPage() {
         '<col class="time-col" />' +
         '<col class="time-col" />' +
         '<col class="time-col" />' +
-        '<col class="overtime-col" />' +
-        '<col class="overtime-col" />' +
         '<col class="hours-col" />' +
       "</colgroup><thead>" +
         "<tr>" +
-          '<th rowspan="2" style="width:50px;">Date</th>' +
-          '<th rowspan="2" style="width:50px;">Day</th>' +
+          '<th rowspan="2">Date</th>' +
+          '<th rowspan="2">Day</th>' +
           '<th colspan="2">AM</th>' +
           '<th colspan="2">PM</th>' +
-          '<th colspan="2">Overtime</th>' +
           '<th rowspan="2">Working<br>Hours</th>' +
         "</tr><tr>" +
-          "<th>In</th><th>Out</th><th>In</th><th>Out</th><th>In</th><th>Out</th>" +
+          "<th>In</th><th>Out</th><th>In</th><th>Out</th>" +
         "</tr></thead><tbody>" +
       rows.join("\n") +
       totalRow +
@@ -508,11 +502,10 @@ export default function AdminReportsPage() {
       "table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 7.5pt; }",
       "th { background: #fff; color: #000; font-weight: bold; border: 1px solid #000; padding: 1px 2px; text-align: center; font-size: 7.5pt; }",
       "td { border: 1px solid #000; padding: 0 2px; text-align: center; font-size: 7.5pt; height: 13px; line-height: 13px; }",
-      '.date-col { text-align: left; padding-left: 4px; width: 8%; }',
-      ".day-col { text-align: left; width: 7%; }",
-      ".time-col { width: 8%; text-align: center; }",
-      ".overtime-col { width: 8%; text-align: center; }",
-      ".hours-col { width: 37%; text-align: center; }",
+      '.date-col { text-align: left; padding-left: 4px; width: 10%; }',
+      ".day-col { text-align: left; width: 8%; }",
+      ".time-col { width: 13%; text-align: center; }",
+      ".hours-col { width: 30%; text-align: center; }",
       ".total-row td { font-weight: bold; border-top: 2px solid #000; }",
       ".signatures { margin-top: 30px; }",
       ".sig-right { text-align: right; margin-right: 60px; }",
