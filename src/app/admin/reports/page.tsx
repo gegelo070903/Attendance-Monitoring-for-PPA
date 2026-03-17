@@ -442,9 +442,13 @@ export default function AdminReportsPage() {
 
     return '<div class="page">' +
       '<div class="header">' +
-        "<h1>PHILIPPINE PORTS AUTHORITY</h1>" +
-        "<h2>Employee Daily Time Record</h2>" +
-        "<h3>Month of " + monthRange + "</h3>" +
+        '<div class="header-logo left"><img src="/images/dotr-logo.png" alt="DOTr Logo" /></div>' +
+        '<div class="header-title">' +
+          "<h1>PHILIPPINE PORTS AUTHORITY</h1>" +
+          "<h2>Employee Daily Time Record</h2>" +
+          "<h3>Month of " + monthRange + "</h3>" +
+        "</div>" +
+        '<div class="header-logo right"><img src="/images/ppa-logo-nobg.png" alt="PPA Logo" /></div>' +
       "</div>" +
       '<div class="info">' +
         '<div class="info-row"><span class="info-label">Name</span><span>: </span><span class="info-value">' + employee.name + "</span></div>" +
@@ -489,10 +493,14 @@ export default function AdminReportsPage() {
       "body { font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #000; }",
       ".page { width: 100%; max-width: 297mm; margin: 0 auto; padding: 8mm 12mm; page-break-after: always; }",
       ".page:last-child { page-break-after: auto; }",
-      ".header { text-align: center; margin-bottom: 6px; }",
+      ".header { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 12px; }",
+      ".header-title { text-align: center; }",
       ".header h1 { font-size: 12pt; font-weight: bold; margin: 0; letter-spacing: 1px; }",
       ".header h2 { font-size: 10pt; font-weight: normal; margin: 1px 0; }",
       ".header h3 { font-size: 9pt; font-weight: normal; margin: 1px 0; }",
+      ".header-logo { display: flex; align-items: center; justify-content: center; }",
+      ".header-logo.left img { height: 44px; width: auto; object-fit: contain; }",
+      ".header-logo.right img { height: 58px; width: auto; object-fit: contain; }",
       ".info { margin-bottom: 5px; }",
       ".info-row { display: flex; gap: 8px; margin-bottom: 2px; font-size: 9pt; }",
       ".info-label { min-width: 60px; font-weight: normal; }",

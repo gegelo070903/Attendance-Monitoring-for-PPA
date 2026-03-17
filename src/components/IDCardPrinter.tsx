@@ -93,7 +93,7 @@ export default function IDCardPrinter({
       .card {
         width: 2.125in;
         height: 3.375in;
-        border-radius: 12px;
+        border-radius: 0;
         overflow: hidden;
         box-shadow: 0 8px 24px rgba(0,0,0,0.15);
         position: relative;
@@ -123,17 +123,22 @@ export default function IDCardPrinter({
       
       /* Header */
       .card-header {
-        padding: 16px 12px 8px;
-        display: flex;
+        padding: 14px 10px 8px;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
         align-items: center;
-        justify-content: center;
-        gap: 8px;
+        gap: 6px;
         position: relative;
         z-index: 1;
       }
-      .logo {
-        width: 36px;
-        height: 36px;
+      .header-logo-left {
+        width: 32px;
+        height: 32px;
+        object-fit: contain;
+      }
+      .header-logo-right {
+        width: 32px;
+        height: 32px;
         object-fit: contain;
       }
       .company-name {
@@ -143,7 +148,7 @@ export default function IDCardPrinter({
         text-transform: uppercase;
         letter-spacing: 0.3px;
         line-height: 1.3;
-        text-align: left;
+        text-align: center;
       }
       
       /* Profile Section */
@@ -361,10 +366,11 @@ export default function IDCardPrinter({
               <div class="corner-bottom-right"></div>
               
               <div class="card-header">
-                <img src="/images/ppa-logo-nobg.png" alt="PPA Logo" class="logo" />
+                <img src="/images/dotr-logo.png" alt="DOTr Logo" class="header-logo-left" />
                 <div class="company-name">
                   Philippine<br/>Ports Authority
                 </div>
+                <img src="/images/ppa-logo-nobg.png" alt="PPA Logo" class="header-logo-right" />
               </div>
               
               <div class="profile-section">
@@ -429,7 +435,7 @@ export default function IDCardPrinter({
           <div className="flex flex-col items-center">
             <span className="text-xs text-gray-500 dark:text-gray-400 mb-2">Front</span>
             <div 
-              className="bg-gradient-to-b from-white to-slate-50 rounded-xl overflow-hidden shadow-xl relative border border-slate-200"
+              className="bg-gradient-to-b from-white to-slate-50 overflow-hidden shadow-xl relative border border-slate-200"
               style={{ width: '170px', height: '270px' }}
             >
               {/* Corner decorations */}
@@ -437,9 +443,10 @@ export default function IDCardPrinter({
               <div className="absolute bottom-0 right-0 w-0 h-0 border-r-[40px] border-r-[#CE1126] border-t-[40px] border-t-transparent"></div>
               
               {/* Header */}
-              <div className="flex items-center justify-center gap-2 pt-4 px-3 relative z-10">
-                <img src="/images/ppa-logo-nobg.png" alt="PPA" className="w-9 h-9 object-contain" />
-                <p className="text-[8px] font-bold text-[#0038A8] leading-tight uppercase">Philippine<br/>Ports Authority</p>
+              <div className="grid grid-cols-[auto,1fr,auto] items-center gap-1 pt-4 px-3 relative z-10 w-full">
+                <img src="/images/dotr-logo.png" alt="DOTr" className="w-8 h-8 object-contain" />
+                <p className="text-[8px] font-bold text-[#0038A8] leading-tight uppercase text-center">Philippine<br/>Ports Authority</p>
+                <img src="/images/ppa-logo-nobg.png" alt="PPA" className="w-8 h-8 object-contain" />
               </div>
               
               {/* Profile Section */}
@@ -474,7 +481,7 @@ export default function IDCardPrinter({
           <div className="flex flex-col items-center">
             <span className="text-xs text-gray-500 dark:text-gray-400 mb-2">Back</span>
             <div 
-              className="bg-gradient-to-b from-white to-slate-50 rounded-xl overflow-hidden shadow-xl relative border border-slate-200 flex flex-col items-center justify-center"
+              className="bg-gradient-to-b from-white to-slate-50 overflow-hidden shadow-xl relative border border-slate-200 flex flex-col items-center justify-center"
               style={{ width: '170px', height: '270px' }}
             >
               {/* Corner decorations - inverted */}

@@ -1106,14 +1106,15 @@ function IDCardModal({
       : '<div class="profile-placeholder">' + employee.name.charAt(0).toUpperCase() + "</div>";
 
     const css = [
-      ".card { width: 2.125in; height: 3.375in; border-radius: 12px; overflow: hidden; position: relative; background: linear-gradient(180deg, #fff 0%, #f8fafc 100%); border: 1px solid #e2e8f0; }",
+      ".card { width: 2.125in; height: 3.375in; border-radius: 0; overflow: hidden; position: relative; background: linear-gradient(180deg, #fff 0%, #f8fafc 100%); border: 1px solid #e2e8f0; }",
       ".corner-tl { position: absolute; top: 0; left: 0; width: 0; height: 0; border-left: 50px solid #0038A8; border-bottom: 50px solid transparent; }",
       ".corner-br { position: absolute; bottom: 0; right: 0; width: 0; height: 0; border-right: 50px solid #CE1126; border-top: 50px solid transparent; }",
       ".corner-tr { position: absolute; top: 0; right: 0; width: 0; height: 0; border-right: 50px solid #CE1126; border-bottom: 50px solid transparent; }",
       ".corner-bl { position: absolute; bottom: 0; left: 0; width: 0; height: 0; border-left: 50px solid #0038A8; border-top: 50px solid transparent; }",
-      ".card-header { padding: 16px 12px 8px; display: flex; align-items: center; justify-content: center; gap: 8px; position: relative; z-index: 1; }",
-      ".logo { width: 36px; height: 36px; object-fit: contain; }",
-      ".company-name { font-size: 9px; font-weight: 700; color: #0038A8; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1.3; text-align: left; }",
+      ".card-header { padding: 14px 10px 8px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; position: relative; z-index: 1; }",
+      ".logo-left { width: 32px; height: 32px; object-fit: contain; }",
+      ".logo-right { width: 32px; height: 32px; object-fit: contain; transform: scale(1.25); transform-origin: center; }",
+      ".company-name { font-size: 8px; font-weight: 700; color: #0038A8; text-transform: uppercase; letter-spacing: 0.2px; line-height: 1.15; text-align: center; }",
       ".profile-section { display: flex; flex-direction: column; align-items: center; padding: 8px 12px; position: relative; z-index: 1; }",
       ".profile-image-container { width: 80px; height: 80px; border-radius: 50%; border: 3px solid #0038A8; overflow: hidden; background: linear-gradient(135deg, #f1f5f9, #e2e8f0); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }",
       ".profile-image { width: 100%; height: 100%; object-fit: cover; }",
@@ -1139,7 +1140,7 @@ function IDCardModal({
       ".card-wrapper { display: flex; flex-direction: column; align-items: center; }" +
       ".card-label { text-align: center; font-size: 12px; color: #64748b; margin-bottom: 8px; font-weight: 500; }" +
       css + "\n" +
-      ".cut-border { border: 2px solid #000; border-radius: 14px; padding: 2px; }" +
+      ".cut-border { border: 2px solid #000; border-radius: 0; padding: 2px; }" +
       "@media print { @page { margin: 10mm; } body { background: #fff; padding: 0; } .cards-container { gap: 30px; } .card { box-shadow: none; } .card-label { display: none; } .no-print { display: none !important; } .cut-border { border: 2px solid #000; } }" +
       ".no-print { position: fixed; top: 12px; right: 16px; z-index: 100; }" +
       ".no-print button { padding: 8px 24px; font-size: 12pt; cursor: pointer; background: #0d3a5c; color: #fff; border: none; border-radius: 6px; }" +
@@ -1148,7 +1149,7 @@ function IDCardModal({
       '<div class="cards-container">' +
       '<div class="card-wrapper"><div class="card-label">Front</div><div class="cut-border"><div class="card">' +
         '<div class="corner-tl"></div><div class="corner-br"></div>' +
-        '<div class="card-header"><img src="/images/ppa-logo-nobg.png" alt="PPA Logo" class="logo" /><div class="company-name">Philippine<br/>Ports Authority</div></div>' +
+        '<div class="card-header"><img src="/images/dotr-logo.png" alt="DOTr Logo" class="logo-left" /><div class="company-name">Philippine<br/>Ports Authority</div><img src="/images/ppa-logo-nobg.png" alt="PPA Logo" class="logo-right" /></div>' +
         '<div class="profile-section"><div class="profile-image-container">' + profileHTML + '</div>' +
         '<div class="user-info"><div class="user-name">' + employee.name + "</div>" +
         (employee.department ? '<div class="user-department">' + employee.department + "</div>" : "") +
@@ -1196,12 +1197,13 @@ function IDCardModal({
             {/* Front Card */}
             <div className="flex flex-col items-center">
               <span className="text-xs text-gray-500 dark:text-gray-400 mb-2">Front</span>
-              <div className="bg-gradient-to-b from-white to-slate-50 rounded-xl overflow-hidden shadow-xl relative border border-slate-200" style={{ width: "170px", height: "270px" }}>
+              <div className="bg-gradient-to-b from-white to-slate-50 overflow-hidden shadow-xl relative border border-slate-200" style={{ width: "170px", height: "270px" }}>
                 <div className="absolute top-0 left-0 w-0 h-0 border-l-[40px] border-l-[#0038A8] border-b-[40px] border-b-transparent"></div>
                 <div className="absolute bottom-0 right-0 w-0 h-0 border-r-[40px] border-r-[#CE1126] border-t-[40px] border-t-transparent"></div>
-                <div className="flex items-center justify-center gap-2 pt-4 px-3 relative z-10">
-                  <img src="/images/ppa-logo-nobg.png" alt="PPA" className="w-9 h-9 object-contain" />
-                  <p className="text-[8px] font-bold text-[#0038A8] leading-tight uppercase">Philippine<br/>Ports Authority</p>
+                <div className="grid grid-cols-[auto,1fr,auto] items-center gap-1 pt-4 px-3 relative z-10 w-full">
+                  <img src="/images/dotr-logo.png" alt="DOTr" className="w-8 h-8 object-contain" />
+                  <p className="text-[7px] font-bold text-[#0038A8] leading-[1.15] uppercase tracking-[0.02em] text-center">Philippine<br/>Ports Authority</p>
+                  <img src="/images/ppa-logo-nobg.png" alt="PPA" className="w-8 h-8 object-contain scale-125" />
                 </div>
                 <div className="flex flex-col items-center pt-2 relative z-10">
                   <div className="w-[72px] h-[72px] rounded-full border-[3px] border-[#0038A8] overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 shadow-lg">
@@ -1227,7 +1229,7 @@ function IDCardModal({
             {/* Back Card */}
             <div className="flex flex-col items-center">
               <span className="text-xs text-gray-500 dark:text-gray-400 mb-2">Back</span>
-              <div className="bg-gradient-to-b from-white to-slate-50 rounded-xl overflow-hidden shadow-xl relative border border-slate-200 flex flex-col items-center justify-center" style={{ width: "170px", height: "270px", minHeight: "270px" }}>
+              <div className="bg-gradient-to-b from-white to-slate-50 overflow-hidden shadow-xl relative border border-slate-200 flex flex-col items-center justify-center" style={{ width: "170px", height: "270px", minHeight: "270px" }}>
                 <div className="absolute top-0 right-0 w-0 h-0 border-r-[40px] border-r-[#CE1126] border-b-[40px] border-b-transparent"></div>
                 <div className="absolute bottom-0 left-0 w-0 h-0 border-l-[40px] border-l-[#0038A8] border-t-[40px] border-t-transparent"></div>
                 <p className="text-[9px] text-[#0038A8] font-bold mb-1 relative z-10">Philippine Ports Authority</p>
