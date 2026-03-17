@@ -45,12 +45,15 @@ echo ==========================================
 echo.
 echo   Local:    https://localhost:3000
 echo   Network:  https://%IP%:3000
+echo   WAN:      Set NEXTAUTH_URL in .env.local if using a public IP/domain
 echo.
 echo   Share the Network URL with employees
 echo   on your company WiFi/network.
+echo   For WAN, forward ports 3000 and 3001 on your router and allow them in Windows Firewall.
 echo.
 echo   NOTE: Users will see a security warning
 echo   because the certificate is self-signed.
+echo   A raw public IP with a self-signed certificate is not ideal for external users.
 echo   Click "Advanced" then "Proceed" to continue.
 echo.
 echo ==========================================

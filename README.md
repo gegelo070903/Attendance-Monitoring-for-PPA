@@ -350,6 +350,35 @@ The database is a single file: `prisma/dev.db`
 
 ---
 
+## WAN / Public IP Access
+
+This system can be exposed over a **public IP** such as `119.93.234.50`, but that is a deployment decision, not just an application change.
+
+Minimum requirements for WAN access:
+
+1. The server PC must stay reachable from the internet.
+2. Your router must forward **TCP 3000** to the server PC for HTTPS access.
+3. Your router should also forward **TCP 3001** if you want the HTTP-to-HTTPS redirect to work externally.
+4. Windows Firewall on the server PC must allow inbound traffic for those ports.
+5. Set `NEXTAUTH_URL` in `.env.local` to the exact public URL used by browsers, for example `https://119.93.234.50:3000`.
+6. Regenerate the certificate after setting `NEXTAUTH_URL`, `PUBLIC_IP`, or `PUBLIC_HOSTNAME` so the self-signed certificate includes that host: `node generate-cert.js --force`.
+
+Important limitations:
+
+- A **raw public IP with a self-signed certificate** is acceptable only for controlled testing.
+- External users will still get certificate trust warnings unless that certificate is manually trusted on every client device.
+- Browser camera access is most reliable only when the certificate is fully trusted.
+- Some ISPs place connections behind **CGNAT**, which means the public IP shown by the ISP is not directly forwardable from your router.
+- If the public IP changes, users will lose access until the new address is shared and the certificate is regenerated.
+
+Recommended WAN approach:
+
+1. Use a stable domain name instead of a raw IP.
+2. Put the app behind a reverse proxy such as Caddy or Nginx.
+3. Use a publicly trusted TLS certificate instead of the generated self-signed certificate.
+
+---
+
 ## Setup Instructions (First Time on a New PC)
 
 ### Step 1: Install Node.js
@@ -376,6 +405,13 @@ The database is a single file: `prisma/dev.db`
 - **Option B**: Run `npm run dev:clean` (development mode, HTTP, auto-clears stale Node listeners on ports 3000/3001)
 - **Option C**: Run `npm run build` then `npm start` (production mode, HTTP)
 - **Option D**: Run `npm run start:https:clean` (production mode, HTTPS, auto-clears stale Node listeners on ports 3000/3001)
+
+If you are preparing for WAN access, create `.env.local` before starting the server and set:
+
+```env
+NEXTAUTH_URL=https://119.93.234.50:3000
+PUBLIC_IP=119.93.234.50
+```
 
 ### Step 5: Access from Other PCs
 
@@ -470,7 +506,9 @@ After fresh setup, register the first account. To make it an admin, either:
 | "Port 3000 already in use"                     | Run `npm run dev:clean` or `npm run start:https:clean` to auto-stop stale Node listeners      |
 | Camera blocked / "Not a secure context"        | Open `https://...` (not `http://`) and run `INSTALL-TRUST-CERT.bat` on that client/scanner PC |
 | Other PCs can't connect                        | Check Windows Firewall — allow Node.js through. Ensure all PCs are on the same network.       |
+| Public IP does not open externally             | Check router port forwarding, ISP CGNAT, and that `NEXTAUTH_URL` matches the public URL       |
 | Browser warns about HTTPS certificate          | This is expected for self-signed certs; click Advanced → Proceed                              |
+| Camera fails over public IP                    | Use a fully trusted certificate; bypassing a self-signed warning is often not enough          |
 | Auto-start task runs but server does not start | Open `AUTO-START.bat` manually once to confirm Node/npm and certificate creation work         |
 | Server crashes                                 | Use `AUTO-START.bat` instead of `START-SERVER.bat` for auto-restart                           |
 | Database corrupted                             | Restore from backup (`prisma/dev.db`)                                                         |
