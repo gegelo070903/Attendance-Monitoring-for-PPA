@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useMemo } from "react";
-import { format, startOfMonth, endOfMonth, getDaysInMonth, eachDayOfInterval, isWeekend } from "date-fns";
+import { format, startOfMonth, endOfMonth, getDaysInMonth, eachDayOfInterval } from "date-fns";
 
 interface Employee {
   id: string;
@@ -211,10 +211,9 @@ export default function AdminReportsPage() {
     const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
     const endDate = endOfMonth(startDate);
     
-    // Calculate working days (exclude weekends)
+    // Count all calendar days as working days
     const allDays = eachDayOfInterval({ start: startDate, end: endDate });
-    const workDays = allDays.filter(day => !isWeekend(day));
-    const totalWorkDays = workDays.length;
+    const totalWorkDays = allDays.length;
 
     const employeeAttendance = attendanceData.filter(a => a.userId === employeeId);
     
@@ -371,7 +370,6 @@ export default function AdminReportsPage() {
       return {
         date: day,
         dateStr,
-        isWeekend: isWeekend(day),
         attendance,
       };
     });
@@ -834,15 +832,6 @@ export default function AdminReportsPage() {
             color: #111827 !important;
           }
           
-          /* Weekend rows - light gray */
-          #print-area table tbody tr.bg-gray-100,
-          #print-area table tbody tr[class*="bg-gray-100"] {
-            background-color: #f3f4f6 !important;
-          }
-          #print-area table tbody tr[class*="bg-gray-100"] td {
-            color: #9ca3af !important;
-          }
-          
           /* Print row classes with highest specificity */
           #print-area .print-row-even {
             background-color: white !important;
@@ -856,13 +845,6 @@ export default function AdminReportsPage() {
           #print-area .print-row-odd td {
             color: #111827 !important;
           }
-          #print-area .print-row-weekend {
-            background-color: #f3f4f6 !important;
-          }
-          #print-area .print-row-weekend td {
-            color: #9ca3af !important;
-          }
-          
           /* Status badges in print */
           #print-area span[class*="bg-green-100"],
           #print-area span[class*="bg-green-900"] {
@@ -1273,9 +1255,7 @@ export default function AdminReportsPage() {
                               <tr 
                                 key={day.dateStr} 
                                 className={
-                                  day.isWeekend 
-                                    ? "print-row-weekend bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500" 
-                                    : idx % 2 === 0 
+                                  idx % 2 === 0 
                                       ? "print-row-even bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" 
                                       : "print-row-odd bg-gray-50 dark:bg-gray-750 text-gray-900 dark:text-gray-100"
                                 }
@@ -1287,30 +1267,28 @@ export default function AdminReportsPage() {
                                   {format(day.date, "EEEE")}
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
-                                  {day.isWeekend ? "-" : formatTime(day.attendance?.amIn || null)}
+                                  {formatTime(day.attendance?.amIn || null)}
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
-                                  {day.isWeekend ? "-" : formatTime(day.attendance?.amOut || null)}
+                                  {formatTime(day.attendance?.amOut || null)}
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
-                                  {day.isWeekend ? "-" : formatTime(day.attendance?.pmIn || null)}
+                                  {formatTime(day.attendance?.pmIn || null)}
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
-                                  {day.isWeekend ? "-" : formatTime(day.attendance?.pmOut || null)}
+                                  {formatTime(day.attendance?.pmOut || null)}
                                 </td>
                                 <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-center">
-                                  {day.isWeekend ? "-" :
-                                    formatHoursAndMinutes(
-                                      (day.attendance?.workHours && day.attendance?.workHours > 0)
-                                        ? day.attendance?.workHours
-                                        : calcWorkHours(
-                                            day.attendance?.amIn ?? null,
-                                            day.attendance?.amOut ?? null,
-                                            day.attendance?.pmIn ?? null,
-                                            day.attendance?.pmOut ?? null
-                                          )
-                                    )
-                                  }
+                                  {formatHoursAndMinutes(
+                                    (day.attendance?.workHours && day.attendance?.workHours > 0)
+                                      ? day.attendance?.workHours
+                                      : calcWorkHours(
+                                          day.attendance?.amIn ?? null,
+                                          day.attendance?.amOut ?? null,
+                                          day.attendance?.pmIn ?? null,
+                                          day.attendance?.pmOut ?? null
+                                        )
+                                  )}
                                 </td>
                               </tr>
                             ))}
