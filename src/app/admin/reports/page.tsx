@@ -540,7 +540,8 @@ export default function AdminReportsPage() {
 
   // Download DTR for ALL employees (one page per employee)
   const handleDownloadAllDTR = () => {
-    if (employees.length === 0) return;
+    const exportEmployees = reportType === "organization" ? filteredEmployees : individualFilteredEmployees;
+    if (exportEmployees.length === 0) return;
     const [year, month] = selectedMonth.split("-");
     const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
     const daysInMonth = getDaysInMonth(startDate);
@@ -548,7 +549,7 @@ export default function AdminReportsPage() {
     const monthRange = monthLabel + " 1-" + daysInMonth + ", " + year;
 
     const css = getDTRCss();
-    const pages = employees.map(emp => buildDTRPage(emp)).join("\n");
+    const pages = exportEmployees.map(emp => buildDTRPage(emp)).join("\n");
     const html = "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>All DTR - " + monthRange + "</title>" +
       "<style>" + css + "</style></head><body>" +
       '<div class="no-print"><button onclick="window.print()">Print All / Save as PDF</button></div>' +
