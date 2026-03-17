@@ -106,15 +106,14 @@ export async function GET(request: NextRequest) {
     // Get settings for overnight detection
     const settingsGET = await prisma.settings.findFirst() || {
       amEndTime: "12:00",
+      pmStartTime: "13:00",
       pmEndTime: "17:00",
     };
-    const amEndGET = parseTimeString(settingsGET.amEndTime);
-    const pmEndGET = parseTimeString(settingsGET.pmEndTime || "17:00");
-    const amEndMinGET = amEndGET.hour * 60 + amEndGET.minute;
-    const pmEndMinGET = pmEndGET.hour * 60 + pmEndGET.minute;
+    const pmStartGET = parseTimeString(settingsGET.pmStartTime || "13:00");
+    const pmStartMinGET = pmStartGET.hour * 60 + pmStartGET.minute;
 
-    // Intended policy: any open previous-day PM In should close as AM Out on morning scan.
-    if (currentTimeMinGET < amEndMinGET) {
+    // Intended policy: any open previous-day PM In should close as AM Out before PM starts.
+    if (currentTimeMinGET < pmStartMinGET) {
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
       const overnightRecord = await prisma.attendance.findFirst({
@@ -124,7 +123,7 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { createdAt: 'desc' },
       });
-      if (overnightRecord && overnightRecord.pmIn && !overnightRecord.pmOut && !overnightRecord.amOut) {
+      if (overnightRecord && overnightRecord.pmIn && !overnightRecord.pmOut) {
         return NextResponse.json({
           attendance: overnightRecord as ExtendedAttendance,
           nextAction: "am-out",
@@ -234,14 +233,14 @@ export async function POST(request: NextRequest) {
     // Parse PM end time for overnight shift detection
     const pmEnd = parseTimeString(settings.pmEndTime || "17:00");
     const pmEndMinutes = pmEnd.hour * 60 + pmEnd.minute;
-    const amEndCheck = parseTimeString(settings.amEndTime);
-    const amEndMinutes = amEndCheck.hour * 60 + amEndCheck.minute;
+    const pmStartCheck = parseTimeString(settings.pmStartTime || "13:00");
+    const pmStartMinutes = pmStartCheck.hour * 60 + pmStartCheck.minute;
     const currentTimeMinutes = currentHour * 60 + currentMinute;
 
     // === OVERNIGHT SHIFT CHECK ===
-    // Intended policy: if it's morning and yesterday has an open PM In,
+    // Intended policy: if it's before PM start and yesterday has an open PM In,
     // close it as AM Out regardless of PM In clock time.
-    if (currentTimeMinutes < amEndMinutes) {
+    if (currentTimeMinutes < pmStartMinutes) {
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
       const openOvernight = await prisma.attendance.findFirst({
@@ -252,7 +251,7 @@ export async function POST(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
       });
 
-      if (openOvernight && openOvernight.pmIn && !openOvernight.pmOut && !openOvernight.amOut) {
+      if (openOvernight && openOvernight.pmIn && !openOvernight.pmOut) {
         const pmInDate = new Date(openOvernight.pmIn);
 
         // Record AM Out on yesterday's open PM session

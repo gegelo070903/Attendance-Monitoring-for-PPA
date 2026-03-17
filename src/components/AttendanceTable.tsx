@@ -17,6 +17,104 @@ import { Attendance } from "@/types";
 import { useEffect, useState } from "react";
 import { useAttendanceSocket } from "@/lib/useAttendanceSocket";
 
+interface DisplayAttendanceRow {
+  id: string;
+  date: Date;
+  user: Attendance["user"];
+  status: string;
+  amIn: Date | string | null;
+  amOut: Date | string | null;
+  pmIn: Date | string | null;
+  pmOut: Date | string | null;
+  workHours: number | null;
+}
+
+function toLocalDateKey(val: Date | string | null | undefined): string | null {
+  const d = toDate(val);
+  if (!d) return null;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function fromLocalDateKey(dateKey: string): Date {
+  return new Date(`${dateKey}T00:00:00`);
+}
+
+function buildDisplayRows(attendances: Attendance[], showUser: boolean): DisplayAttendanceRow[] {
+  const rowMap = new Map<string, DisplayAttendanceRow>();
+
+  const makeRowKey = (attendance: Attendance, dateKey: string): string => {
+    const userKey = showUser ? attendance.userId || "unknown" : "self";
+    return `${userKey}|${dateKey}`;
+  };
+
+  const ensureRow = (attendance: Attendance, dateKey: string): DisplayAttendanceRow => {
+    const key = makeRowKey(attendance, dateKey);
+    const existing = rowMap.get(key);
+    if (existing) {
+      return existing;
+    }
+
+    const row: DisplayAttendanceRow = {
+      id: key,
+      date: fromLocalDateKey(dateKey),
+      user: attendance.user,
+      status: attendance.status,
+      amIn: null,
+      amOut: null,
+      pmIn: null,
+      pmOut: null,
+      workHours: null,
+    };
+    rowMap.set(key, row);
+    return row;
+  };
+
+  for (const attendance of attendances) {
+    const baseDateKey = toLocalDateKey(attendance.date);
+    if (!baseDateKey) continue;
+
+    const baseRow = ensureRow(attendance, baseDateKey);
+    if (attendance.amIn) baseRow.amIn = attendance.amIn;
+    if (attendance.pmIn) baseRow.pmIn = attendance.pmIn;
+    if (attendance.pmOut) baseRow.pmOut = attendance.pmOut;
+
+    let rowHours = (attendance.workHours && attendance.workHours > 0)
+      ? attendance.workHours
+      : calcWorkHours(attendance.amIn ?? null, attendance.amOut ?? null, attendance.pmIn ?? null, attendance.pmOut ?? null);
+    rowHours = rowHours > 0 ? rowHours : 0;
+
+    let targetRow = baseRow;
+    if (attendance.amOut) {
+      const amOutDateKey = toLocalDateKey(attendance.amOut);
+      if (amOutDateKey) {
+        const amOutRow = ensureRow(attendance, amOutDateKey);
+        amOutRow.amOut = attendance.amOut;
+
+        const isOvernightAmOut = Boolean(attendance.pmIn && amOutDateKey !== baseDateKey);
+        if (isOvernightAmOut) {
+          targetRow = amOutRow;
+        }
+      }
+    }
+
+    if (rowHours > 0) {
+      const existingHours = targetRow.workHours ?? 0;
+      targetRow.workHours = Math.round((existingHours + rowHours) * 100) / 100;
+    }
+  }
+
+  return Array.from(rowMap.values()).sort((a, b) => {
+    const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+    if (dateDiff !== 0) return dateDiff;
+    const aName = a.user?.name || "";
+    const bName = b.user?.name || "";
+    return aName.localeCompare(bName);
+  });
+}
+
 
 interface AttendanceTableProps {
   attendances: Attendance[];
@@ -43,7 +141,9 @@ export default function AttendanceTable({
       });
     }
   });
-  if (liveAttendances.length === 0) {
+  const displayRows = buildDisplayRows(liveAttendances, showUser);
+
+  if (displayRows.length === 0) {
     return (
       <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-lg">
         <svg
@@ -98,7 +198,7 @@ export default function AttendanceTable({
           </tr>
         </thead>
         <tbody>
-          {liveAttendances.map((attendance) => (
+          {displayRows.map((attendance) => (
             <tr
               key={attendance.id}
               className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"

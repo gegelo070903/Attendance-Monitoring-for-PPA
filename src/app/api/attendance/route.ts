@@ -32,11 +32,24 @@ export async function GET(request: NextRequest) {
     }
 
     if (startDate && endDate) {
-      // Append T00:00:00 to parse as local time instead of UTC
-      where.date = {
-        gte: startOfDay(new Date(startDate + 'T00:00:00')),
-        lte: endOfDay(new Date(endDate + 'T00:00:00')),
-      };
+      // Include records by record date and overnight records that close via AM Out within range.
+      const rangeStart = startOfDay(new Date(startDate + 'T00:00:00'));
+      const rangeEnd = endOfDay(new Date(endDate + 'T00:00:00'));
+
+      where.OR = [
+        {
+          date: {
+            gte: rangeStart,
+            lte: rangeEnd,
+          },
+        },
+        {
+          amOut: {
+            gte: rangeStart,
+            lte: rangeEnd,
+          },
+        },
+      ];
     }
 
     const attendances = await prisma.attendance.findMany({

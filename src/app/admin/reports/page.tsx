@@ -29,6 +29,14 @@ interface AttendanceRecord {
   };
 }
 
+interface DailyDisplayAttendance {
+  amIn: string | null;
+  amOut: string | null;
+  pmIn: string | null;
+  pmOut: string | null;
+  workHours: number | null;
+}
+
 interface MonthlyStats {
   totalWorkDays: number;
   presentDays: number;
@@ -58,14 +66,12 @@ function calcWorkHours(amIn: string | null, amOut: string | null, pmIn: string |
   return Math.round((total / 60) * 100) / 100;
 }
 
-// Helper to compare attendance date with a local calendar date
-// Handles UTC serialization: "2026-02-24T00:00:00 PHT" -> "2026-02-23T16:00:00.000Z"
-function isSameLocalDate(attendanceDateStr: string, localDateStr: string): boolean {
-  const attendanceDate = new Date(attendanceDateStr);
-  const localYear = attendanceDate.getFullYear();
-  const localMonth = String(attendanceDate.getMonth() + 1).padStart(2, '0');
-  const localDay = String(attendanceDate.getDate()).padStart(2, '0');
-  return `${localYear}-${localMonth}-${localDay}` === localDateStr;
+function toLocalDateKey(dateStr: string): string {
+  const d = new Date(dateStr);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export default function AdminReportsPage() {
@@ -305,11 +311,62 @@ export default function AdminReportsPage() {
     const endDate = endOfMonth(startDate);
     const allDays = eachDayOfInterval({ start: startDate, end: endDate });
 
+    const employeeAttendance = attendanceData.filter(a => a.userId === employeeId);
+    const dailyDisplayMap: Record<string, DailyDisplayAttendance> = {};
+
+    const ensureDay = (dateKey: string): DailyDisplayAttendance => {
+      if (!dailyDisplayMap[dateKey]) {
+        dailyDisplayMap[dateKey] = {
+          amIn: null,
+          amOut: null,
+          pmIn: null,
+          pmOut: null,
+          workHours: null,
+        };
+      }
+      return dailyDisplayMap[dateKey];
+    };
+
+    for (const record of employeeAttendance) {
+      const recordDateKey = toLocalDateKey(record.date);
+      const recordDay = ensureDay(recordDateKey);
+
+      if (record.amIn) recordDay.amIn = record.amIn;
+      if (record.pmIn) recordDay.pmIn = record.pmIn;
+      if (record.pmOut) recordDay.pmOut = record.pmOut;
+
+      let hours = 0;
+      if (record.workHours && record.workHours > 0) {
+        hours = record.workHours;
+      } else {
+        hours = calcWorkHours(record.amIn, record.amOut, record.pmIn, record.pmOut);
+      }
+
+      let targetHoursDateKey = recordDateKey;
+
+      if (record.amOut) {
+        const amOutDateKey = toLocalDateKey(record.amOut);
+        const isOvernightAmOut = Boolean(record.pmIn && amOutDateKey !== recordDateKey);
+        const amOutDay = ensureDay(amOutDateKey);
+        amOutDay.amOut = record.amOut;
+
+        // For overnight entries (PM In on previous day, AM Out next day),
+        // display the worked hours on the actual AM Out day.
+        if (isOvernightAmOut) {
+          targetHoursDateKey = amOutDateKey;
+        }
+      }
+
+      if (hours > 0) {
+        const hoursDay = ensureDay(targetHoursDateKey);
+        const existing = hoursDay.workHours ?? 0;
+        hoursDay.workHours = Math.round((existing + hours) * 100) / 100;
+      }
+    }
+
     return allDays.map(day => {
       const dateStr = format(day, "yyyy-MM-dd");
-      const attendance = attendanceData.find(
-        a => a.userId === employeeId && isSameLocalDate(a.date, dateStr)
-      );
+      const attendance = dailyDisplayMap[dateStr] || null;
       
       return {
         date: day,

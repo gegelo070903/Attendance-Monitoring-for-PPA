@@ -15,6 +15,9 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const today = startOfDay(now);
     const todayEnd = endOfDay(now);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayEnd = endOfDay(yesterday);
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
@@ -28,6 +31,7 @@ export async function GET(request: NextRequest) {
 
     const [
       todayAttendance,
+      overnightClosure,
       presentDays,
       lateDays,
       absentDays,
@@ -42,6 +46,21 @@ export async function GET(request: NextRequest) {
             lte: todayEnd,
           },
         },
+      }),
+      prisma.attendance.findFirst({
+        where: {
+          userId: session.user.id,
+          date: {
+            gte: yesterday,
+            lte: yesterdayEnd,
+          },
+          pmIn: { not: null },
+          amOut: {
+            gte: today,
+            lte: todayEnd,
+          },
+        },
+        orderBy: { updatedAt: "desc" },
       }),
       prisma.attendance.count({
         where: { ...baseMonthlyWhere, status: "PRESENT" },
@@ -91,8 +110,33 @@ export async function GET(request: NextRequest) {
       };
     }
 
+    const projectedTodayAttendance = todayAttendance
+      ? {
+          amIn: todayAttendance.amIn,
+          amOut: todayAttendance.amOut,
+          pmIn: todayAttendance.pmIn,
+          pmOut: todayAttendance.pmOut,
+        }
+      : {
+          amIn: null,
+          amOut: null,
+          pmIn: null,
+          pmOut: null,
+        };
+
+    if (overnightClosure?.amOut && !projectedTodayAttendance.amOut) {
+      projectedTodayAttendance.amOut = overnightClosure.amOut;
+    }
+
+    const hasAnyTodayAttendance = Boolean(
+      projectedTodayAttendance.amIn ||
+      projectedTodayAttendance.amOut ||
+      projectedTodayAttendance.pmIn ||
+      projectedTodayAttendance.pmOut
+    );
+
     return NextResponse.json({
-      todayAttendance,
+      todayAttendance: hasAnyTodayAttendance ? projectedTodayAttendance : null,
       monthlyStats: {
         presentDays,
         lateDays,
