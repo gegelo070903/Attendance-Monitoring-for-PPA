@@ -444,7 +444,8 @@ export default function AdminReportsPage() {
         '<div class="header-logo right"><img src="/images/ppa-logo-nobg.png" alt="PPA Logo" /></div>' +
       "</div>" +
       '<div class="info">' +
-        '<div class="info-row"><span class="info-label">Name</span><span>: </span><span class="info-value">' + employee.name + "</span></div>" +
+        '<div class="info-row"><span class="info-label">Name</span><span>: </span><span class="info-value">' + (employee.name || "N/A") + "</span></div>" +
+        '<div class="info-row"><span class="info-label">Division</span><span>: </span><span class="info-value">' + (employee.department || "N/A") + "</span></div>" +
         '<div class="info-row"><span class="info-label">Position</span><span>: </span><span class="info-value">' + (employee.position || "N/A") + "</span></div>" +
       "</div>" +
       "<table><colgroup>" +
@@ -494,7 +495,7 @@ export default function AdminReportsPage() {
       ".info { margin-bottom: 5px; }",
       ".info-row { display: flex; gap: 8px; margin-bottom: 2px; font-size: 9pt; }",
       ".info-label { min-width: 60px; font-weight: normal; }",
-      ".info-value { font-weight: bold; }",
+      ".info-value { font-weight: bold; text-transform: uppercase; }",
       "table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 7.5pt; }",
       "th { background: #fff; color: #000; font-weight: bold; border: 1px solid #000; padding: 1px 2px; text-align: center; font-size: 7.5pt; }",
       "td { border: 1px solid #000; padding: 0 2px; text-align: center; font-size: 7.5pt; height: 13px; line-height: 13px; }",
