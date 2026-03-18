@@ -8,12 +8,27 @@ echo   PPA Attendance WAN Setup
 echo ========================================
 echo.
 
-set WAN_IP=119.93.234.50
+REM Update WAN_IP to your real static public IP (or domain if you adapt this script)
+set WAN_IP=REPLACE_WITH_PUBLIC_IP
 set WAN_URL=https://%WAN_IP%:3000
 set LAN_IP=
 
+if /I "%WAN_IP%"=="REPLACE_WITH_PUBLIC_IP" (
+  echo ERROR: Please edit SETUP-WAN.bat and set WAN_IP first.
+  echo Example: set WAN_IP=203.0.113.10
+  echo.
+  goto :end
+)
+
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+  echo WARNING: Not running as Administrator.
+  echo Firewall rule creation may fail. Right-click this file and Run as administrator.
+  echo.
+)
+
 for /f "usebackq delims=" %%i in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127.*' -and $_.PrefixOrigin -ne 'WellKnown' -and $_.InterfaceAlias -notmatch 'Loopback|vEthernet' } | Select-Object -First 1 -ExpandProperty IPAddress)"`) do set LAN_IP=%%i
-if "%LAN_IP%"=="" set LAN_IP=192.168.1.74
+if "%LAN_IP%"=="" set LAN_IP=10.2.6.42
 
 echo [1/4] Preparing .env.local for WAN...
 if not exist ".env.local" (
@@ -23,7 +38,7 @@ if not exist ".env.local" (
     echo NEXTAUTH_SECRET=replace-with-strong-secret
   ) > .env.local
 ) else (
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "$path='.env.local'; $content=Get-Content -Raw -Path $path; if ($content -notmatch '(?m)^NEXTAUTH_URL=') { Add-Content -Path $path -Value 'NEXTAUTH_URL=%WAN_URL%' }; if ($content -notmatch '(?m)^PUBLIC_IP=') { Add-Content -Path $path -Value 'PUBLIC_IP=%WAN_IP%' }"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$path='.env.local'; $lines=@(); if (Test-Path $path) { $lines=Get-Content -Path $path }; function SetOrAdd([string]$key,[string]$value){ $script:lines=@($script:lines | Where-Object { $_ -notmatch ('^' + [regex]::Escape($key) + '=') }); $script:lines += ($key + '=' + $value) }; SetOrAdd 'NEXTAUTH_URL' '%WAN_URL%'; SetOrAdd 'PUBLIC_IP' '%WAN_IP%'; if (-not ($lines | Where-Object { $_ -match '^NEXTAUTH_SECRET=' })) { $lines += 'NEXTAUTH_SECRET=replace-with-strong-secret' }; Set-Content -Path $path -Value $lines"
 )
 echo Done.
 echo.
@@ -53,7 +68,7 @@ echo   Forward TCP 3001 -^> %LAN_IP%:3001
 echo.
 echo WAN URL: %WAN_URL%
 echo.
-echo Next: start server with START-SERVER.bat then test from mobile data.
+echo Next: start server with START-SERVER.bat then test from mobile data/WAN.
 echo.
 
 :end

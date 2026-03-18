@@ -413,6 +413,17 @@ NEXTAUTH_URL=https://119.93.234.50:3000
 PUBLIC_IP=119.93.234.50
 ```
 
+Or use the built-in WAN setup script:
+
+1. Set your public endpoint values.
+2. Open `SETUP-WAN.bat`.
+3. Update `WAN_IP` to your real static public IP (or domain if you adapt it).
+4. Keep `WAN_URL` as `https://<your-public-ip>:3000` (or your host).
+5. Run the script as Administrator:
+   - PowerShell: `SETUP-WAN.bat`
+
+This script updates `.env.local`, regenerates certs via `generate-cert.js`, and creates firewall rules.
+
 ### Step 5: Access from Other PCs
 
 1. Note the **Network URL** shown in the terminal (e.g., `https://192.168.1.100:3000`)

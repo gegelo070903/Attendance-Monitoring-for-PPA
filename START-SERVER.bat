@@ -38,6 +38,13 @@ for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4"') do (
 :found
 set IP=%IP:~1%
 
+set WAN_URL=
+if exist ".env.local" (
+    for /f "tokens=1,* delims==" %%A in ('findstr /b /c:"NEXTAUTH_URL=" .env.local') do (
+        set WAN_URL=%%B
+    )
+)
+
 echo.
 echo ==========================================
 echo   Server is running! (HTTPS)
@@ -45,7 +52,11 @@ echo ==========================================
 echo.
 echo   Local:    https://localhost:3000
 echo   Network:  https://%IP%:3000
+if defined WAN_URL (
+echo   WAN:      %WAN_URL%
+) else (
 echo   WAN:      Set NEXTAUTH_URL in .env.local if using a public IP/domain
+)
 echo.
 echo   Share the Network URL with employees
 echo   on your company WiFi/network.
