@@ -369,10 +369,6 @@ export async function POST(request: NextRequest) {
       
       if (isInAMPeriod) {
         action = "am-in";
-        const lateCheck = checkLateStatus(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15);
-        if (lateCheck.isLate) {
-          status = "LATE";
-        }
         
         attendance = await prisma.attendance.create({
           data: {
@@ -388,7 +384,7 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           userName: user.name || "Unknown",
           action: ActivityActions.SCAN_AM_IN,
-          description: `${user.name} scanned AM In at ${fmtTime(now)}${status === "LATE" ? " (Late)" : ""}`,
+          description: `${user.name} scanned AM In at ${fmtTime(now)}`,
           type: "SUCCESS",
           metadata: {
             attendanceId: attendance.id,
@@ -404,7 +400,7 @@ export async function POST(request: NextRequest) {
           action: "AM In",
           time: now,
           status,
-          message: `Good morning, ${user.name}! AM In recorded at ${fmtTime(now)}.${status === "LATE" ? " (Late)" : ""}`,
+          message: `Good morning, ${user.name}! AM In recorded at ${fmtTime(now)}.`,
           nextAction: "am-out",
           user: {
             name: user.name,
@@ -501,7 +497,6 @@ export async function POST(request: NextRequest) {
         });
       } else {
         action = "pm-in";
-        const lateCheck = checkLateStatus(now, settings.pmStartTime, (settings as { pmGracePeriod?: number }).pmGracePeriod || 15);
         
         attendance = await prisma.attendance.create({
           data: {
@@ -513,10 +508,7 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        let statusMsg = " (Morning session missed - Half Day)";
-        if (lateCheck.isLate) {
-          statusMsg = " (Morning missed + Late PM arrival - Half Day)";
-        }
+        const statusMsg = " (Morning session missed - Half Day)";
 
         await logActivity({
           userId: user.id,
@@ -528,7 +520,6 @@ export async function POST(request: NextRequest) {
             attendanceId: attendance.id,
             time: now.toISOString(),
             status: "HALF_DAY",
-            lateForPM: lateCheck.isLate,
           },
           scanPhoto: scanPhoto || undefined,
         });
@@ -563,10 +554,6 @@ export async function POST(request: NextRequest) {
       }
     } else if (attendance.amIn && attendance.amOut && !attendance.pmIn && !attendance.pmOut) {
       action = "pm-in";
-      const lateCheck = checkLateStatus(now, settings.pmStartTime, (settings as { pmGracePeriod?: number }).pmGracePeriod || 15);
-      if (lateCheck.isLate && attendance.status === "PRESENT") {
-        updateData.status = "LATE";
-      }
       updateData.pmIn = now;
     } else if (attendance.pmIn && !attendance.pmOut) {
       action = "pm-out";
@@ -584,10 +571,7 @@ export async function POST(request: NextRequest) {
     } else if (!attendance.amIn && !attendance.pmIn) {
       if (isInAMPeriod) {
         action = "am-in";
-        const lateCheck = checkLateStatus(now, settings.amStartTime, (settings as { amGracePeriod?: number }).amGracePeriod || 15);
-        if (lateCheck.isLate) {
-          updateData.status = "LATE";
-        } else if (attendance.status === "ABSENT") {
+        if (attendance.status === "ABSENT") {
           updateData.status = "PRESENT";
         }
         updateData.amIn = now;

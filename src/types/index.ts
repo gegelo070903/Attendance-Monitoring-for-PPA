@@ -20,7 +20,7 @@ export interface Attendance {
   amOut: Date | null;
   pmIn: Date | null;
   pmOut: Date | null;
-  status: 'PRESENT' | 'ABSENT' | 'LATE' | 'HALF_DAY';
+  status: 'PRESENT' | 'NO_RECORD' | 'HALF_DAY' | 'ABSENT' | 'LATE';
   workHours: number | null;
   notes?: string;
   createdAt: Date;

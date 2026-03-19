@@ -243,7 +243,7 @@ export default function AttendanceTable({
                     attendance.status
                   )}`}
                 >
-                  {attendance.status}
+                  {attendance.status === "NO_RECORD" ? "NO RECORD" : attendance.status}
                 </span>
               </td>
             </tr>

@@ -68,8 +68,8 @@ export async function GET(request: NextRequest) {
       orderBy: { date: "desc" },
     });
 
-    // Correct HALF_DAY statuses based on actual attendance data.
-    // HALF_DAY rules: only one session completed (AM in+out without PM, or PM in+out without AM)
+    // Normalize statuses for no-schedule mode.
+    // Allowed statuses: PRESENT, HALF_DAY, NO_RECORD.
     const today = startOfDay(new Date());
     const updatedAttendances = attendances.map((att) => {
       const recordDate = startOfDay(new Date(att.date));
@@ -79,31 +79,29 @@ export async function GET(request: NextRequest) {
       const hasCompletedPM = att.pmIn && att.pmOut;
       const hasAnyAM = att.amIn || att.amOut;
       const hasAnyPM = att.pmIn || att.pmOut;
+      const hasAnyRecord = Boolean(hasAnyAM || hasAnyPM);
 
-      // For past days: determine HALF_DAY based on completed sessions
-      if (isPastDay) {
-        if (hasCompletedAM && !hasAnyPM) {
-          return { ...att, status: "HALF_DAY" };
-        }
-        if (hasCompletedPM && !hasAnyAM) {
-          return { ...att, status: "HALF_DAY" };
-        }
-        if (att.status === "HALF_DAY" && !hasCompletedAM && !hasCompletedPM) {
-          return { ...att, status: "LATE" };
-        }
+      if (!hasAnyRecord || att.status === "ABSENT") {
+        return { ...att, status: "NO_RECORD" };
       }
 
-      // For today: fix records that were wrongly marked HALF_DAY
-      if (!isPastDay && att.status === "HALF_DAY") {
-        if (!hasAnyAM && hasAnyPM) {
-          return att;
-        }
-        if (att.amIn && !hasAnyPM) {
-          return { ...att, status: "LATE" };
-        }
+      // HALF_DAY: only one session completed, or PM-only attendance.
+      if (hasCompletedAM && !hasAnyPM) {
+        return { ...att, status: "HALF_DAY" };
+      }
+      if (hasCompletedPM && !hasAnyAM) {
+        return { ...att, status: "HALF_DAY" };
+      }
+      if (!hasAnyAM && hasAnyPM) {
+        return { ...att, status: "HALF_DAY" };
       }
 
-      return att;
+      // For in-progress same-day records, treat as PRESENT when there is any scan.
+      if (!isPastDay && (att.amIn || att.pmIn) && !hasCompletedAM && !hasCompletedPM) {
+        return { ...att, status: "PRESENT" };
+      }
+
+      return { ...att, status: "PRESENT" };
     });
 
     return NextResponse.json(updatedAttendances);

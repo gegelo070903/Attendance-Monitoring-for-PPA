@@ -96,9 +96,9 @@ export default function AdminAttendancePage() {
   );
 
   const presentToday = todayAttendances.filter(
-    (a) => a.status === "PRESENT" || a.status === "LATE"
+    (a) => a.status === "PRESENT" || a.status === "HALF_DAY"
   ).length;
-  const lateToday = todayAttendances.filter((a) => a.status === "LATE").length;
+  const noRecordToday = todayAttendances.filter((a) => a.status === "NO_RECORD").length;
 
   return (
     <div className="space-y-4">
@@ -136,8 +136,8 @@ export default function AdminAttendancePage() {
         <div className="bg-yellow-50 dark:bg-yellow-900/30 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Late Today</p>
-              <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">{lateToday}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">No Record Today</p>
+              <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">{noRecordToday}</p>
             </div>
             <div className="w-9 h-9 bg-yellow-100 dark:bg-yellow-800/50 rounded-lg flex items-center justify-center">
               <svg

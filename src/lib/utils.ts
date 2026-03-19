@@ -44,7 +44,7 @@ export function calculateWorkHours(checkIn: Date | null, checkOut: Date | null):
 }
 
 export function getAttendanceStatus(checkInTime: Date | null, workStartTime: string, lateThreshold: number): string {
-  if (!checkInTime) return 'ABSENT';
+  if (!checkInTime) return 'NO_RECORD';
   
   const [hours, minutes] = workStartTime.split(':').map(Number);
   const workStart = new Date(checkInTime);
@@ -52,9 +52,7 @@ export function getAttendanceStatus(checkInTime: Date | null, workStartTime: str
   
   const diffMinutes = differenceInMinutes(checkInTime, workStart);
   
-  if (diffMinutes <= 0) return 'PRESENT';
-  if (diffMinutes <= lateThreshold) return 'PRESENT';
-  if (diffMinutes <= 120) return 'LATE';
+  if (diffMinutes <= 120) return 'PRESENT';
   return 'HALF_DAY';
 }
 
@@ -62,10 +60,11 @@ export function getStatusColor(status: string): string {
   switch (status) {
     case 'PRESENT':
       return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
-    case 'LATE':
-      return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
     case 'HALF_DAY':
       return 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300';
+    case 'NO_RECORD':
+      return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
+    case 'LATE':
     case 'ABSENT':
       return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300';
     default:
