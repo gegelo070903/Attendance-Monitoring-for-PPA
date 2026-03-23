@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
 interface QRScannerProps {
   onScan: (data: { email: string; name: string }, photoBlob?: Blob) => void;
@@ -17,6 +17,46 @@ export default function QRScanner({ onScan, onError }: QRScannerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const processingRef = useRef(false);
   const transitionLockRef = useRef(false);
+
+  const parseQrPayload = (decodedText: string): { email: string; name: string } | null => {
+    // Backward-compatible formats:
+    // 1) Full JSON: { type: "PPA_ATTENDANCE", email, name }
+    // 2) Compact JSON: { t: "PPA", e, n }
+    // 3) Plain email text
+    try {
+      const parsed = JSON.parse(decodedText);
+
+      if (parsed?.type === "PPA_ATTENDANCE" && parsed?.email) {
+        return {
+          email: String(parsed.email),
+          name: String(parsed.name || parsed.email),
+        };
+      }
+
+      if (parsed?.t === "PPA" && parsed?.e) {
+        return {
+          email: String(parsed.e),
+          name: String(parsed.n || parsed.e),
+        };
+      }
+
+      if (parsed?.userId) {
+        return {
+          email: String(parsed.userId),
+          name: String(parsed.name || parsed.userId),
+        };
+      }
+    } catch {
+      // Not JSON, continue to plain email parsing.
+    }
+
+    const text = decodedText.trim();
+    if (text.includes("@") && text.length <= 120) {
+      return { email: text, name: text };
+    }
+
+    return null;
+  };
 
   // Function to capture photo from video stream
   const capturePhoto = useCallback((): Promise<Blob | null> => {
@@ -90,18 +130,17 @@ export default function QRScanner({ onScan, onError }: QRScannerProps) {
           qrbox: { width: 320, height: 320 },
           aspectRatio: 1,
           disableFlip: false,
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
         },
         async (decodedText) => {
           try {
-            const data = JSON.parse(decodedText);
-            
-            // Validate QR code format - support both email and userId for backwards compatibility
-            if (data.type !== "PPA_ATTENDANCE" || (!data.email && !data.userId)) {
+            const parsed = parseQrPayload(decodedText);
+            if (!parsed) {
               onError?.("Invalid QR code format");
               return;
             }
 
-            const identifier = data.email || data.userId;
+            const identifier = parsed.email;
 
             // Prevent duplicate scans - use ref for synchronous check
             if (lastScannedRef.current === identifier || processingRef.current) {
@@ -118,7 +157,7 @@ export default function QRScanner({ onScan, onError }: QRScannerProps) {
             // Capture photo before calling onScan
             const photoBlob = await capturePhoto();
             
-            onScan({ email: data.email || data.userId, name: data.name }, photoBlob || undefined);
+            onScan({ email: parsed.email, name: parsed.name }, photoBlob || undefined);
           } catch {
             onError?.("Invalid QR code data");
           }
@@ -129,6 +168,17 @@ export default function QRScanner({ onScan, onError }: QRScannerProps) {
       );
 
       setIsScanning(true);
+
+      // Best-effort autofocus improvements for devices that support advanced constraints.
+      try {
+        await scannerRef.current.applyVideoConstraints({
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          advanced: [{ focusMode: "continuous" as any }],
+        } as any);
+      } catch {
+        // Ignore unsupported constraints; scanner still works with defaults.
+      }
     } catch (err) {
       onError?.(`Failed to start camera: ${err}`);
     } finally {

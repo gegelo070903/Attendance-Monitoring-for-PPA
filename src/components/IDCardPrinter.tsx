@@ -33,52 +33,25 @@ export default function IDCardPrinter({
       canvas.width = size;
       canvas.height = size;
 
+      // Compact payload creates fewer QR modules and improves long-distance scanning.
       const qrData = JSON.stringify({
-        email: userEmail,
-        name: userName,
-        type: "PPA_ATTENDANCE",
+        t: "PPA",
+        e: userEmail,
+        n: userName,
       });
 
-      // Generate QR code with high error correction for logo overlay
+      // Scanner-friendly print profile: black modules, white background, quiet zone.
       await QRCode.toCanvas(canvas, qrData, {
         width: size,
-        margin: 1,
-        errorCorrectionLevel: "H",
+        margin: 2,
+        errorCorrectionLevel: "M",
         color: {
-          dark: "#0038A8",
+          dark: "#000000",
           light: "#ffffff",
         },
       });
 
-      // Load and draw logo in center
-      const logo = new Image();
-      logo.crossOrigin = "anonymous";
-      logo.onload = () => {
-        const logoSize = size * 0.22;
-        const logoX = (size - logoSize) / 2;
-        const logoY = (size - logoSize) / 2;
-
-        // Draw white circle background for logo
-        ctx.beginPath();
-        ctx.arc(size / 2, size / 2, logoSize / 2 + 6, 0, 2 * Math.PI);
-        ctx.fillStyle = "#ffffff";
-        ctx.fill();
-
-        // Draw border around logo
-        ctx.beginPath();
-        ctx.arc(size / 2, size / 2, logoSize / 2 + 6, 0, 2 * Math.PI);
-        ctx.strokeStyle = "#0038A8";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Draw the logo
-        ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
-        setQrDataUrl(canvas.toDataURL("image/png"));
-      };
-      logo.onerror = () => {
-        setQrDataUrl(canvas.toDataURL("image/png"));
-      };
-      logo.src = "/images/ppa-logo-nobg.png";
+      setQrDataUrl(canvas.toDataURL("image/png"));
     };
 
     generateQRWithLogo();

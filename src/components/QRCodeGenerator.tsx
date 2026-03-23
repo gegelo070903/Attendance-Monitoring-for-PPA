@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import QRCode from "qrcode";
 
 interface QRCodeGeneratorProps {
@@ -15,65 +15,25 @@ export default function QRCodeGenerator({
   size = 300,
 }: QRCodeGeneratorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isLogoLoaded, setIsLogoLoaded] = useState(false);
 
   useEffect(() => {
     const generateQRWithLogo = async () => {
       if (!canvasRef.current) return;
 
       const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+      // Plain email payload yields less-dense QR and improves long-distance decoding.
+      const qrData = userEmail;
 
-      // Generate QR code with user email (permanent identifier)
-      const qrData = JSON.stringify({
-        email: userEmail,
-        name: userName,
-        type: "PPA_ATTENDANCE",
-      });
-
-      // Generate QR code with higher error correction for logo overlay
+      // High-contrast print profile for laminated cards and low-light scan stations.
       await QRCode.toCanvas(canvas, qrData, {
         width: size,
-        margin: 2,
-        errorCorrectionLevel: "H", // High error correction to allow logo overlay
+        margin: 3,
+        errorCorrectionLevel: "M",
         color: {
-          dark: "#1e3a5f", // Dark blue (PPA color)
+          dark: "#000000",
           light: "#ffffff",
         },
       });
-
-      // Load and draw logo in center
-      const logo = new Image();
-      logo.crossOrigin = "anonymous";
-      logo.onload = () => {
-        const logoSize = size * 0.22; // Logo takes 22% of QR code size
-        const logoX = (size - logoSize) / 2;
-        const logoY = (size - logoSize) / 2;
-
-        // Draw white circle background for logo
-        ctx.beginPath();
-        ctx.arc(size / 2, size / 2, logoSize / 2 + 8, 0, 2 * Math.PI);
-        ctx.fillStyle = "#ffffff";
-        ctx.fill();
-
-        // Draw border around logo
-        ctx.beginPath();
-        ctx.arc(size / 2, size / 2, logoSize / 2 + 8, 0, 2 * Math.PI);
-        ctx.strokeStyle = "#1e3a5f";
-        ctx.lineWidth = 3;
-        ctx.stroke();
-
-        // Draw the logo
-        ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
-        setIsLogoLoaded(true);
-      };
-      logo.onerror = () => {
-        // If logo fails to load, QR code still works without it
-        console.log("Logo not found, QR code generated without logo");
-        setIsLogoLoaded(true);
-      };
-      logo.src = "/images/download-removebg-preview.png";
     };
 
     generateQRWithLogo();
