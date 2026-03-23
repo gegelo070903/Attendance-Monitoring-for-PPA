@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { User } from "@/types";
 import { useToast } from "@/components/Toast";
 import QRCode from "qrcode";
+import { ATTENDANCE_QR_STYLE, getAttendanceQrPayload } from "@/lib/attendanceQr";
 
 // Eye icons as inline SVG components
 const EyeIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -869,52 +870,15 @@ function QRCodeModal({
       const canvas = activeCanvas.current;
       if (!canvas) return;
 
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
       const size = 280;
-      const qrData = JSON.stringify({
-        email: employee.email,
-        name: employee.name,
-        type: "PPA_ATTENDANCE",
-      });
+      const qrData = getAttendanceQrPayload(employee.email);
 
       await QRCode.toCanvas(canvas, qrData, {
         width: size,
-        margin: 2,
-        errorCorrectionLevel: "H",
-        color: {
-          dark: "#1e3a5f",
-          light: "#ffffff",
-        },
+        ...ATTENDANCE_QR_STYLE,
       });
 
-      // Load and draw logo
-      const logo = new Image();
-      logo.crossOrigin = "anonymous";
-      logo.onload = () => {
-        const logoSize = size * 0.22;
-        const logoX = (size - logoSize) / 2;
-        const logoY = (size - logoSize) / 2;
-
-        ctx.beginPath();
-        ctx.arc(size / 2, size / 2, logoSize / 2 + 8, 0, 2 * Math.PI);
-        ctx.fillStyle = "#ffffff";
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(size / 2, size / 2, logoSize / 2 + 8, 0, 2 * Math.PI);
-        ctx.strokeStyle = "#1e3a5f";
-        ctx.lineWidth = 3;
-        ctx.stroke();
-
-        ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
-        setReady(true);
-      };
-      logo.onerror = () => {
-        setReady(true);
-      };
-      logo.src = "/images/download-removebg-preview.png";
+      setReady(true);
     };
 
     generateQR();
@@ -1054,46 +1018,19 @@ function IDCardModal({
     const generateQR = async () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
 
-      const size = 200;
+      const size = 420;
       canvas.width = size;
       canvas.height = size;
 
-      const qrData = JSON.stringify({
-        email: employee.email,
-        name: employee.name,
-        type: "PPA_ATTENDANCE",
-      });
+      const qrData = getAttendanceQrPayload(employee.email);
 
       await QRCode.toCanvas(canvas, qrData, {
         width: size,
-        margin: 2,
-        errorCorrectionLevel: "H",
-        color: { dark: "#0038A8", light: "#ffffff" },
+        ...ATTENDANCE_QR_STYLE,
       });
 
-      const logo = new Image();
-      logo.crossOrigin = "anonymous";
-      logo.onload = () => {
-        const logoSize = size * 0.22;
-        const logoX = (size - logoSize) / 2;
-        const logoY = (size - logoSize) / 2;
-        ctx.beginPath();
-        ctx.arc(size / 2, size / 2, logoSize / 2 + 6, 0, 2 * Math.PI);
-        ctx.fillStyle = "#ffffff";
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(size / 2, size / 2, logoSize / 2 + 6, 0, 2 * Math.PI);
-        ctx.strokeStyle = "#0038A8";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
-        setQrDataUrl(canvas.toDataURL("image/png"));
-      };
-      logo.onerror = () => setQrDataUrl(canvas.toDataURL("image/png"));
-      logo.src = "/images/ppa-logo-nobg.png";
+      setQrDataUrl(canvas.toDataURL("image/png"));
     };
     generateQR();
   }, [employee]);

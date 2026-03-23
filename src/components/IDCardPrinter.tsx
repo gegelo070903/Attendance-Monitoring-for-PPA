@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import QRCode from "qrcode";
+import { ATTENDANCE_QR_STYLE, getAttendanceQrPayload } from "@/lib/attendanceQr";
 
 interface IDCardPrinterProps {
   userEmail: string;
@@ -26,29 +27,16 @@ export default function IDCardPrinter({
       if (!qrCanvasRef.current) return;
 
       const canvas = qrCanvasRef.current;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
 
       const size = 420;
       canvas.width = size;
       canvas.height = size;
 
-      // Compact payload creates fewer QR modules and improves long-distance scanning.
-      const qrData = JSON.stringify({
-        t: "PPA",
-        e: userEmail,
-        n: userName,
-      });
+      const qrData = getAttendanceQrPayload(userEmail);
 
-      // Scanner-friendly print profile: black modules, white background, quiet zone.
       await QRCode.toCanvas(canvas, qrData, {
         width: size,
-        margin: 2,
-        errorCorrectionLevel: "M",
-        color: {
-          dark: "#000000",
-          light: "#ffffff",
-        },
+        ...ATTENDANCE_QR_STYLE,
       });
 
       setQrDataUrl(canvas.toDataURL("image/png"));

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import QRCode from "qrcode";
+import { ATTENDANCE_QR_STYLE, getAttendanceQrPayload } from "@/lib/attendanceQr";
 
 interface QRCodeGeneratorProps {
   userEmail: string;
@@ -21,18 +22,11 @@ export default function QRCodeGenerator({
       if (!canvasRef.current) return;
 
       const canvas = canvasRef.current;
-      // Plain email payload yields less-dense QR and improves long-distance decoding.
-      const qrData = userEmail;
+      const qrData = getAttendanceQrPayload(userEmail);
 
-      // High-contrast print profile for laminated cards and low-light scan stations.
       await QRCode.toCanvas(canvas, qrData, {
         width: size,
-        margin: 3,
-        errorCorrectionLevel: "M",
-        color: {
-          dark: "#000000",
-          light: "#ffffff",
-        },
+        ...ATTENDANCE_QR_STYLE,
       });
     };
 
