@@ -29,7 +29,7 @@ export default function IDCardPrinter({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      const size = 200;
+      const size = 420;
       canvas.width = size;
       canvas.height = size;
 
@@ -42,7 +42,7 @@ export default function IDCardPrinter({
       // Generate QR code with high error correction for logo overlay
       await QRCode.toCanvas(canvas, qrData, {
         width: size,
-        margin: 2,
+        margin: 1,
         errorCorrectionLevel: "H",
         color: {
           dark: "#0038A8",
@@ -91,8 +91,8 @@ export default function IDCardPrinter({
     // Use consistent styles for both preview and print
     const cardStyles = `
       .card {
-        width: 2.125in;
-        height: 3.375in;
+        width: 2.5in;
+        height: 3.9in;
         border-radius: 0;
         overflow: hidden;
         box-shadow: 0 8px 24px rgba(0,0,0,0.15);
@@ -161,8 +161,8 @@ export default function IDCardPrinter({
         z-index: 1;
       }
       .profile-image-container {
-        width: 80px;
-        height: 80px;
+        width: 92px;
+        height: 92px;
         border-radius: 50%;
         border: 3px solid #0038A8;
         overflow: hidden;
@@ -193,7 +193,7 @@ export default function IDCardPrinter({
         padding: 0 8px;
       }
       .user-name {
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 700;
         color: #1e293b;
         margin-bottom: 4px;
@@ -272,9 +272,9 @@ export default function IDCardPrinter({
         color: #0038A8;
       }
       .back-title {
-        font-size: 8px;
+        font-size: 9px;
         color: #0038A8;
-        margin-bottom: 12px;
+        margin-bottom: 14px;
         text-transform: uppercase;
         letter-spacing: 1px;
         font-weight: 500;
@@ -283,7 +283,7 @@ export default function IDCardPrinter({
       }
       .qr-container {
         background: #fff;
-        padding: 10px;
+        padding: 12px;
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         border: 2px solid #0038A8;
@@ -291,9 +291,11 @@ export default function IDCardPrinter({
         z-index: 1;
       }
       .qr-code {
-        width: 110px;
-        height: 110px;
+        width: 145px;
+        height: 145px;
         display: block;
+        image-rendering: crisp-edges;
+        image-rendering: pixelated;
       }
     `;
 
@@ -342,6 +344,10 @@ export default function IDCardPrinter({
             body {
               background: #fff;
               padding: 0;
+            }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
             .cards-container {
               gap: 20px;

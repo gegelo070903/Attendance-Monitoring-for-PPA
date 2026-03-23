@@ -19,10 +19,10 @@ export async function GET() {
     if (!settings) {
       settings = await prisma.settings.create({
         data: {
-          amStartTime: "08:00",
+          amStartTime: "00:00",
           amEndTime: "12:00",
           pmStartTime: "13:00",
-          pmEndTime: "17:00",
+          pmEndTime: "23:59",
           amGracePeriod: 15,
           pmGracePeriod: 15,
           lateThreshold: 15,
@@ -79,10 +79,10 @@ export async function PUT(request: NextRequest) {
     } else {
       settings = await prisma.settings.create({
         data: {
-          amStartTime: amStartTime || "08:00",
+          amStartTime: amStartTime || "00:00",
           amEndTime: amEndTime || "12:00",
           pmStartTime: pmStartTime || "13:00",
-          pmEndTime: pmEndTime || "17:00",
+          pmEndTime: pmEndTime || "23:59",
           amGracePeriod: amGracePeriod || 15,
           pmGracePeriod: pmGracePeriod || 15,
           lateThreshold: lateThreshold || 15,

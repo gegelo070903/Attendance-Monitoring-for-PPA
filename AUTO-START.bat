@@ -49,11 +49,11 @@ for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4"') do (
 :found
 set IP=%IP:~1%
 
-set WAN_URL=
+set APP_URL=
 set VPN_URL=
 if exist ".env.local" (
     for /f "tokens=1,* delims==" %%A in ('findstr /b /c:"NEXTAUTH_URL=" .env.local') do (
-        set WAN_URL=%%B
+        set APP_URL=%%B
     )
     for /f "tokens=1,* delims==" %%A in ('findstr /b /c:"VPN_URL=" .env.local') do (
         set VPN_URL=%%B
@@ -67,10 +67,10 @@ echo ============================================
 echo.
 echo   Local:    https://localhost:3000
 echo   Network:  https://%IP%:3000
-if defined WAN_URL (
-echo   WAN:      %WAN_URL%
+if defined APP_URL (
+echo   URL:      %APP_URL%
 ) else (
-echo   WAN:      Set NEXTAUTH_URL in .env.local if using a public IP/domain
+echo   URL:      Set NEXTAUTH_URL in .env.local
 )
 if defined VPN_URL (
 echo   VPN:      %VPN_URL%
@@ -79,9 +79,7 @@ echo   VPN:      Set VPN_URL in .env.local if using VPN access
 )
 echo.
 echo   Share the Network URL with employees.
-echo   For WAN, forward ports 3000 and 3001 on your router and allow them in Windows Firewall.
 echo   Browser may show certificate warning.
-echo   A raw public IP with a self-signed certificate is not ideal for external users.
 echo   Click Advanced then Proceed.
 echo   Server will auto-restart if it stops.
 echo ============================================

@@ -32,10 +32,10 @@ interface BackupData {
 export default function SettingsPage() {
   const { showSuccess, showError: showErrorToast } = useToast();
   const [settings, setSettings] = useState<Settings>({
-    amStartTime: "08:00",
+    amStartTime: "00:00",
     amEndTime: "12:00",
     pmStartTime: "13:00",
-    pmEndTime: "17:00",
+    pmEndTime: "23:59",
     amGracePeriod: 15,
     pmGracePeriod: 15,
     lateThreshold: 15,
@@ -63,10 +63,10 @@ export default function SettingsPage() {
         if (res.ok) {
           const data = await res.json();
           setSettings({
-            amStartTime: data.amStartTime || "08:00",
+            amStartTime: data.amStartTime || "00:00",
             amEndTime: data.amEndTime || "12:00",
             pmStartTime: data.pmStartTime || "13:00",
-            pmEndTime: data.pmEndTime || "17:00",
+            pmEndTime: data.pmEndTime || "23:59",
             amGracePeriod: data.amGracePeriod || 15,
             pmGracePeriod: data.pmGracePeriod || 15,
             lateThreshold: data.lateThreshold || 15,

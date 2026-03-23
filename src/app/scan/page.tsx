@@ -137,10 +137,10 @@ export default function ScanStationPage() {
   const [pendingPhotoData, setPendingPhotoData] = useState<{attendanceId: string; action: string; userName: string; actionLabel: string} | null>(null);
   const faceCaptureTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [settings, setSettings] = useState<Settings>({
-    amStartTime: "08:00",
+    amStartTime: "00:00",
     amEndTime: "12:00",
     pmStartTime: "13:00",
-    pmEndTime: "17:00",
+    pmEndTime: "23:59",
     amGracePeriod: 15,
     pmGracePeriod: 15,
   });
@@ -153,10 +153,10 @@ export default function ScanStationPage() {
         if (res.ok) {
           const data = await res.json();
           setSettings({
-            amStartTime: data.amStartTime || "08:00",
+            amStartTime: data.amStartTime || "00:00",
             amEndTime: data.amEndTime || "12:00",
             pmStartTime: data.pmStartTime || "13:00",
-            pmEndTime: data.pmEndTime || "17:00",
+            pmEndTime: data.pmEndTime || "23:59",
             amGracePeriod: data.amGracePeriod || 15,
             pmGracePeriod: data.pmGracePeriod || 15,
           });
@@ -424,12 +424,9 @@ export default function ScanStationPage() {
 
           {/* Date/Time & Help Button */}
           <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-2">
-              <span className="bg-[#0038A8]/10 px-2 py-1 rounded text-[#0038A8] text-xs font-medium" suppressHydrationWarning>
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline bg-[#0038A8]/10 px-2 py-1 rounded text-[#0038A8] text-xs font-medium" suppressHydrationWarning>
                 {mounted && currentTime ? currentTime.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "--"}
-              </span>
-              <span className="bg-[#FCD116]/30 px-2 py-1 rounded text-[#0038A8] text-xs font-mono font-bold" suppressHydrationWarning>
-                {mounted && currentTime ? currentTime.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" }) : "--:--"}
               </span>
             </div>
             <button
@@ -470,6 +467,15 @@ export default function ScanStationPage() {
               </div>
               QR Code Scanner
             </h2>
+
+            <div className="mb-3 flex justify-center">
+              <span
+                className="bg-[#FCD116]/30 px-4 sm:px-5 py-2.5 rounded-lg text-[#0038A8] text-3xl sm:text-4xl lg:text-5xl font-mono font-bold leading-none"
+                suppressHydrationWarning
+              >
+                {mounted && currentTime ? currentTime.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "--:--:--"}
+              </span>
+            </div>
             
             <QRScanner onScan={handleScan} onError={handleError} />
 

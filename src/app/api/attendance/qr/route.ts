@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
     const settingsGET = await prisma.settings.findFirst() || {
       amEndTime: "12:00",
       pmStartTime: "13:00",
-      pmEndTime: "17:00",
+      pmEndTime: "23:59",
     };
     const pmStartGET = parseTimeString(settingsGET.pmStartTime || "13:00");
     const pmStartMinGET = pmStartGET.hour * 60 + pmStartGET.minute;
@@ -219,17 +219,17 @@ export async function POST(request: NextRequest) {
 
     // Get settings
     const settings = await prisma.settings.findFirst() || {
-      amStartTime: "08:00",
+      amStartTime: "00:00",
       amEndTime: "12:00",
       pmStartTime: "13:00",
-      pmEndTime: "17:00",
+      pmEndTime: "23:59",
       amGracePeriod: 15,
       pmGracePeriod: 15,
       lateThreshold: 15,
     };
 
     // Parse PM end time for overnight shift detection
-    const pmEnd = parseTimeString(settings.pmEndTime || "17:00");
+    const pmEnd = parseTimeString(settings.pmEndTime || "23:59");
     const pmEndMinutes = pmEnd.hour * 60 + pmEnd.minute;
     const pmStartCheck = parseTimeString(settings.pmStartTime || "13:00");
     const pmStartMinutes = pmStartCheck.hour * 60 + pmStartCheck.minute;

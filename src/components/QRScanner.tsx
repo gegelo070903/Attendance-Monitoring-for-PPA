@@ -10,11 +10,13 @@ interface QRScannerProps {
 
 export default function QRScanner({ onScan, onError }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const lastScannedRef = useRef<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const processingRef = useRef(false);
+  const transitionLockRef = useRef(false);
 
   // Function to capture photo from video stream
   const capturePhoto = useCallback((): Promise<Blob | null> => {
@@ -69,6 +71,13 @@ export default function QRScanner({ onScan, onError }: QRScannerProps) {
   }, []);
 
   const startScanner = async () => {
+    if (isScanning || transitionLockRef.current) {
+      return;
+    }
+
+    transitionLockRef.current = true;
+    setIsTransitioning(true);
+
     try {
       if (!scannerRef.current) {
         scannerRef.current = new Html5Qrcode("qr-reader");
@@ -77,8 +86,8 @@ export default function QRScanner({ onScan, onError }: QRScannerProps) {
       await scannerRef.current.start(
         { facingMode: "environment" },
         {
-          fps: 15,
-          qrbox: { width: 280, height: 280 },
+          fps: 12,
+          qrbox: { width: 320, height: 320 },
           aspectRatio: 1,
           disableFlip: false,
         },
@@ -122,10 +131,20 @@ export default function QRScanner({ onScan, onError }: QRScannerProps) {
       setIsScanning(true);
     } catch (err) {
       onError?.(`Failed to start camera: ${err}`);
+    } finally {
+      transitionLockRef.current = false;
+      setIsTransitioning(false);
     }
   };
 
   const stopScanner = async () => {
+    if (!scannerRef.current || transitionLockRef.current) {
+      return;
+    }
+
+    transitionLockRef.current = true;
+    setIsTransitioning(true);
+
     if (scannerRef.current) {
       try {
         const scanner = scannerRef.current;
@@ -144,6 +163,9 @@ export default function QRScanner({ onScan, onError }: QRScannerProps) {
         // Still reset state even if error
         scannerRef.current = null;
         setIsScanning(false);
+      } finally {
+        transitionLockRef.current = false;
+        setIsTransitioning(false);
       }
     }
   };
@@ -175,30 +197,31 @@ export default function QRScanner({ onScan, onError }: QRScannerProps) {
       <div
         ref={containerRef}
         id="qr-reader"
-        className={`w-full rounded-lg overflow-hidden border-2 ${isScanning ? "bg-gray-800 border-gray-700" : "bg-transparent border-transparent"}`}
-        style={{ minHeight: isScanning ? "300px" : "0px", maxWidth: "380px" }}
+        className={`w-full max-w-[430px] h-[300px] sm:h-[340px] rounded-lg overflow-hidden border-2 transition-colors ${isScanning ? "bg-gray-800 border-gray-700" : "bg-gray-100 border-gray-300"}`}
       />
 
       {!isScanning ? (
         <button
           onClick={startScanner}
-          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 text-sm font-semibold shadow-md hover:shadow-lg"
+          disabled={isTransitioning}
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 text-sm font-semibold shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
           </svg>
-          Start Camera Scanner
+          {isTransitioning ? "Starting Camera..." : "Start Camera Scanner"}
         </button>
       ) : (
         <button
           onClick={stopScanner}
-          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-300 text-sm font-semibold shadow-md hover:shadow-lg"
+          disabled={isTransitioning}
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-300 text-sm font-semibold shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" />
           </svg>
-          Stop Scanner
+          {isTransitioning ? "Stopping Camera..." : "Stop Scanner"}
         </button>
       )}
 
