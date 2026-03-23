@@ -9,7 +9,7 @@ echo ========================================
 echo.
 
 REM Update WAN_IP to your real static public IP (or domain if you adapt this script)
-set WAN_IP=REPLACE_WITH_PUBLIC_IP
+set WAN_IP=119.93.234.50
 set WAN_URL=https://%WAN_IP%:3000
 set LAN_IP=
 
@@ -28,7 +28,13 @@ if %errorlevel% neq 0 (
 )
 
 for /f "usebackq delims=" %%i in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127.*' -and $_.PrefixOrigin -ne 'WellKnown' -and $_.InterfaceAlias -notmatch 'Loopback|vEthernet' } | Select-Object -First 1 -ExpandProperty IPAddress)"`) do set LAN_IP=%%i
-if "%LAN_IP%"=="" set LAN_IP=10.2.6.42
+if "%LAN_IP%"=="" (
+  echo ERROR: Could not detect server LAN IP automatically.
+  echo Ensure the server is connected to your router, then run this script again.
+  echo You can also set LAN_IP manually in this file before running.
+  echo.
+  goto :end
+)
 
 echo [1/4] Preparing .env.local for WAN...
 if not exist ".env.local" (

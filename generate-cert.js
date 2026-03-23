@@ -99,6 +99,18 @@ function getConfiguredHosts() {
 
   addHost(process.env.PUBLIC_IP);
   addHost(process.env.PUBLIC_HOSTNAME);
+  addHost(process.env.VPN_IP);
+  addHost(process.env.VPN_HOSTNAME);
+
+  if (process.env.VPN_URL) {
+    try {
+      const parsedVpnUrl = new URL(process.env.VPN_URL);
+      addHost(parsedVpnUrl.hostname);
+    } catch {
+      // Accept plain VPN host/IP values without URL scheme.
+      addHost(process.env.VPN_URL);
+    }
+  }
 
   if (process.env.NEXTAUTH_URL) {
     try {
