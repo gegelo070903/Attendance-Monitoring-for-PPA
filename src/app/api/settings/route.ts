@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import path from "path";
+import { promises as fs } from "fs";
 import prisma from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { logActivity, ActivityActions } from "@/lib/activityLogger";
+
+const SCAN_SOUND_RELATIVE_PATH = "/uploads/sounds/scan-notification.mp3";
+
+async function getScanSoundFileUrl(): Promise<string | null> {
+  try {
+    const absolutePath = path.join(process.cwd(), "public", "uploads", "sounds", "scan-notification.mp3");
+    const stats = await fs.stat(absolutePath);
+    return `${SCAN_SOUND_RELATIVE_PATH}?v=${Math.floor(stats.mtimeMs)}`;
+  } catch {
+    return null;
+  }
+}
 
 // GET - Get current settings
 export async function GET() {
@@ -17,7 +31,7 @@ export async function GET() {
     let settings = await prisma.settings.findFirst();
 
     if (!settings) {
-      settings = await prisma.settings.create({
+      settings = await (prisma.settings as any).create({
         data: {
           amStartTime: "00:00",
           amEndTime: "12:00",
@@ -26,11 +40,14 @@ export async function GET() {
           amGracePeriod: 15,
           pmGracePeriod: 15,
           lateThreshold: 15,
+          scanSoundEnabled: true,
+          scanSoundVolume: 60,
         },
       });
     }
 
-    return NextResponse.json(settings);
+    const scanSoundFileUrl = await getScanSoundFileUrl();
+    return NextResponse.json({ ...settings, scanSoundFileUrl });
   } catch (error) {
     console.error("Get settings error:", error);
     return NextResponse.json(
@@ -58,13 +75,24 @@ export async function PUT(request: NextRequest) {
       amGracePeriod,
       pmGracePeriod,
       lateThreshold,
+      scanSoundEnabled,
+      scanSoundVolume,
     } = body;
+
+    const normalizedScanSoundVolume =
+      scanSoundVolume !== undefined
+        ? Math.max(0, Math.min(100, Number(scanSoundVolume)))
+        : undefined;
 
     // Get existing settings or create new
     let settings = await prisma.settings.findFirst();
+    const existingSettings = settings as (typeof settings & {
+      scanSoundEnabled?: boolean;
+      scanSoundVolume?: number;
+    }) | null;
 
     if (settings) {
-      settings = await prisma.settings.update({
+      settings = await (prisma.settings as any).update({
         where: { id: settings.id },
         data: {
           amStartTime: amStartTime || settings.amStartTime,
@@ -74,10 +102,16 @@ export async function PUT(request: NextRequest) {
           amGracePeriod: amGracePeriod !== undefined ? amGracePeriod : settings.amGracePeriod,
           pmGracePeriod: pmGracePeriod !== undefined ? pmGracePeriod : settings.pmGracePeriod,
           lateThreshold: lateThreshold !== undefined ? lateThreshold : settings.lateThreshold,
+          scanSoundEnabled:
+            scanSoundEnabled !== undefined ? Boolean(scanSoundEnabled) : existingSettings?.scanSoundEnabled ?? true,
+          scanSoundVolume:
+            normalizedScanSoundVolume !== undefined
+              ? normalizedScanSoundVolume
+              : existingSettings?.scanSoundVolume ?? 60,
         },
       });
     } else {
-      settings = await prisma.settings.create({
+      settings = await (prisma.settings as any).create({
         data: {
           amStartTime: amStartTime || "00:00",
           amEndTime: amEndTime || "12:00",
@@ -86,8 +120,19 @@ export async function PUT(request: NextRequest) {
           amGracePeriod: amGracePeriod || 15,
           pmGracePeriod: pmGracePeriod || 15,
           lateThreshold: lateThreshold || 15,
+          scanSoundEnabled:
+            scanSoundEnabled !== undefined ? Boolean(scanSoundEnabled) : true,
+          scanSoundVolume:
+            normalizedScanSoundVolume !== undefined ? normalizedScanSoundVolume : 60,
         },
       });
+    }
+
+    if (!settings) {
+      return NextResponse.json(
+        { error: "Failed to save settings" },
+        { status: 500 }
+      );
     }
 
     // Log settings update activity

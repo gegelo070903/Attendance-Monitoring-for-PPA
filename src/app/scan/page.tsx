@@ -37,6 +37,9 @@ interface Settings {
   pmEndTime: string;
   amGracePeriod: number;
   pmGracePeriod: number;
+  scanSoundEnabled: boolean;
+  scanSoundVolume: number;
+  scanSoundFileUrl?: string | null;
 }
 
 function toScanActionKey(actionLabel: string): string {
@@ -124,6 +127,7 @@ function formatShortTime(date: Date): string {
 export default function ScanStationPage() {
   const router = useRouter();
   const { showSuccess, showError: showErrorToast } = useToast();
+  const scanCompleteMessage = "Scanned complete, thank you!";
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
@@ -143,7 +147,66 @@ export default function ScanStationPage() {
     pmEndTime: "23:59",
     amGracePeriod: 15,
     pmGracePeriod: 15,
+    scanSoundEnabled: true,
+    scanSoundVolume: 60,
+    scanSoundFileUrl: null,
   });
+
+  const playScanFallbackTone = useCallback((volumePercent: number) => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      const safeVolumePercent = Math.max(0, Math.min(100, volumePercent));
+      if (safeVolumePercent === 0) return;
+
+      const audioContext = new AudioContextClass();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      const gainLevel = Math.max(0.03, Math.min(0.6, safeVolumePercent / 100));
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+      oscillator.frequency.linearRampToValueAtTime(1175, audioContext.currentTime + 0.12);
+
+      gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(gainLevel, audioContext.currentTime + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.18);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.2);
+      oscillator.onended = () => {
+        void audioContext.close().catch(() => undefined);
+      };
+    } catch (error) {
+      console.error("Failed to play scan success sound:", error);
+    }
+  }, []);
+
+  // Play uploaded MP3 if available; otherwise fallback to generated chime.
+  const playScanCompleteSound = useCallback(async (volumePercent: number, soundUrl?: string | null) => {
+    const safeVolumePercent = Math.max(0, Math.min(100, volumePercent));
+    if (safeVolumePercent === 0) return;
+
+    if (soundUrl) {
+      try {
+        const versionedUrl = soundUrl.includes("?")
+          ? `${soundUrl}&t=${Date.now()}`
+          : `${soundUrl}?t=${Date.now()}`;
+        const audio = new Audio(versionedUrl);
+        audio.volume = safeVolumePercent / 100;
+        await audio.play();
+        return;
+      } catch {
+        // Fallback to generated tone if MP3 playback fails.
+      }
+    }
+
+    playScanFallbackTone(safeVolumePercent);
+  }, [playScanFallbackTone]);
 
   // Fetch settings from API
   useEffect(() => {
@@ -159,6 +222,9 @@ export default function ScanStationPage() {
             pmEndTime: data.pmEndTime || "23:59",
             amGracePeriod: data.amGracePeriod || 15,
             pmGracePeriod: data.pmGracePeriod || 15,
+            scanSoundEnabled: data.scanSoundEnabled ?? true,
+            scanSoundVolume: data.scanSoundVolume ?? 60,
+            scanSoundFileUrl: data.scanSoundFileUrl ?? null,
           });
         }
       } catch (err) {
@@ -269,7 +335,10 @@ export default function ScanStationPage() {
           };
 
           setScanResult(result);
-          showSuccess(responseData.message || `${responseData.action} recorded successfully!`);
+          showSuccess(scanCompleteMessage);
+          if (settings.scanSoundEnabled) {
+            void playScanCompleteSound(settings.scanSoundVolume, settings.scanSoundFileUrl);
+          }
 
           // Show overlay with greeting message
           if (responseData.user && responseData.action) {
@@ -321,7 +390,7 @@ export default function ScanStationPage() {
         setIsProcessing(false);
       }
     },
-    [isProcessing]
+    [isProcessing, playScanCompleteSound, settings.scanSoundEnabled, settings.scanSoundFileUrl, settings.scanSoundVolume, showErrorToast, showSuccess]
   );
 
   const handleError = (error: string) => {

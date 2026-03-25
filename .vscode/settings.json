@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "**/.next/trace": "plaintext"
+    },
+    "files.exclude": {
+        "**/.next": true
+    }
+}

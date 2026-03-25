@@ -39,9 +39,14 @@ export default function DashboardPage() {
     try {
       const response = await fetch("/api/dashboard");
       const result = await response.json();
+      if (!response.ok) {
+        setData(null);
+        return;
+      }
       setData(result);
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
+      setData(null);
     } finally {
       setLoading(false);
     }
@@ -71,6 +76,13 @@ export default function DashboardPage() {
   }
 
   const isAdmin = session?.user?.role === "ADMIN";
+  const monthlyStats = data?.monthlyStats ?? {
+    presentDays: 0,
+    lateDays: 0,
+    absentDays: 0,
+    totalWorkHours: 0,
+    totalDays: 0,
+  };
 
   return (
     <div className="space-y-4">
@@ -193,25 +205,25 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <StatsCard
                 title="Present Days"
-                value={data?.monthlyStats.presentDays || 0}
+                value={monthlyStats.presentDays}
                 icon="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                 color="green"
               />
               <StatsCard
                 title="Late Days"
-                value={data?.monthlyStats.lateDays || 0}
+                value={monthlyStats.lateDays}
                 icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                 color="yellow"
               />
               <StatsCard
                 title="Absent Days"
-                value={data?.monthlyStats.absentDays || 0}
+                value={monthlyStats.absentDays}
                 icon="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
                 color="red"
               />
               <StatsCard
                 title="Work Hours"
-                value={`${data?.monthlyStats.totalWorkHours || 0}h`}
+                value={`${monthlyStats.totalWorkHours}h`}
                 icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                 color="purple"
               />

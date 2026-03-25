@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/components/Toast";
 
 interface Settings {
@@ -11,6 +11,9 @@ interface Settings {
   amGracePeriod: number;
   pmGracePeriod: number;
   lateThreshold: number;
+  scanSoundEnabled: boolean;
+  scanSoundVolume: number;
+  scanSoundFileUrl?: string | null;
 }
 
 interface BackupInfo {
@@ -39,6 +42,8 @@ export default function SettingsPage() {
     amGracePeriod: 15,
     pmGracePeriod: 15,
     lateThreshold: 15,
+    scanSoundEnabled: true,
+    scanSoundVolume: 60,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,6 +59,118 @@ export default function SettingsPage() {
   const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [uploadingBackup, setUploadingBackup] = useState(false);
+  const [testingSound, setTestingSound] = useState(false);
+  const [uploadingSound, setUploadingSound] = useState(false);
+
+  const playMp3Sound = useCallback(async (soundUrl: string, volumePercent: number) => {
+    const safeVolumePercent = Math.max(0, Math.min(100, volumePercent));
+    if (safeVolumePercent === 0) return false;
+
+    try {
+      const versionedUrl = soundUrl.includes("?")
+        ? `${soundUrl}&t=${Date.now()}`
+        : `${soundUrl}?t=${Date.now()}`;
+      const audio = new Audio(versionedUrl);
+      audio.volume = safeVolumePercent / 100;
+      await audio.play();
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const playTestSound = useCallback((volumePercent: number) => {
+    try {
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      const safeVolumePercent = Math.max(0, Math.min(100, volumePercent));
+      if (safeVolumePercent === 0) return;
+
+      const audioContext = new AudioContextClass();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      const gainLevel = Math.max(0.03, Math.min(0.6, safeVolumePercent / 100));
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+      oscillator.frequency.linearRampToValueAtTime(1175, audioContext.currentTime + 0.12);
+
+      gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(gainLevel, audioContext.currentTime + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.18);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.2);
+      oscillator.onended = () => {
+        void audioContext.close().catch(() => undefined);
+      };
+    } catch (error) {
+      console.error("Failed to play test sound:", error);
+    }
+  }, []);
+
+  const handleTestSound = useCallback(() => {
+    if (!settings.scanSoundEnabled) {
+      showErrorToast("Enable sound first to test audio.");
+      return;
+    }
+
+    setTestingSound(true);
+    void (async () => {
+      const playedMp3 = settings.scanSoundFileUrl
+        ? await playMp3Sound(settings.scanSoundFileUrl, settings.scanSoundVolume)
+        : false;
+
+      if (!playedMp3) {
+        playTestSound(settings.scanSoundVolume);
+      }
+    })();
+    setTimeout(() => setTestingSound(false), 300);
+  }, [playMp3Sound, playTestSound, settings.scanSoundEnabled, settings.scanSoundFileUrl, settings.scanSoundVolume, showErrorToast]);
+
+  const uploadScanSound = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith(".mp3")) {
+      showErrorToast("Invalid file type. Please upload an MP3 file.");
+      e.target.value = "";
+      return;
+    }
+
+    setUploadingSound(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/settings/sound", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setSettings((prev) => ({
+          ...prev,
+          scanSoundFileUrl: data.scanSoundFileUrl || prev.scanSoundFileUrl || null,
+        }));
+        showSuccess(data.message || "Scan notification MP3 uploaded successfully.");
+      } else {
+        showErrorToast(data.error || "Failed to upload MP3 sound.");
+      }
+    } catch (error) {
+      showErrorToast("Failed to upload MP3 sound.");
+    } finally {
+      setUploadingSound(false);
+      e.target.value = "";
+    }
+  };
 
   // Fetch settings on load
   useEffect(() => {
@@ -70,6 +187,9 @@ export default function SettingsPage() {
             amGracePeriod: data.amGracePeriod || 15,
             pmGracePeriod: data.pmGracePeriod || 15,
             lateThreshold: data.lateThreshold || 15,
+            scanSoundEnabled: data.scanSoundEnabled ?? true,
+            scanSoundVolume: data.scanSoundVolume ?? 60,
+            scanSoundFileUrl: data.scanSoundFileUrl ?? null,
           });
         }
       } catch (err) {
@@ -459,6 +579,105 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">QR Scan Notification Sound</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Control the completion sound on the scan station after every successful QR scan.
+            </p>
+          </div>
+          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={settings.scanSoundEnabled}
+              onChange={(e) =>
+                setSettings((prev) => ({
+                  ...prev,
+                  scanSoundEnabled: e.target.checked,
+                }))
+              }
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Enable sound</span>
+          </label>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label htmlFor="scanSoundVolume" className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              Volume
+            </label>
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{settings.scanSoundVolume}%</span>
+          </div>
+          <input
+            id="scanSoundVolume"
+            type="range"
+            min={0}
+            max={100}
+            value={settings.scanSoundVolume}
+            onChange={(e) =>
+              setSettings((prev) => ({
+                ...prev,
+                scanSoundVolume: Number(e.target.value),
+              }))
+            }
+            disabled={!settings.scanSoundEnabled}
+            className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-200 disabled:opacity-50"
+          />
+        </div>
+
+        {error && (
+          <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>
+        )}
+
+        <div className="mt-4 flex items-center gap-3">
+          <label
+            className={`px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer ${
+              uploadingSound ? "opacity-50 pointer-events-none" : ""
+            }`}
+          >
+            {uploadingSound ? "Uploading MP3..." : "Upload MP3 Sound"}
+            <input
+              type="file"
+              accept=".mp3,audio/mpeg"
+              onChange={uploadScanSound}
+              className="hidden"
+              disabled={uploadingSound}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={handleTestSound}
+            disabled={!settings.scanSoundEnabled || testingSound}
+            className="px-4 py-2 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {testingSound ? "Playing..." : "Test Sound"}
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={saving}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {saving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                Saving...
+              </>
+            ) : (
+              "Save Sound Settings"
+            )}
+          </button>
+          {saved && <span className="text-sm text-emerald-600 dark:text-emerald-400">Saved</span>}
+        </div>
+
+        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          {settings.scanSoundFileUrl
+            ? "Custom MP3 uploaded. Test Sound will use your MP3."
+            : "No custom MP3 yet. Upload one to replace the default chime."}
+        </p>
       </div>
 
     </div>

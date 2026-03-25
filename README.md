@@ -6,7 +6,7 @@
 
 This is a full-stack, offline-capable **Attendance Monitoring System** built for the Philippine Ports Authority (PPA). It runs on a **single server PC** and is accessible by other PCs/devices on the same local network via a web browser — **no internet required**.
 
-The system uses **QR code scanning** for employee check-in/check-out, supports **AM, PM, and Night shifts**, captures **face photos** on scan, generates **reports**, and provides a complete **admin panel** for employee and attendance management.
+The system uses **QR code scanning** for employee check-in/check-out, supports **AM/PM flow with overnight handling**, captures **face photos** on scan, generates **reports**, and provides a complete **admin panel** for employee and attendance management.
 
 ---
 
@@ -51,7 +51,7 @@ The system uses **QR code scanning** for employee check-in/check-out, supports *
 
 ### Employee Features
 
-- **Dashboard** — View today's attendance (AM/PM/Night times), monthly statistics
+- **Dashboard** — View today's attendance (AM/PM times), monthly statistics
 - **My QR Code** — View, download, and print personal QR code for scanning
 - **Profile Management** — Update department, position, and profile photo
 - **Attendance History** — View personal attendance records with filters
@@ -66,7 +66,7 @@ The system uses **QR code scanning** for employee check-in/check-out, supports *
 - **Attendance Management** — View and manage all employee attendance records
 - **Reports** — Generate reports for all employees with date filters
 - **Activity Logs** — Full audit trail of all system events (logins, scans, changes)
-- **Settings** — Configure shift times, grace periods, and late thresholds
+- **Settings** — Configure shift times, grace periods, late thresholds, and QR scan notification sound (enable/disable, volume, custom MP3 upload)
 - **Database Backup & Restore** — Create, download, delete, and restore database backups
 - **ID Card Printing** — Generate and print PPA-branded employee ID cards with QR codes
 
@@ -76,10 +76,30 @@ The system uses **QR code scanning** for employee check-in/check-out, supports *
 - **Real-time Updates** — Live attendance updates via WebSocket (Socket.IO)
 - **Dark/Light Theme** — Toggle between dark and light mode
 - **Face Capture** — Captures employee photo during QR scan for verification
-- **Shift Support** — AM (morning), PM (afternoon), and Night shifts
-- **Grace Period** — Configurable late thresholds per shift
+- **Shift Support** — AM/PM sequence with overnight handling (late PM In can close next day as AM Out)
+- **Grace Period** — Configurable grace periods for AM and PM
 - **Auto-start** — Can be configured to start automatically on PC boot
 - **Activity Logging** — Every action is logged for audit purposes
+
+### Quick Instructions (Short Version)
+
+1. Install dependencies: `npm install`
+2. Prepare database and client: `npx prisma generate` then `npx prisma db push`
+3. Start server: use `START-SERVER.bat` or run `npm run start:https`
+4. Open scanner page: `/scan`
+5. In Admin Settings, configure schedule and scan sound:
+   - Set AM/PM times and grace periods
+   - Enable sound and set volume
+   - (Optional) upload custom MP3 and test it
+
+### Time Logic (Short Version)
+
+- **Normal day sequence**: `AM In → AM Out → PM In → PM Out`
+- **Lunch window first scan**: if first scan is between AM end and PM start, record `PM In` and mark `HALF_DAY`
+- **After PM end first scan**: record `PM In` as an overnight start
+- **Overnight closure**: before PM start, if yesterday has open `PM In` with no `PM Out`, current scan closes it as `AM Out`
+- **Scan cooldown**: repeat scans within `3 seconds` are blocked
+- **Notification after success**: success toast + sound (uploaded MP3 if available, fallback chime otherwise)
 
 ---
 
@@ -94,7 +114,8 @@ The system uses **QR code scanning** for employee check-in/check-out, supports *
 │   ├── images/                # Static images (PPA logos)
 │   └── uploads/               # Upload directories
 │       ├── profiles/          # Profile images
-│       └── scans/             # Scan photos
+│       ├── scans/             # Scan photos
+│       └── sounds/            # Custom scan notification sound (MP3)
 │
 ├── src/
 │   ├── app/                   # Next.js App Router
@@ -143,6 +164,7 @@ The system uses **QR code scanning** for employee check-in/check-out, supports *
 │   │       ├── dashboard/route.ts     # Dashboard statistics
 │   │       ├── activity-logs/route.ts # Activity log queries
 │   │       ├── settings/route.ts      # System settings CRUD
+│   │       │   └── sound/route.ts     # Upload custom scan notification MP3 (admin)
 │   │       ├── files/[id]/route.ts    # Binary file serving
 │   │       ├── profile/              # Profile management
 │   │       │   ├── update/route.ts    # Update profile fields
@@ -202,13 +224,13 @@ The database is a single file: `prisma/dev.db`
 
 ### Models
 
-| Model           | Purpose                          | Key Fields                                                                                                                                      |
-| --------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| **User**        | Employees and admins             | `id`, `email` (unique), `name`, `password` (hashed), `role` (ADMIN/EMPLOYEE), `department`, `position`, `shiftType` (DAY/NIGHT), `profileImage` |
-| **Attendance**  | Daily attendance per user        | `userId` (FK), `date`, `amIn/amOut`, `pmIn/pmOut`, `nightIn/nightOut`, `status` (PRESENT/LATE/HALF_DAY/ABSENT), `workHours`                     |
-| **FileUpload**  | Binary file storage (images)     | `filename`, `mimeType`, `data` (binary bytes)                                                                                                   |
-| **ActivityLog** | Audit trail for all events       | `userId`, `action`, `description`, `type` (INFO/SUCCESS/WARNING/ERROR), `scanPhoto`, `metadata` (JSON)                                          |
-| **Settings**    | System configuration (singleton) | Shift start/end times, grace periods per shift, late threshold                                                                                  |
+| Model           | Purpose                          | Key Fields                                                                                                             |
+| --------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **User**        | Employees and admins             | `id`, `email` (unique), `name`, `password` (hashed), `role` (ADMIN/EMPLOYEE), `department`, `position`, `profileImage` |
+| **Attendance**  | Daily attendance per user        | `userId` (FK), `date`, `amIn/amOut`, `pmIn/pmOut`, `status` (PRESENT/LATE/HALF_DAY/ABSENT), `workHours`                |
+| **FileUpload**  | Binary file storage (images)     | `filename`, `mimeType`, `data` (binary bytes)                                                                          |
+| **ActivityLog** | Audit trail for all events       | `userId`, `action`, `description`, `type` (INFO/SUCCESS/WARNING/ERROR), `scanPhoto`, `metadata` (JSON)                 |
+| **Settings**    | System configuration (singleton) | Shift start/end times, grace periods per shift, late threshold, scan sound enabled flag, scan sound volume             |
 
 ---
 
@@ -224,12 +246,12 @@ The database is a single file: `prisma/dev.db`
 
 ### Attendance
 
-| Method   | Endpoint                       | Description                                                                                                    |
-| -------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| GET      | `/api/attendance`              | Fetch attendance records (filtered by user/date)                                                               |
-| GET/POST | `/api/attendance/qr`           | **Core endpoint** — process QR scan, record AM/PM/Night check-in/out, calculate work hours, determine lateness |
-| POST     | `/api/attendance/photo`        | Upload scan face photo                                                                                         |
-| POST     | `/api/attendance/photo/update` | Link photo to activity log entry                                                                               |
+| Method   | Endpoint                       | Description                                                                                                                 |
+| -------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| GET      | `/api/attendance`              | Fetch attendance records (filtered by user/date)                                                                            |
+| GET/POST | `/api/attendance/qr`           | **Core endpoint** — process QR scan, record AM/PM actions (with overnight handling), calculate work hours, determine status |
+| POST     | `/api/attendance/photo`        | Upload scan face photo                                                                                                      |
+| POST     | `/api/attendance/photo/update` | Link photo to activity log entry                                                                                            |
 
 ### Employee Management (Admin)
 
@@ -260,12 +282,13 @@ The database is a single file: `prisma/dev.db`
 
 ### Profile & Settings
 
-| Method  | Endpoint                    | Description                         |
-| ------- | --------------------------- | ----------------------------------- |
-| GET/PUT | `/api/profile/update`       | View/update user profile            |
-| POST    | `/api/profile/upload`       | Upload profile image (max 5MB)      |
-| POST    | `/api/user/change-password` | Change user password                |
-| GET/PUT | `/api/settings`             | View/update system settings (admin) |
+| Method  | Endpoint                    | Description                                          |
+| ------- | --------------------------- | ---------------------------------------------------- |
+| GET/PUT | `/api/profile/update`       | View/update user profile                             |
+| POST    | `/api/profile/upload`       | Upload profile image (max 5MB)                       |
+| POST    | `/api/user/change-password` | Change user password                                 |
+| GET/PUT | `/api/settings`             | View/update system settings (admin)                  |
+| POST    | `/api/settings/sound`       | Upload custom scan notification MP3 (admin, max 3MB) |
 
 ### Other
 
@@ -284,7 +307,7 @@ The database is a single file: `prisma/dev.db`
 | **FaceCapture**          | Opens front camera, shows motivational message, auto-captures after 5s countdown. Preview, retake, and skip options.                           |
 | **QRCodeGenerator**      | Generates employee QR code with PPA logo overlay. Download as PNG and print support.                                                           |
 | **IDCardPrinter**        | Generates printable PPA-branded ID card (2.125" × 3.375") with name, department, position, photo, and QR code.                                 |
-| **AttendanceTable**      | Responsive table with AM/PM/Night columns, work hours, status badges, and real-time WebSocket updates.                                         |
+| **AttendanceTable**      | Responsive table with AM/PM columns, work hours, status badges, and real-time WebSocket updates.                                               |
 | **Sidebar**              | Navigation with role-based links (employee vs admin items), theme toggle, and logout.                                                          |
 | **StatsCard**            | Reusable stat display card with 7 color themes and dark mode support.                                                                          |
 | **ThemeProvider**        | Dark/light theme context with localStorage persistence and system preference detection.                                                        |
@@ -302,12 +325,28 @@ The database is a single file: `prisma/dev.db`
 2. **Employee presents QR code** to the camera
 3. **System reads the QR code** (format: `PPA_ATTENDANCE|email|name`)
 4. **System determines the scan type** based on current time and existing records:
-   - AM In → AM Out → PM In → PM Out (Day shift)
-   - Night In → Night Out (Night shift)
+   - AM In → AM Out → PM In → PM Out (normal day flow)
+   - Late PM start can be treated as overnight PM In, then next-day AM Out closure before PM start
 5. **Face capture activates** — takes a photo of the employee (5s countdown)
 6. **Record is saved** with timestamp, lateness calculation, and work hours
-7. **Real-time update** broadcasts to all connected dashboards via Socket.IO
-8. **Activity log entry** is created with all scan details
+7. **Completion notification** is shown and a scan sound plays (custom MP3 if uploaded; fallback chime otherwise)
+8. **Real-time update** broadcasts to all connected dashboards via Socket.IO
+9. **Activity log entry** is created with all scan details
+
+### Custom Scan Notification MP3 (Admin)
+
+1. Log in as **Admin**
+2. Open **Admin → Settings**
+3. In **QR Scan Notification Sound**, click **Upload MP3 Sound**
+4. Select an `.mp3` file (max `3 MB`)
+5. Set **Enable sound** and adjust **Volume** as needed
+6. Click **Test Sound** to preview
+7. Save settings
+
+Notes:
+
+- Uploaded sound is stored at `public/uploads/sounds/scan-notification.mp3`
+- If no MP3 is uploaded (or playback fails), the scanner uses the built-in chime
 
 ### Shift Schedule (configurable in Settings)
 
@@ -315,7 +354,6 @@ The database is a single file: `prisma/dev.db`
 | ----- | ------------- | ----------- | ------------ |
 | AM    | 08:00         | 12:00       | 15 minutes   |
 | PM    | 13:00         | 17:00       | 15 minutes   |
-| Night | 22:00         | 06:00       | 15 minutes   |
 
 ---
 
@@ -376,6 +414,31 @@ Recommended WAN approach:
 1. Use a stable domain name instead of a raw IP.
 2. Put the app behind a reverse proxy such as Caddy or Nginx.
 3. Use a publicly trusted TLS certificate instead of the generated self-signed certificate.
+
+## VPN Access (Recommended for Remote Branches)
+
+If users need to access the system from outside the office, VPN is usually safer and easier to maintain than exposing ports 3000/3001 directly to the internet.
+
+### Why VPN is recommended
+
+- Keeps the app on a private network (LAN-style access over encrypted tunnel)
+- Reduces internet exposure of the server PC
+- Avoids many public-IP issues (CGNAT, changing IP, direct attack surface)
+
+### Typical VPN setup flow
+
+1. Deploy a VPN server on your firewall/router or a dedicated gateway (examples: WireGuard, OpenVPN, IPsec)
+2. Create VPN user accounts for authorized staff
+3. Connect remote client devices to VPN
+4. Access the attendance system using the server's private LAN URL (for example: `https://192.168.1.100:3000`)
+5. Keep `NEXTAUTH_URL` aligned with the URL users actually open in browser
+
+### VPN notes for this project
+
+- Scanner/camera clients should still use `https://` to satisfy secure-context browser requirements
+- If HTTPS certificate warnings appear on VPN clients, trust the certificate on each client device
+- Firewall rules should allow VPN subnet to reach the server PC on required app ports
+- Restrict VPN users to only required internal resources
 
 ---
 
@@ -518,6 +581,7 @@ After fresh setup, register the first account. To make it an admin, either:
 | Camera blocked / "Not a secure context"        | Open `https://...` (not `http://`) and run `INSTALL-TRUST-CERT.bat` on that client/scanner PC |
 | Other PCs can't connect                        | Check Windows Firewall — allow Node.js through. Ensure all PCs are on the same network.       |
 | Public IP does not open externally             | Check router port forwarding, ISP CGNAT, and that `NEXTAUTH_URL` matches the public URL       |
+| Remote users need secure access                | Prefer VPN (WireGuard/OpenVPN/IPsec) and use the server LAN URL through the VPN tunnel        |
 | Browser warns about HTTPS certificate          | This is expected for self-signed certs; click Advanced → Proceed                              |
 | Camera fails over public IP                    | Use a fully trusted certificate; bypassing a self-signed warning is often not enough          |
 | Auto-start task runs but server does not start | Open `AUTO-START.bat` manually once to confirm Node/npm and certificate creation work         |
