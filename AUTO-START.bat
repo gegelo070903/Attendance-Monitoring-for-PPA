@@ -1,4 +1,5 @@
 @echo off
+setlocal EnableDelayedExpansion
 REM ============================================
 REM  PPA Attendance Server - Auto Start Script
 REM ============================================
@@ -41,13 +42,44 @@ if %errorlevel% neq 0 (
     echo Camera may be blocked until cert is trusted manually.
 )
 
-REM Get local IP for display
+REM Prefer LAN IPv4 for display (avoid VPN/overlay adapters when possible)
+set "IP="
 for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4"') do (
-    set IP=%%a
-    goto :found
+    set "CANDIDATE=%%a"
+    set "CANDIDATE=!CANDIDATE: =!"
+    if "!CANDIDATE:~0,8!"=="192.168." (
+        set "IP=!CANDIDATE!"
+        goto :ip_found
+    )
+    if "!CANDIDATE:~0,3!"=="10." (
+        set "IP=!CANDIDATE!"
+        goto :ip_found
+    )
 )
-:found
-set IP=%IP:~1%
+
+if not defined IP (
+    for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4"') do (
+        set "CANDIDATE=%%a"
+        set "CANDIDATE=!CANDIDATE: =!"
+        for /f "tokens=1,2 delims=." %%i in ("!CANDIDATE!") do (
+            if "%%i"=="172" if %%j GEQ 16 if %%j LEQ 31 (
+                set "IP=!CANDIDATE!"
+                goto :ip_found
+            )
+        )
+    )
+)
+
+if not defined IP (
+    for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4"') do (
+        set "IP=%%a"
+        set "IP=!IP: =!"
+        goto :ip_found
+    )
+)
+
+:ip_found
+if not defined IP set "IP=localhost"
 
 set APP_URL=
 set VPN_URL=

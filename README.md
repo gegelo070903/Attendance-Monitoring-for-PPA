@@ -496,6 +496,46 @@ This script updates `.env.local`, regenerates certs via `generate-cert.js`, and 
 5. For scanner stations using camera, always use `https://` (not `http://`)
 6. If camera is still blocked on a client/scanner PC, run `INSTALL-TRUST-CERT.bat` once on that PC
 
+### Step 5A: Make VPN/LAN URL Show as Secure (Lock Icon)
+
+If a client opens the VPN URL (example: `https://100.90.x.x:3000`) and still sees **Not secure**, follow this checklist.
+
+1. Use the exact HTTPS address printed by the server (`https://...:3000`).
+2. Do not switch to a different IP/hostname unless that value is included in the generated certificate.
+3. Install and trust the same server certificate on each client device.
+
+Windows client steps:
+
+1. On the server PC, run `EXPORT-CLIENT-CERT.bat` to create `certs/PPA-Attendance-Client-Trust.cer`.
+2. Copy `certs/PPA-Attendance-Client-Trust.cer` to the client PC.
+3. Open the certificate, click **Install Certificate**.
+4. Choose **Current User** (or **Local Machine** if running as Administrator).
+5. Place it in **Trusted Root Certification Authorities**.
+6. Close and reopen the browser, then test the same HTTPS URL.
+
+Alternative for advanced users:
+
+1. You can still copy `certs/cert.pem` directly and install it manually.
+2. The `.cer` export is recommended for easier client onboarding.
+
+Android client steps:
+
+1. Copy `PPA-Attendance-Client-Trust.cer` (or `cert.pem`) to the phone.
+2. Install it as a CA certificate from Android Settings.
+3. Reopen the browser and test the same HTTPS URL.
+
+iPhone/iPad client steps:
+
+1. Install the certificate profile on the device.
+2. Enable trust in **Settings → General → About → Certificate Trust Settings**.
+3. Reopen Safari and test the same HTTPS URL.
+
+Notes:
+
+- Trusting the certificate on the server PC does not automatically trust it on other client devices.
+- If URL host/IP does not match the certificate SAN entries, browsers will always show a warning.
+- For internet-facing production use, use a publicly trusted certificate instead of self-signed.
+
 ### Step 6: Create Admin Account
 
 1. Navigate to the registration page
@@ -554,6 +594,7 @@ Important notes:
 | -------------------------- | --------------------------------------------- | ---------------------------------- |
 | `START-SERVER.bat`         | Start the server in HTTPS mode                | Double-click to run                |
 | `AUTO-START.bat`           | Start HTTPS with auto-restart on crash (24/7) | Double-click to run                |
+| `EXPORT-CLIENT-CERT.bat`   | Export client-trust `.cer` from `cert.pem`    | Double-click to run on server PC   |
 | `INSTALL-TRUST-CERT.bat`   | Trust HTTPS certificate on client/scanner PC  | Double-click to run once per PC    |
 | `INSTALL-AUTO-START.bat`   | Auto-start server when PC boots               | Right-click → Run as Administrator |
 | `UNINSTALL-AUTO-START.bat` | Remove auto-start on boot                     | Right-click → Run as Administrator |
