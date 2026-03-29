@@ -9,7 +9,7 @@
     "build": "prisma generate && next build",
     "postinstall": "prisma generate",
     "start": "next start -H 0.0.0.0",
-    "start:https": "npm run ports:free && node generate-cert.js && node server.js",
+    "start:https": "npm run ports:free && node generate-cert.js && set NODE_ENV=production&& node server.js",
     "start:https:clean": "npm run start:https",
     "lint": "next lint",
     "db:generate": "prisma generate",

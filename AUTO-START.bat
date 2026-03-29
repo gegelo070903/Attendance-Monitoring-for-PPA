@@ -94,7 +94,7 @@ if exist ".env.local" (
 
 echo.
 echo ============================================
-echo   PPA Attendance Server Running
+echo   PPA Attendance Server Starting
 echo ============================================
 echo.
 echo   Local:    https://localhost:3000
@@ -111,6 +111,9 @@ echo   VPN:      Set VPN_URL in .env.local if using VPN access
 )
 echo.
 echo   Share the Network URL with employees.
+echo   The system is accessible only after this line appears:
+echo   ^> HTTPS server ready on https://0.0.0.0:3000
+echo   Expected warm-up after startup/restart: 1-3 minutes.
 echo   Browser may show certificate warning.
 echo   Click Advanced then Proceed.
 echo   Server will auto-restart if it stops.
@@ -119,7 +122,14 @@ echo.
 
 :startserver
 echo [%date% %time%] Starting server...
-npm run start:https
+call npm run ports:free
+if %errorlevel% neq 0 (
+    echo [%date% %time%] WARNING: Could not free ports 3000/3001.
+    echo Another Node.js service may be using the ports.
+)
+
+set NODE_ENV=production
+node server.js
 
 REM If server stops, wait 5 seconds and restart
 echo.

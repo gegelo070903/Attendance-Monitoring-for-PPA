@@ -83,7 +83,7 @@ if exist ".env.local" (
 
 echo.
 echo ==========================================
-echo   Server is running! (HTTPS)
+echo   Starting HTTPS server...
 echo ==========================================
 echo.
 echo   Local:    https://localhost:3000
@@ -101,6 +101,11 @@ echo   VPN:      Set VPN_URL in .env.local if using VPN access
 echo.
 echo   Share the Network URL with employees
 echo   on your company WiFi/network.
+echo   The system is accessible only after the console shows:
+echo   ^> HTTPS server ready on https://0.0.0.0:3000
+echo.
+echo   If this is first startup or after updates,
+echo   warm-up can take 1-3 minutes.
 echo.
 echo   NOTE: Users will see a security warning
 echo   because the certificate is self-signed.
@@ -113,10 +118,19 @@ echo https://%IP%:3000| clip
 echo.
 echo   [Link copied to clipboard! Press Ctrl+V to paste]
 echo.
-echo   Press any key to start the server...
+echo   Press any key to start the server now...
 echo   (Press Ctrl+C to stop the server later)
 echo.
 pause >nul
 
-npm run start:https
+call npm run ports:free
+if %errorlevel% neq 0 (
+    echo ERROR: Could not free ports 3000/3001.
+    echo Close other Node.js servers and try again.
+    pause
+    exit /b 1
+)
+
+set NODE_ENV=production
+node server.js
 pause

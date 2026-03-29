@@ -6,7 +6,8 @@ const { Server: SocketIOServer } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
 
-const dev = process.env.NODE_ENV !== 'production';
+const nodeEnv = (process.env.NODE_ENV || '').toLowerCase();
+const dev = nodeEnv === 'development';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
@@ -27,6 +28,8 @@ const httpsOptions = {
 };
 
 app.prepare().then(() => {
+  console.log(`> Running in ${dev ? 'development' : 'production'} mode`);
+
   // HTTPS server (main)
   const httpsServer = createServer(httpsOptions, (req, res) => {
     const parsedUrl = parse(req.url, true);
