@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 
 interface QRScannerProps {
   onScan: (data: { email: string; name: string }, photoBlob?: Blob) => void;
@@ -130,7 +130,6 @@ export default function QRScanner({ onScan, onError }: QRScannerProps) {
           qrbox: { width: 320, height: 320 },
           aspectRatio: 1,
           disableFlip: false,
-          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
         },
         async (decodedText) => {
           try {

@@ -26,11 +26,15 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-REM Check if .next folder exists (means already built)
-if not exist ".next" (
-    echo Building app for first time...
+REM Production start requires .next\BUILD_ID (a plain .next folder is not enough)
+if not exist ".next\BUILD_ID" (
+    echo Production build not found - building app...
     echo This may take a few minutes...
     call npm run build
+    if %errorlevel% neq 0 (
+        echo ERROR: Build failed. Auto-start cannot continue.
+        exit /b 1
+    )
     echo Build complete!
 )
 

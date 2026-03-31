@@ -7,12 +7,18 @@ echo ========================================
 echo.
 cd /d "%~dp0"
 
-REM Check if .next folder exists (means already built)
-if not exist ".next" (
-    echo First time setup - Building the application...
+REM Production start requires .next\BUILD_ID (a plain .next folder is not enough)
+if not exist ".next\BUILD_ID" (
+    echo Production build not found - building the application...
     echo This may take a few minutes...
     echo.
     call npm run build
+    if %errorlevel% neq 0 (
+        echo.
+        echo ERROR: Build failed. Server will not start.
+        pause
+        exit /b 1
+    )
     echo.
     echo Build complete!
     echo.
