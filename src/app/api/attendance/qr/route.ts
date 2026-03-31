@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay } from "date-fns";
 import { logActivity, ActivityActions } from "@/lib/activityLogger";
+import { emitAttendanceUpdate } from "@/lib/socketServer";
 
 // Minimum seconds between scans for the same user (cooldown)
 const SCAN_COOLDOWN_SECONDS = 3;
@@ -28,6 +29,13 @@ interface ExtendedSettings {
   amGracePeriod?: number;
   pmGracePeriod?: number;
   lateThreshold: number;
+}
+
+function broadcastAttendanceUpdate(attendance: ExtendedAttendance) {
+  emitAttendanceUpdate({
+    type: "attendance-update",
+    attendance,
+  });
 }
 
 // Helper to parse time string "HH:MM" to hours and minutes
@@ -264,6 +272,8 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        broadcastAttendanceUpdate(updatedOvernight as ExtendedAttendance);
+
         await logActivity({
           userId: user.id,
           userName: user.name || "Unknown",
@@ -380,6 +390,8 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        broadcastAttendanceUpdate(attendance as ExtendedAttendance);
+
         await logActivity({
           userId: user.id,
           userName: user.name || "Unknown",
@@ -421,6 +433,8 @@ export async function POST(request: NextRequest) {
             status: "HALF_DAY",
           },
         });
+
+        broadcastAttendanceUpdate(attendance as ExtendedAttendance);
 
         await logActivity({
           userId: user.id,
@@ -465,6 +479,8 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        broadcastAttendanceUpdate(attendance as ExtendedAttendance);
+
         await logActivity({
           userId: user.id,
           userName: user.name || "Unknown",
@@ -507,6 +523,8 @@ export async function POST(request: NextRequest) {
             status: "HALF_DAY",
           },
         });
+
+        broadcastAttendanceUpdate(attendance as ExtendedAttendance);
 
         const statusMsg = " (Morning session missed - Half Day)";
 
@@ -593,6 +611,8 @@ export async function POST(request: NextRequest) {
       where: { id: attendance.id },
       data: updateData,
     });
+
+    broadcastAttendanceUpdate(updatedAttendance as ExtendedAttendance);
 
     // Format action labels and messages
     const actionLabels: Record<string, string> = {

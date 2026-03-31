@@ -129,7 +129,7 @@ export default function AttendanceTable({
     setLiveAttendances(attendances);
   }, [attendances]);
   useAttendanceSocket((data) => {
-    if (data?.type === "attendance-photo-update" && data.attendance) {
+    if ((data?.type === "attendance-update" || data?.type === "attendance-photo-update") && data.attendance) {
       setLiveAttendances((prev) => {
         const idx = prev.findIndex((a) => a.id === data.attendance.id);
         if (idx !== -1) {
@@ -137,7 +137,7 @@ export default function AttendanceTable({
           updated[idx] = { ...prev[idx], ...data.attendance };
           return updated;
         }
-        return prev;
+        return [data.attendance, ...prev];
       });
     }
   });

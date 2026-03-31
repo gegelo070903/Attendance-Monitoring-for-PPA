@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { emitActivityLogUpdate } from "@/lib/socketServer";
 
 export type ActivityType = "INFO" | "SUCCESS" | "WARNING" | "ERROR";
 
@@ -29,6 +30,7 @@ export async function logActivity(params: LogActivityParams) {
         userAgent: params.userAgent,
       },
     });
+    emitActivityLogUpdate(log);
     return log;
   } catch (error) {
     console.error("Failed to log activity:", error);
