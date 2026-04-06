@@ -33,8 +33,9 @@ schtasks /delete /tn "%TASK_NAME%" /f >nul 2>&1
 
 REM Create the scheduled task to run at system startup
 schtasks /create /tn "%TASK_NAME%" /tr "\"%PROJECT_DIR%AUTO-START.bat\"" /sc onstart /ru SYSTEM /rl HIGHEST /f
+set "CREATE_TASK_EXIT=%errorlevel%"
 
-if %errorlevel% equ 0 (
+if "%CREATE_TASK_EXIT%"=="0" (
     echo.
     echo SUCCESS! Auto-start was installed and duplicate startup entries were cleaned.
     echo The PPA Attendance Server will now:
@@ -44,7 +45,7 @@ if %errorlevel% equ 0 (
     echo   - Be available at https://localhost:3000
     echo.
     echo To access from other computers on your network,
-    echo use your computer's IP address (e.g., https://192.168.x.x:3000)
+    echo use your computer's IP address, for example: https://192.168.x.x:3000
     echo If browser shows certificate warning, click Advanced then Proceed.
     echo.
     echo To REMOVE auto-start, run: UNINSTALL-AUTO-START.bat
