@@ -44,7 +44,8 @@ export default function Sidebar() {
             />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xs font-bold text-gray-800 dark:text-gray-800 leading-tight">Philippine Ports Authority</h1>
+            <h1 className="text-xs font-bold text-gray-800 dark:text-gray-800 leading-tight">PPA PMO-NBB
+            </h1>
             <p className="text-[10px] text-gray-500 dark:text-gray-600">Attendance Monitoring</p>
           </div>
           {/* Theme Toggle Button */}
