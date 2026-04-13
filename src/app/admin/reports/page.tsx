@@ -526,16 +526,29 @@ export default function AdminReportsPage() {
     const monthRange = monthLabel + " 1-" + daysInMonth + ", " + year;
 
     const css = getDTRCss();
-    const html = "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>DTR - " + employee.name + " - " + monthRange + "</title>" +
-      "<style>" + css + "</style></head><body>" +
-      '<div class="no-print"><button onclick="window.print()">Print / Save as PDF</button></div>' +
-      buildDTRPage(employee) +
-      "</body></html>";
+    const html = buildDTRPage(employee);
+    const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DTR - ${employee.name} - ${monthRange}</title>
+  <style>${css}</style>
+  <script>
+    window.addEventListener('load', function() {
+      window.print();
+    });
+  </script>
+</head>
+<body>
+  ${html}
+</body>
+</html>`;
 
-    const w = window.open("", "_blank");
-    if (w) {
-      w.document.write(html);
-      w.document.close();
+    // Open in new window and trigger print
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(fullHtml);
+      printWindow.document.close();
     }
   };
 
@@ -543,6 +556,7 @@ export default function AdminReportsPage() {
   const handleDownloadAllDTR = () => {
     const exportEmployees = reportType === "organization" ? filteredEmployees : individualFilteredEmployees;
     if (exportEmployees.length === 0) return;
+
     const [year, month] = selectedMonth.split("-");
     const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
     const daysInMonth = getDaysInMonth(startDate);
@@ -551,16 +565,28 @@ export default function AdminReportsPage() {
 
     const css = getDTRCss();
     const pages = exportEmployees.map(emp => buildDTRPage(emp)).join("\n");
-    const html = "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>All DTR - " + monthRange + "</title>" +
-      "<style>" + css + "</style></head><body>" +
-      '<div class="no-print"><button onclick="window.print()">Print All / Save as PDF</button></div>' +
-      pages +
-      "</body></html>";
+    const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>All DTR - ${monthRange}</title>
+  <style>${css}</style>
+  <script>
+    window.addEventListener('load', function() {
+      window.print();
+    });
+  </script>
+</head>
+<body>
+  ${pages}
+</body>
+</html>`;
 
-    const w = window.open("", "_blank");
-    if (w) {
-      w.document.write(html);
-      w.document.close();
+    // Open in new window and trigger print
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(fullHtml);
+      printWindow.document.close();
     }
   };
 
