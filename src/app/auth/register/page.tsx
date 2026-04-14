@@ -32,27 +32,23 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  const confirmationSummary = {
+    name: formData.name.trim(),
+    email: formData.email.trim(),
+    department: formData.department.trim() || "(none)",
+    position: formData.position.trim() || "(none)",
+    passwordMask: "*".repeat(Math.max(6, formData.password.length)),
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitRegistration = async () => {
+    setShowConfirmModal(false);
     setLoading(true);
-    setError("");
-
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
-      setLoading(false);
-      return;
-    }
 
     try {
       const response = await fetch("/api/auth/register", {
@@ -79,6 +75,23 @@ export default function RegisterPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    setShowConfirmModal(true);
   };
 
   return (
@@ -281,6 +294,42 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
+
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-gray-900">Confirm Account Creation</h2>
+            <p className="mt-1 text-sm text-gray-600">Please review the details before submitting.</p>
+
+            <div className="mt-4 space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm">
+              <p><span className="font-medium text-gray-700">Name:</span> <span className="text-gray-900">{confirmationSummary.name}</span></p>
+              <p><span className="font-medium text-gray-700">Email:</span> <span className="text-gray-900">{confirmationSummary.email}</span></p>
+              <p><span className="font-medium text-gray-700">Department:</span> <span className="text-gray-900">{confirmationSummary.department}</span></p>
+              <p><span className="font-medium text-gray-700">Position:</span> <span className="text-gray-900">{confirmationSummary.position}</span></p>
+              <p><span className="font-medium text-gray-700">Password:</span> <span className="text-gray-900">{confirmationSummary.passwordMask}</span></p>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                disabled={loading}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={submitRegistration}
+                disabled={loading}
+                className="flex-1 rounded-lg bg-primary-600 px-4 py-2 font-medium text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+              >
+                {loading ? "Creating..." : "Confirm & Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

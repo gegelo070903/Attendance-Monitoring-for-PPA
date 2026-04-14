@@ -1,1 +1,1 @@
-[Mon 04/13/2026 10:06:26.70] READY - site is reachable at https://localhost:3000
+[14/04/2026 17:52:18.32] STARTING - launching server process

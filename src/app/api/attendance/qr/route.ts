@@ -4,8 +4,8 @@ import { startOfDay, endOfDay } from "date-fns";
 import { logActivity, ActivityActions } from "@/lib/activityLogger";
 import { emitAttendanceUpdate } from "@/lib/socketServer";
 
-// Minimum seconds between scans for the same user (cooldown)
-const SCAN_COOLDOWN_SECONDS = 3;
+// Minimum minutes a scan-in remains open before the next scan can close it.
+const SCAN_WINDOW_MINUTES = 15;
 
 // Extended types for schema fields
 interface ExtendedAttendance {
@@ -49,6 +49,10 @@ function fmtTime(d: Date): string {
   const hours = d.getHours().toString().padStart(2, '0');
   const minutes = d.getMinutes().toString().padStart(2, '0');
   return `${hours}:${minutes}`;
+}
+
+function getMinutesSince(start: Date, end: Date): number {
+  return (end.getTime() - start.getTime()) / (1000 * 60);
 }
 
 // Helper to get the scheduled start time as a Date object for the given arrival date
@@ -321,28 +325,59 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Check for scan cooldown
+    // Determine action and update data
+    let action: string | undefined;
+    let updateData: Record<string, unknown> = {};
+    let status = "PRESENT";
+
     if (attendance) {
-      const lastScanTime = attendance.pmOut || attendance.pmIn || attendance.amOut || attendance.amIn;
-      
-      if (lastScanTime) {
-        const secondsSinceLastScan = (now.getTime() - new Date(lastScanTime).getTime()) / 1000;
-        if (secondsSinceLastScan < SCAN_COOLDOWN_SECONDS) {
-          const waitTime = Math.ceil(SCAN_COOLDOWN_SECONDS - secondsSinceLastScan);
-          return NextResponse.json({
-            success: false,
-            message: `Please wait ${waitTime} seconds before scanning again.`,
-            cooldown: true,
-            waitTime,
-          });
+      const openTimeIn = attendance.pmIn && !attendance.pmOut
+        ? { field: "pmIn" as const, label: "PM In" }
+        : attendance.amIn && !attendance.amOut
+          ? { field: "amIn" as const, label: "AM In" }
+          : null;
+
+      if (openTimeIn) {
+        const openScanTime = attendance[openTimeIn.field];
+
+        if (openScanTime) {
+          const minutesSinceScan = getMinutesSince(new Date(openScanTime), now);
+
+          if (minutesSinceScan < SCAN_WINDOW_MINUTES) {
+            const remainingMinutes = Math.ceil(SCAN_WINDOW_MINUTES - minutesSinceScan);
+            return NextResponse.json({
+              success: true,
+              unchanged: true,
+              attendanceId: attendance.id,
+              action: openTimeIn.label,
+              time: openScanTime,
+              status: attendance.status,
+              message: `${openTimeIn.label} remains recorded at ${fmtTime(new Date(openScanTime))}. Please wait ${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"} before scanning again.`,
+              nextAction: openTimeIn.field === "amIn" ? "am-in" : "pm-in",
+              workHours: attendance.workHours,
+              user: {
+                name: user.name,
+                department: user.department,
+                position: user.position,
+                profileImage: user.profileImage,
+              },
+            });
+          }
+
+          action = openTimeIn.field === "amIn" ? "am-out" : "pm-out";
+          updateData[openTimeIn.field === "amIn" ? "amOut" : "pmOut"] = now;
+
+          if (action === "pm-out") {
+            let totalHours = 0;
+            if (attendance.amIn && attendance.amOut) {
+              totalHours += (new Date(attendance.amOut).getTime() - new Date(attendance.amIn).getTime()) / (1000 * 60 * 60);
+            }
+            totalHours += (now.getTime() - new Date(openScanTime).getTime()) / (1000 * 60 * 60);
+            updateData.workHours = Math.round(totalHours * 100) / 100;
+          }
         }
       }
     }
-
-    // Determine action and update data
-    let action: string;
-    let updateData: Record<string, unknown> = {};
-    let status = "PRESENT";
 
     // Parse time boundaries from settings
     const amEnd = parseTimeString(settings.amEndTime);
@@ -560,50 +595,51 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Existing attendance record - determine next action
-    
-    if (attendance.amIn && !attendance.amOut && !attendance.pmIn && !attendance.pmOut) {
-      if (isInAMPeriod || isInLunchPeriod) {
-        action = "am-out";
-        updateData.amOut = now;
-      } else {
-        action = "pm-in";
-        updateData.pmIn = now;
-      }
-    } else if (attendance.amIn && attendance.amOut && !attendance.pmIn && !attendance.pmOut) {
-      action = "pm-in";
-      updateData.pmIn = now;
-    } else if (attendance.pmIn && !attendance.pmOut) {
-      action = "pm-out";
-      updateData.pmOut = now;
-      
-      // Calculate total work hours
-      let totalHours = 0;
-      if (attendance.amIn && attendance.amOut) {
-        totalHours += (new Date(attendance.amOut).getTime() - new Date(attendance.amIn).getTime()) / (1000 * 60 * 60);
-      }
-      if (attendance.pmIn) {
-        totalHours += (now.getTime() - new Date(attendance.pmIn).getTime()) / (1000 * 60 * 60);
-      }
-      updateData.workHours = Math.round(totalHours * 100) / 100;
-    } else if (!attendance.amIn && !attendance.pmIn) {
-      if (isInAMPeriod) {
-        action = "am-in";
-        if (attendance.status === "ABSENT") {
-          updateData.status = "PRESENT";
+    if (!action) {
+      // Existing attendance record - determine next action
+      if (attendance.amIn && !attendance.amOut && !attendance.pmIn && !attendance.pmOut) {
+        if (isInAMPeriod || isInLunchPeriod) {
+          action = "am-out";
+          updateData.amOut = now;
+        } else {
+          action = "pm-in";
+          updateData.pmIn = now;
         }
-        updateData.amIn = now;
-      } else {
+      } else if (attendance.amIn && attendance.amOut && !attendance.pmIn && !attendance.pmOut) {
         action = "pm-in";
-        updateData.status = "HALF_DAY";
         updateData.pmIn = now;
+      } else if (attendance.pmIn && !attendance.pmOut) {
+        action = "pm-out";
+        updateData.pmOut = now;
+        
+        // Calculate total work hours
+        let totalHours = 0;
+        if (attendance.amIn && attendance.amOut) {
+          totalHours += (new Date(attendance.amOut).getTime() - new Date(attendance.amIn).getTime()) / (1000 * 60 * 60);
+        }
+        if (attendance.pmIn) {
+          totalHours += (now.getTime() - new Date(attendance.pmIn).getTime()) / (1000 * 60 * 60);
+        }
+        updateData.workHours = Math.round(totalHours * 100) / 100;
+      } else if (!attendance.amIn && !attendance.pmIn) {
+        if (isInAMPeriod) {
+          action = "am-in";
+          if (attendance.status === "ABSENT") {
+            updateData.status = "PRESENT";
+          }
+          updateData.amIn = now;
+        } else {
+          action = "pm-in";
+          updateData.status = "HALF_DAY";
+          updateData.pmIn = now;
+        }
+      } else {
+        return NextResponse.json({
+          success: false,
+          message: `${user.name} has already completed all attendance for today.`,
+          nextAction: "complete",
+        });
       }
-    } else {
-      return NextResponse.json({
-        success: false,
-        message: `${user.name} has already completed all attendance for today.`,
-        nextAction: "complete",
-      });
     }
 
     // Update attendance record
@@ -643,12 +679,14 @@ export async function POST(request: NextRequest) {
       "pm-out": "complete",
     };
 
+    const resolvedAction = action as keyof typeof actionLabels;
+
     // Log the scan activity
     await logActivity({
       userId: user.id,
       userName: user.name,
-      action: activityActionMap[action] || action.toUpperCase().replace("-", "_"),
-      description: `${user.name} scanned ${actionLabels[action]} at ${fmtTime(now)}`,
+      action: activityActionMap[resolvedAction] || resolvedAction.toUpperCase().replace("-", "_"),
+      description: `${user.name} scanned ${actionLabels[resolvedAction]} at ${fmtTime(now)}`,
       type: "SUCCESS",
       metadata: {
         attendanceId: updatedAttendance.id,
@@ -662,11 +700,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       attendanceId: updatedAttendance.id,
-      action: actionLabels[action],
+      action: actionLabels[resolvedAction],
       time: now,
       status: updatedAttendance.status,
-      message: messages[action],
-      nextAction: nextActions[action],
+      message: messages[resolvedAction],
+      nextAction: nextActions[resolvedAction],
       workHours: updatedAttendance.workHours,
       user: {
         name: user.name,

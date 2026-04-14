@@ -21,6 +21,7 @@ interface ScanResult {
   time?: string;
   nextAction?: string;
   user?: UserInfo;
+  unchanged?: boolean;
 }
 
 interface RecentScan {
@@ -332,16 +333,18 @@ export default function ScanStationPage() {
             time: responseData.time,
             nextAction: responseData.nextAction,
             user: responseData.user,
+            unchanged: responseData.unchanged,
           };
 
           setScanResult(result);
-          showSuccess(scanCompleteMessage);
-          if (settings.scanSoundEnabled) {
+          showSuccess(responseData.message || scanCompleteMessage);
+
+          if (!responseData.unchanged && settings.scanSoundEnabled) {
             void playScanCompleteSound(settings.scanSoundVolume, settings.scanSoundFileUrl);
           }
 
-          // Show overlay with greeting message
-          if (responseData.user && responseData.action) {
+          // Show overlay with greeting message only for actual attendance changes.
+          if (!responseData.unchanged && responseData.user && responseData.action) {
             setOverlayData({
               greeting: getGreetingMessage(responseData.action, responseData.user.name),
               user: responseData.user,
@@ -352,18 +355,20 @@ export default function ScanStationPage() {
             setTimeout(() => setShowOverlay(false), 3000);
           }
 
-          setRecentScans((prev) => [
-            {
-              name: responseData.user?.name || data.name,
-              action: responseData.action,
-              time: responseData.time,
-              profileImage: responseData.user?.profileImage,
-            },
-            ...prev.slice(0, 9),
-          ]);
+          if (!responseData.unchanged) {
+            setRecentScans((prev) => [
+              {
+                name: responseData.user?.name || data.name,
+                action: responseData.action,
+                time: responseData.time,
+                profileImage: responseData.user?.profileImage,
+              },
+              ...prev.slice(0, 9),
+            ]);
+          }
 
           // Open face capture camera for photo verification
-          if (responseData.attendanceId && responseData.action) {
+          if (!responseData.unchanged && responseData.attendanceId && responseData.action) {
             setPendingPhotoData({
               attendanceId: responseData.attendanceId,
               action: toScanActionKey(responseData.action),

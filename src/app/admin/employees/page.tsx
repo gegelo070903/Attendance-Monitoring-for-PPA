@@ -25,6 +25,7 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showCreateConfirmModal, setShowCreateConfirmModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<User | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -56,6 +57,15 @@ export default function EmployeesPage() {
   const [editProfilePreview, setEditProfilePreview] = useState<string | null>(null);
   const [editProfileFile, setEditProfileFile] = useState<File | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const createEmployeeSummary = {
+    name: formData.name.trim(),
+    email: formData.email.trim(),
+    role: formData.role,
+    department: formData.department.trim() || "(none)",
+    position: formData.position.trim() || "(none)",
+    passwordMask: "*".repeat(Math.max(6, formData.password.length)),
+  };
 
   const fetchEmployees = async () => {
     try {
@@ -99,8 +109,8 @@ export default function EmployeesPage() {
     fetchEmployees();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitCreateEmployee = async () => {
+    setShowCreateConfirmModal(false);
     setSubmitting(true);
     setError("");
 
@@ -118,6 +128,7 @@ export default function EmployeesPage() {
         showError(data.error || "Failed to create employee");
       } else {
         showSuccess(`Employee ${formData.name} created successfully!`);
+        setShowCreateConfirmModal(false);
         setShowModal(false);
         setFormData({
           name: "",
@@ -135,6 +146,12 @@ export default function EmployeesPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setShowCreateConfirmModal(true);
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -600,7 +617,10 @@ export default function EmployeesPage() {
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowCreateConfirmModal(false);
+                    setShowModal(false);
+                  }}
                   className="flex-1 py-2 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   Cancel
@@ -614,6 +634,43 @@ export default function EmployeesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showCreateConfirmModal && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl dark:bg-gray-800">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Confirm New Account</h2>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Review the employee details before creating the account.</p>
+
+            <div className="mt-4 space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm dark:border-gray-700 dark:bg-gray-700/50">
+              <p><span className="font-medium text-gray-700 dark:text-gray-200">Name:</span> <span className="text-gray-900 dark:text-gray-100">{createEmployeeSummary.name}</span></p>
+              <p><span className="font-medium text-gray-700 dark:text-gray-200">Email:</span> <span className="text-gray-900 dark:text-gray-100">{createEmployeeSummary.email}</span></p>
+              <p><span className="font-medium text-gray-700 dark:text-gray-200">Role:</span> <span className="text-gray-900 dark:text-gray-100">{createEmployeeSummary.role}</span></p>
+              <p><span className="font-medium text-gray-700 dark:text-gray-200">Department:</span> <span className="text-gray-900 dark:text-gray-100">{createEmployeeSummary.department}</span></p>
+              <p><span className="font-medium text-gray-700 dark:text-gray-200">Position:</span> <span className="text-gray-900 dark:text-gray-100">{createEmployeeSummary.position}</span></p>
+              <p><span className="font-medium text-gray-700 dark:text-gray-200">Password:</span> <span className="text-gray-900 dark:text-gray-100">{createEmployeeSummary.passwordMask}</span></p>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCreateConfirmModal(false)}
+                disabled={submitting}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={submitCreateEmployee}
+                disabled={submitting}
+                className="flex-1 rounded-lg bg-primary-600 px-4 py-2 font-medium text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+              >
+                {submitting ? "Creating..." : "Confirm & Create"}
+              </button>
+            </div>
           </div>
         </div>
       )}
