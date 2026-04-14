@@ -1,1 +1,1 @@
-[14/04/2026 17:52:18.32] STARTING - launching server process
+[14/04/2026 17:53:52.69] STOPPED - server process exited with code -1
