@@ -641,32 +641,117 @@ export default function EmployeesPage() {
       {showCreateConfirmModal && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 px-4">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl dark:bg-gray-800">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Confirm New Account</h2>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Review the employee details before creating the account.</p>
-
-            <div className="mt-4 space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm dark:border-gray-700 dark:bg-gray-700/50">
-              <p><span className="font-medium text-gray-700 dark:text-gray-200">Name:</span> <span className="text-gray-900 dark:text-gray-100">{createEmployeeSummary.name}</span></p>
-              <p><span className="font-medium text-gray-700 dark:text-gray-200">Email:</span> <span className="text-gray-900 dark:text-gray-100">{createEmployeeSummary.email}</span></p>
-              <p><span className="font-medium text-gray-700 dark:text-gray-200">Role:</span> <span className="text-gray-900 dark:text-gray-100">{createEmployeeSummary.role}</span></p>
-              <p><span className="font-medium text-gray-700 dark:text-gray-200">Department:</span> <span className="text-gray-900 dark:text-gray-100">{createEmployeeSummary.department}</span></p>
-              <p><span className="font-medium text-gray-700 dark:text-gray-200">Position:</span> <span className="text-gray-900 dark:text-gray-100">{createEmployeeSummary.position}</span></p>
-              <p><span className="font-medium text-gray-700 dark:text-gray-200">Password:</span> <span className="text-gray-900 dark:text-gray-100">{createEmployeeSummary.passwordMask}</span></p>
+            {/* Header */}
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Review Employee Details</h2>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Verify the information before creating the account</p>
             </div>
 
+            {/* Avatar and Name Section */}
+            <div className="mb-6 flex flex-col items-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-600">
+                <span className="text-2xl font-bold text-white">
+                  {createEmployeeSummary.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {createEmployeeSummary.name}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {createEmployeeSummary.email}
+                </p>
+              </div>
+            </div>
+
+            {/* Role Badge */}
+            <div className="mb-6 flex justify-center">
+              <span
+                className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                  createEmployeeSummary.role === "ADMIN"
+                    ? "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
+                    : "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                }`}
+              >
+                {createEmployeeSummary.role}
+              </span>
+            </div>
+
+            {/* Divider */}
+            <div className="mb-6 border-t border-gray-200 dark:border-gray-700"></div>
+
+            {/* Details Section */}
+            <div className="space-y-4">
+              {/* Credentials */}
+              <div>
+                <h3 className="mb-2 text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
+                  Credentials
+                </h3>
+                <div className="space-y-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Email</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {createEmployeeSummary.email}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-gray-200 pt-2 dark:border-gray-600">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Password</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {createEmployeeSummary.passwordMask}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Organization Details */}
+              <div>
+                <h3 className="mb-2 text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
+                  Organization
+                </h3>
+                <div className="space-y-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Department</span>
+                    <span
+                      className={`text-sm font-medium ${
+                        createEmployeeSummary.department === "(none)"
+                          ? "text-gray-500 dark:text-gray-400 italic"
+                          : "text-gray-900 dark:text-gray-100"
+                      }`}
+                    >
+                      {createEmployeeSummary.department}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-gray-200 pt-2 dark:border-gray-600">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Position</span>
+                    <span
+                      className={`text-sm font-medium ${
+                        createEmployeeSummary.position === "(none)"
+                          ? "text-gray-500 dark:text-gray-400 italic"
+                          : "text-gray-900 dark:text-gray-100"
+                      }`}
+                    >
+                      {createEmployeeSummary.position}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
             <div className="mt-6 flex gap-3">
               <button
                 type="button"
                 onClick={() => setShowCreateConfirmModal(false)}
                 disabled={submitting}
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
               >
-                Back
+                Edit
               </button>
               <button
                 type="button"
                 onClick={submitCreateEmployee}
                 disabled={submitting}
-                className="flex-1 rounded-lg bg-primary-600 px-4 py-2 font-medium text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+                className="flex-1 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-gray-400"
               >
                 {submitting ? "Creating..." : "Confirm & Create"}
               </button>

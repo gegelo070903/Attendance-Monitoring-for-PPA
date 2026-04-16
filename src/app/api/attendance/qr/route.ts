@@ -271,8 +271,16 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date();
+    const traceId = `qr-${user.id.slice(-6)}-${now.getTime()}`;
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
+
+    console.info(`[ATTN_DEBUG:${traceId}] Scan start`, {
+      userId: user.id,
+      userName: user.name,
+      nowIso: now.toISOString(),
+      identifier,
+    });
 
     const latestAttendance = await prisma.attendance.findFirst({
       where: { userId: user.id },
@@ -335,6 +343,12 @@ export async function POST(request: NextRequest) {
       });
 
       if (openOvernight && openOvernight.pmIn && !openOvernight.amOut) {
+        console.info(`[ATTN_DEBUG:${traceId}] Overnight close path`, {
+          overnightAttendanceId: openOvernight.id,
+          pmIn: openOvernight.pmIn,
+          nowIso: now.toISOString(),
+        });
+
         const pmInDate = new Date(openOvernight.pmIn);
 
         // Record AM Out on yesterday's open PM session
@@ -419,12 +433,31 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    console.info(`[ATTN_DEBUG:${traceId}] Attendance candidate`, {
+      attendanceId: attendance?.id || null,
+      amIn: attendance?.amIn || null,
+      amOut: attendance?.amOut || null,
+      pmIn: attendance?.pmIn || null,
+      pmOut: attendance?.pmOut || null,
+      status: attendance?.status || null,
+      updatedAt: attendance?.updatedAt || null,
+    });
+
     // Hard gate: keep an open scan-in unchanged for the first 15 minutes,
     // regardless of subsequent action resolution paths.
     if (attendance?.amIn && !attendance.amOut) {
       const minutesSinceAmIn = getMinutesSinceSafe(attendance.amIn, now);
+      console.info(`[ATTN_DEBUG:${traceId}] AM hold check`, {
+        attendanceId: attendance.id,
+        minutesSinceAmIn,
+        windowMinutes: SCAN_WINDOW_MINUTES,
+      });
       if (minutesSinceAmIn !== null && minutesSinceAmIn < SCAN_WINDOW_MINUTES) {
         const remainingMinutes = Math.ceil(SCAN_WINDOW_MINUTES - minutesSinceAmIn);
+        console.info(`[ATTN_DEBUG:${traceId}] AM hold applied`, {
+          attendanceId: attendance.id,
+          remainingMinutes,
+        });
         return NextResponse.json({
           success: true,
           unchanged: true,
@@ -447,8 +480,17 @@ export async function POST(request: NextRequest) {
 
     if (attendance?.pmIn && !attendance.pmOut) {
       const minutesSincePmIn = getMinutesSinceSafe(attendance.pmIn, now);
+      console.info(`[ATTN_DEBUG:${traceId}] PM hold check`, {
+        attendanceId: attendance.id,
+        minutesSincePmIn,
+        windowMinutes: SCAN_WINDOW_MINUTES,
+      });
       if (minutesSincePmIn !== null && minutesSincePmIn < SCAN_WINDOW_MINUTES) {
         const remainingMinutes = Math.ceil(SCAN_WINDOW_MINUTES - minutesSincePmIn);
+        console.info(`[ATTN_DEBUG:${traceId}] PM hold applied`, {
+          attendanceId: attendance.id,
+          remainingMinutes,
+        });
         return NextResponse.json({
           success: true,
           unchanged: true,
@@ -787,9 +829,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    console.info(`[ATTN_DEBUG:${traceId}] Action resolved`, {
+      attendanceId: attendance.id,
+      action,
+      updateData,
+      currentTimeMinutes,
+      pmStartMinutes,
+    });
+
     // Final safety gate: never allow AM Out/PM Out before the 15-minute window.
     if (action === "am-out" && attendance.amIn) {
       const minutesSinceAmIn = getMinutesSince(new Date(attendance.amIn), now);
+      console.info(`[ATTN_DEBUG:${traceId}] Final AM out gate`, {
+        attendanceId: attendance.id,
+        minutesSinceAmIn,
+      });
       if (minutesSinceAmIn < SCAN_WINDOW_MINUTES) {
         const remainingMinutes = Math.ceil(SCAN_WINDOW_MINUTES - minutesSinceAmIn);
         return NextResponse.json({
@@ -814,6 +868,10 @@ export async function POST(request: NextRequest) {
 
     if (action === "pm-out" && attendance.pmIn) {
       const minutesSincePmIn = getMinutesSince(new Date(attendance.pmIn), now);
+      console.info(`[ATTN_DEBUG:${traceId}] Final PM out gate`, {
+        attendanceId: attendance.id,
+        minutesSincePmIn,
+      });
       if (minutesSincePmIn < SCAN_WINDOW_MINUTES) {
         const remainingMinutes = Math.ceil(SCAN_WINDOW_MINUTES - minutesSincePmIn);
         return NextResponse.json({
@@ -840,6 +898,16 @@ export async function POST(request: NextRequest) {
     const updatedAttendance = await prisma.attendance.update({
       where: { id: attendance.id },
       data: updateData,
+    });
+
+    console.info(`[ATTN_DEBUG:${traceId}] Attendance updated`, {
+      attendanceId: updatedAttendance.id,
+      action,
+      amIn: updatedAttendance.amIn,
+      amOut: updatedAttendance.amOut,
+      pmIn: updatedAttendance.pmIn,
+      pmOut: updatedAttendance.pmOut,
+      updatedAt: updatedAttendance.updatedAt,
     });
 
     broadcastAttendanceUpdate(updatedAttendance as ExtendedAttendance);
