@@ -6,6 +6,8 @@ import { emitAttendanceUpdate } from "@/lib/socketServer";
 
 // Minimum minutes a scan-in remains open before the next scan can close it.
 const SCAN_WINDOW_MINUTES = 15;
+// Prevent rapid duplicate camera callbacks from recording two actions.
+const SCAN_DUPLICATE_COOLDOWN_SECONDS = 5;
 
 // Extended types for schema fields
 interface ExtendedAttendance {
@@ -53,6 +55,40 @@ function fmtTime(d: Date): string {
 
 function getMinutesSince(start: Date, end: Date): number {
   return (end.getTime() - start.getTime()) / (1000 * 60);
+}
+
+function getMinutesSinceSafe(start: Date | string | null | undefined, end: Date): number | null {
+  if (!start) return null;
+  const parsedStart = start instanceof Date ? start : new Date(start);
+  const diffMs = end.getTime() - parsedStart.getTime();
+
+  if (!Number.isFinite(diffMs)) {
+    return 0;
+  }
+
+  // Guard against future timestamps from clock drift/timezone anomalies.
+  if (diffMs < 0) {
+    return 0;
+  }
+
+  return diffMs / (1000 * 60);
+}
+
+function getMostRecentScan(attendance: ExtendedAttendance | null): { label: string; time: Date } | null {
+  if (!attendance) return null;
+
+  const scans: Array<{ label: string; time: Date | null }> = [
+    { label: "AM In", time: attendance.amIn },
+    { label: "AM Out", time: attendance.amOut },
+    { label: "PM In", time: attendance.pmIn },
+    { label: "PM Out", time: attendance.pmOut },
+  ];
+
+  const valid = scans
+    .filter((entry): entry is { label: string; time: Date } => Boolean(entry.time))
+    .sort((a, b) => b.time.getTime() - a.time.getTime());
+
+  return valid[0] || null;
 }
 
 // Helper to get the scheduled start time as a Date object for the given arrival date
@@ -133,7 +169,7 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { createdAt: 'desc' },
       });
-      if (overnightRecord && overnightRecord.pmIn && !overnightRecord.pmOut) {
+      if (overnightRecord && overnightRecord.pmIn && !overnightRecord.amOut) {
         return NextResponse.json({
           attendance: overnightRecord as ExtendedAttendance,
           nextAction: "am-out",
@@ -150,18 +186,27 @@ export async function GET(request: NextRequest) {
           lte: endOfDay(today),
         },
       },
+      orderBy: { updatedAt: 'desc' },
     });
     
     const attendance = attendanceRaw as ExtendedAttendance | null;
 
     let nextAction: string = "am-in";
-    
+
     if (attendance) {
-      if (!attendance.amIn) nextAction = "am-in";
-      else if (!attendance.amOut) nextAction = "am-out";
-      else if (!attendance.pmIn) nextAction = "pm-in";
-      else if (!attendance.pmOut) nextAction = "pm-out";
-      else nextAction = "complete";
+      if (!attendance.amIn) {
+        nextAction = "am-in";
+      } else if (!attendance.amOut) {
+        const minutesSinceAmIn = getMinutesSince(new Date(attendance.amIn), today);
+        nextAction = minutesSinceAmIn < SCAN_WINDOW_MINUTES ? "am-in" : "am-out";
+      } else if (!attendance.pmIn) {
+        nextAction = "pm-in";
+      } else if (!attendance.pmOut) {
+        const minutesSincePmIn = getMinutesSince(new Date(attendance.pmIn), today);
+        nextAction = minutesSincePmIn < SCAN_WINDOW_MINUTES ? "pm-in" : "pm-out";
+      } else {
+        nextAction = "complete";
+      }
     }
 
     return NextResponse.json({
@@ -229,6 +274,34 @@ export async function POST(request: NextRequest) {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
 
+    const latestAttendance = await prisma.attendance.findFirst({
+      where: { userId: user.id },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    const latestScan = getMostRecentScan(latestAttendance as ExtendedAttendance | null);
+    if (latestScan) {
+      const secondsSinceLatestScan = (now.getTime() - latestScan.time.getTime()) / 1000;
+      if (secondsSinceLatestScan < SCAN_DUPLICATE_COOLDOWN_SECONDS) {
+        const waitSeconds = Math.ceil(SCAN_DUPLICATE_COOLDOWN_SECONDS - secondsSinceLatestScan);
+        return NextResponse.json({
+          success: true,
+          unchanged: true,
+          duplicate: true,
+          attendanceId: latestAttendance?.id,
+          action: latestScan.label,
+          time: latestScan.time,
+          message: `${latestScan.label} was just recorded at ${fmtTime(latestScan.time)}. Please wait ${waitSeconds} second${waitSeconds === 1 ? "" : "s"} before scanning again.`,
+          user: {
+            name: user.name,
+            department: user.department,
+            position: user.position,
+            profileImage: user.profileImage,
+          },
+        });
+      }
+    }
+
     // Get settings
     const settings = await prisma.settings.findFirst() || {
       amStartTime: "00:00",
@@ -261,7 +334,7 @@ export async function POST(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
       });
 
-      if (openOvernight && openOvernight.pmIn && !openOvernight.pmOut) {
+      if (openOvernight && openOvernight.pmIn && !openOvernight.amOut) {
         const pmInDate = new Date(openOvernight.pmIn);
 
         // Record AM Out on yesterday's open PM session
@@ -314,16 +387,87 @@ export async function POST(request: NextRequest) {
 
     const attendanceDate = startOfDay(now);
 
-    // Find today's attendance record
-    let attendance = await prisma.attendance.findFirst({
+    // Find today's attendance record.
+    // Prioritize open sessions to avoid selecting stale duplicate rows.
+    const openAttendance = await prisma.attendance.findFirst({
       where: {
         userId: user.id,
         date: {
           gte: attendanceDate,
           lte: endOfDay(attendanceDate),
         },
+        OR: [
+          { amIn: { not: null }, amOut: null },
+          { pmIn: { not: null }, pmOut: null },
+        ],
       },
+      orderBy: { updatedAt: 'desc' },
     });
+
+    let attendance = openAttendance;
+
+    if (!attendance) {
+      attendance = await prisma.attendance.findFirst({
+        where: {
+          userId: user.id,
+          date: {
+            gte: attendanceDate,
+            lte: endOfDay(attendanceDate),
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+    }
+
+    // Hard gate: keep an open scan-in unchanged for the first 15 minutes,
+    // regardless of subsequent action resolution paths.
+    if (attendance?.amIn && !attendance.amOut) {
+      const minutesSinceAmIn = getMinutesSinceSafe(attendance.amIn, now);
+      if (minutesSinceAmIn !== null && minutesSinceAmIn < SCAN_WINDOW_MINUTES) {
+        const remainingMinutes = Math.ceil(SCAN_WINDOW_MINUTES - minutesSinceAmIn);
+        return NextResponse.json({
+          success: true,
+          unchanged: true,
+          attendanceId: attendance.id,
+          action: "AM In",
+          time: attendance.amIn,
+          status: attendance.status,
+          message: `AM In remains recorded at ${fmtTime(new Date(attendance.amIn))}. Please wait ${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"} before scanning out.`,
+          nextAction: "am-in",
+          workHours: attendance.workHours,
+          user: {
+            name: user.name,
+            department: user.department,
+            position: user.position,
+            profileImage: user.profileImage,
+          },
+        });
+      }
+    }
+
+    if (attendance?.pmIn && !attendance.pmOut) {
+      const minutesSincePmIn = getMinutesSinceSafe(attendance.pmIn, now);
+      if (minutesSincePmIn !== null && minutesSincePmIn < SCAN_WINDOW_MINUTES) {
+        const remainingMinutes = Math.ceil(SCAN_WINDOW_MINUTES - minutesSincePmIn);
+        return NextResponse.json({
+          success: true,
+          unchanged: true,
+          attendanceId: attendance.id,
+          action: "PM In",
+          time: attendance.pmIn,
+          status: attendance.status,
+          message: `PM In remains recorded at ${fmtTime(new Date(attendance.pmIn))}. Please wait ${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"} before scanning out.`,
+          nextAction: "pm-in",
+          workHours: attendance.workHours,
+          user: {
+            name: user.name,
+            department: user.department,
+            position: user.position,
+            profileImage: user.profileImage,
+          },
+        });
+      }
+    }
 
     // Determine action and update data
     let action: string | undefined;
@@ -403,6 +547,7 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           date: { gte: attendanceDate, lte: endOfDay(attendanceDate) },
         },
+        orderBy: { updatedAt: 'desc' },
       });
       if (existingCheck) {
         attendance = existingCheck;
@@ -638,6 +783,55 @@ export async function POST(request: NextRequest) {
           success: false,
           message: `${user.name} has already completed all attendance for today.`,
           nextAction: "complete",
+        });
+      }
+    }
+
+    // Final safety gate: never allow AM Out/PM Out before the 15-minute window.
+    if (action === "am-out" && attendance.amIn) {
+      const minutesSinceAmIn = getMinutesSince(new Date(attendance.amIn), now);
+      if (minutesSinceAmIn < SCAN_WINDOW_MINUTES) {
+        const remainingMinutes = Math.ceil(SCAN_WINDOW_MINUTES - minutesSinceAmIn);
+        return NextResponse.json({
+          success: true,
+          unchanged: true,
+          attendanceId: attendance.id,
+          action: "AM In",
+          time: attendance.amIn,
+          status: attendance.status,
+          message: `AM In remains recorded at ${fmtTime(new Date(attendance.amIn))}. Please wait ${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"} before scanning out.`,
+          nextAction: "am-in",
+          workHours: attendance.workHours,
+          user: {
+            name: user.name,
+            department: user.department,
+            position: user.position,
+            profileImage: user.profileImage,
+          },
+        });
+      }
+    }
+
+    if (action === "pm-out" && attendance.pmIn) {
+      const minutesSincePmIn = getMinutesSince(new Date(attendance.pmIn), now);
+      if (minutesSincePmIn < SCAN_WINDOW_MINUTES) {
+        const remainingMinutes = Math.ceil(SCAN_WINDOW_MINUTES - minutesSincePmIn);
+        return NextResponse.json({
+          success: true,
+          unchanged: true,
+          attendanceId: attendance.id,
+          action: "PM In",
+          time: attendance.pmIn,
+          status: attendance.status,
+          message: `PM In remains recorded at ${fmtTime(new Date(attendance.pmIn))}. Please wait ${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"} before scanning out.`,
+          nextAction: "pm-in",
+          workHours: attendance.workHours,
+          user: {
+            name: user.name,
+            department: user.department,
+            position: user.position,
+            profileImage: user.profileImage,
+          },
         });
       }
     }

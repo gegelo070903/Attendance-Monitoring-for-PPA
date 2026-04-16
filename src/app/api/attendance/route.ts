@@ -5,6 +5,17 @@ import prisma from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { emitAttendanceUpdate } from "@/lib/socketServer";
 
+const SCAN_WINDOW_MINUTES = 15;
+const DUPLICATE_ACTION_COOLDOWN_SECONDS = 5;
+
+function getMinutesSince(start: Date, end: Date): number {
+  return (end.getTime() - start.getTime()) / (1000 * 60);
+}
+
+function getSecondsSince(start: Date, end: Date): number {
+  return (end.getTime() - start.getTime()) / 1000;
+}
+
 // GET - Get attendance records
 export async function GET(request: NextRequest) {
   try {
@@ -149,6 +160,65 @@ export async function POST(request: NextRequest) {
           status: "PRESENT",
         },
       });
+    }
+
+    const duplicateCooldownMap: Record<string, Date | null> = {
+      amIn: attendance.amIn,
+      amOut: attendance.amOut,
+      pmIn: attendance.pmIn,
+      pmOut: attendance.pmOut,
+    };
+    const previousSameActionTime = duplicateCooldownMap[action as keyof typeof duplicateCooldownMap];
+    if (previousSameActionTime) {
+      const secondsSinceAction = getSecondsSince(new Date(previousSameActionTime), now);
+      if (secondsSinceAction < DUPLICATE_ACTION_COOLDOWN_SECONDS) {
+        const waitSeconds = Math.ceil(DUPLICATE_ACTION_COOLDOWN_SECONDS - secondsSinceAction);
+        return NextResponse.json(
+          {
+            success: true,
+            unchanged: true,
+            message: `Action already recorded. Please wait ${waitSeconds} second${waitSeconds === 1 ? "" : "s"} before trying again.`,
+            waitSeconds,
+            action,
+          },
+          { status: 200 }
+        );
+      }
+    }
+
+    // Keep a recent scan-in unchanged until the 15-minute window has passed.
+    if (action === "amOut" && attendance.amIn && !attendance.amOut) {
+      const minutesSinceIn = getMinutesSince(new Date(attendance.amIn), now);
+      if (minutesSinceIn < SCAN_WINDOW_MINUTES) {
+        const remainingMinutes = Math.ceil(SCAN_WINDOW_MINUTES - minutesSinceIn);
+        return NextResponse.json(
+          {
+            success: true,
+            unchanged: true,
+            message: `AM In remains recorded. Please wait ${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"} before timing out.`,
+            waitMinutes: remainingMinutes,
+            action: "amIn",
+          },
+          { status: 200 }
+        );
+      }
+    }
+
+    if (action === "pmOut" && attendance.pmIn && !attendance.pmOut) {
+      const minutesSinceIn = getMinutesSince(new Date(attendance.pmIn), now);
+      if (minutesSinceIn < SCAN_WINDOW_MINUTES) {
+        const remainingMinutes = Math.ceil(SCAN_WINDOW_MINUTES - minutesSinceIn);
+        return NextResponse.json(
+          {
+            success: true,
+            unchanged: true,
+            message: `PM In remains recorded. Please wait ${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"} before timing out.`,
+            waitMinutes: remainingMinutes,
+            action: "pmIn",
+          },
+          { status: 200 }
+        );
+      }
     }
 
     // Update the appropriate field based on action
