@@ -507,11 +507,14 @@ If a client opens the VPN URL (example: `https://100.90.x.x:3000`) and still see
 Windows client steps:
 
 1. On the server PC, run `EXPORT-CLIENT-CERT.bat` to create `certs/PPA-Attendance-Client-Trust.cer`.
-2. Copy `certs/PPA-Attendance-Client-Trust.cer` to the client PC.
-3. Open the certificate, click **Install Certificate**.
-4. Choose **Current User** (or **Local Machine** if running as Administrator).
-5. Place it in **Trusted Root Certification Authorities**.
-6. Close and reopen the browser, then test the same HTTPS URL.
+2. Share these files with the other user or client PC:
+   - `INSTALL-TRUST-CERT.bat`
+   - `certs/PPA-Attendance-Client-Trust.cer`
+3. Copy `certs/PPA-Attendance-Client-Trust.cer` to the client PC.
+4. Double-click the `.cer` file, then click **Install Certificate**.
+5. Choose **Current User** (or **Local Machine** if running as Administrator).
+6. Place it in **Trusted Root Certification Authorities**.
+7. Close and reopen the browser, then test the same HTTPS URL.
 
 Alternative for advanced users:
 
@@ -590,18 +593,17 @@ Important notes:
 
 ## Batch Files (Windows)
 
-| File                       | Purpose                                                            | How to Use                         |
-| -------------------------- | ------------------------------------------------------------------ | ---------------------------------- |
-| `START-SERVER.bat`         | Start the server in HTTPS mode                                     | Double-click to run                |
-| `AUTO-START.bat`           | Start HTTPS with auto-restart on crash (24/7)                      | Double-click to run                |
-| `SHOW-SERVER-INFO.bat`     | Show/copy Local + Network URL and IP (no server restart)           | Double-click to run                |
-| `EXPORT-CLIENT-CERT.bat`   | Export client-trust `.cer` from `cert.pem`                         | Double-click to run on server PC   |
-| `INSTALL-TRUST-CERT.bat`   | Trust HTTPS certificate on client/scanner PC                       | Double-click to run once per PC    |
-| `INSTALL-AUTO-START.bat`   | Auto-start server when PC boots (cleans duplicate startup entries) | Right-click → Run as Administrator |
-| `UNINSTALL-AUTO-START.bat` | Remove auto-start on boot                                          | Right-click → Run as Administrator |
-| `BACKUP-DATABASE.bat`      | Manual backup with optional USB copy                               | Double-click to run                |
-| `RESTORE-DATABASE.bat`     | Restore from backup (with safety backup)                           | Double-click to run                |
-| `SCHEDULED-BACKUP.bat`     | Silent backup script for Task Scheduler                            | Use from Windows Task Scheduler    |
+| File                       | Purpose                                       | How to Use                         |
+| -------------------------- | --------------------------------------------- | ---------------------------------- |
+| `START-SERVER.bat`         | Start the server in HTTPS mode                | Double-click to run                |
+| `AUTO-START.bat`           | Start HTTPS with auto-restart on crash (24/7) | Double-click to run                |
+| `EXPORT-CLIENT-CERT.bat`   | Export client-trust `.cer` from `cert.pem`    | Double-click to run on server PC   |
+| `INSTALL-TRUST-CERT.bat`   | Trust HTTPS certificate on client/scanner PC  | Double-click to run once per PC    |
+| `INSTALL-AUTO-START.bat`   | Auto-start server when PC boots               | Right-click → Run as Administrator |
+| `UNINSTALL-AUTO-START.bat` | Remove auto-start on boot                     | Right-click → Run as Administrator |
+| `BACKUP-DATABASE.bat`      | Manual backup with optional USB copy          | Double-click to run                |
+| `RESTORE-DATABASE.bat`     | Restore from backup (with safety backup)      | Double-click to run                |
+| `SCHEDULED-BACKUP.bat`     | Silent backup script for Task Scheduler       | Use from Windows Task Scheduler    |
 
 ---
 
@@ -616,22 +618,21 @@ After fresh setup, register the first account. To make it an admin, either:
 
 ## Troubleshooting
 
-| Problem                                        | Solution                                                                                                        |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| "npm not found"                                | Install Node.js and restart the terminal                                                                        |
-| "Port 3000 already in use"                     | Run `npm run dev:clean` or `npm run start:https:clean` to auto-stop stale Node listeners                        |
-| Camera blocked / "Not a secure context"        | Open `https://...` (not `http://`) and run `INSTALL-TRUST-CERT.bat` on that client/scanner PC                   |
-| Other PCs can't connect                        | Check Windows Firewall — allow Node.js through. Ensure all PCs are on the same network.                         |
-| Public IP does not open externally             | Check router port forwarding, ISP CGNAT, and that `NEXTAUTH_URL` matches the public URL                         |
-| Remote users need secure access                | Prefer VPN (WireGuard/OpenVPN/IPsec) and use the server LAN URL through the VPN tunnel                          |
-| Browser warns about HTTPS certificate          | This is expected for self-signed certs; click Advanced → Proceed                                                |
-| Camera fails over public IP                    | Use a fully trusted certificate; bypassing a self-signed warning is often not enough                            |
-| Auto-start task runs but server does not start | Open `AUTO-START.bat` manually once to confirm Node/npm and certificate creation work                           |
-| Server keeps restarting every few seconds      | Run `INSTALL-AUTO-START.bat` as Administrator to remove duplicate startup triggers and keep only Task Scheduler |
-| Server crashes                                 | Use `AUTO-START.bat` instead of `START-SERVER.bat` for auto-restart                                             |
-| Database corrupted                             | Restore from backup (`prisma/dev.db`)                                                                           |
-| QR scanner not working                         | Allow camera access in the browser when prompted                                                                |
-| Blank page after transfer                      | Run `npm run build` to rebuild the application                                                                  |
+| Problem                                        | Solution                                                                                      |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| "npm not found"                                | Install Node.js and restart the terminal                                                      |
+| "Port 3000 already in use"                     | Run `npm run dev:clean` or `npm run start:https:clean` to auto-stop stale Node listeners      |
+| Camera blocked / "Not a secure context"        | Open `https://...` (not `http://`) and run `INSTALL-TRUST-CERT.bat` on that client/scanner PC |
+| Other PCs can't connect                        | Check Windows Firewall — allow Node.js through. Ensure all PCs are on the same network.       |
+| Public IP does not open externally             | Check router port forwarding, ISP CGNAT, and that `NEXTAUTH_URL` matches the public URL       |
+| Remote users need secure access                | Prefer VPN (WireGuard/OpenVPN/IPsec) and use the server LAN URL through the VPN tunnel        |
+| Browser warns about HTTPS certificate          | This is expected for self-signed certs; click Advanced → Proceed                              |
+| Camera fails over public IP                    | Use a fully trusted certificate; bypassing a self-signed warning is often not enough          |
+| Auto-start task runs but server does not start | Open `AUTO-START.bat` manually once to confirm Node/npm and certificate creation work         |
+| Server crashes                                 | Use `AUTO-START.bat` instead of `START-SERVER.bat` for auto-restart                           |
+| Database corrupted                             | Restore from backup (`prisma/dev.db`)                                                         |
+| QR scanner not working                         | Allow camera access in the browser when prompted                                              |
+| Blank page after transfer                      | Run `npm run build` to rebuild the application                                                |
 
 ---
 
