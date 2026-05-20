@@ -85,6 +85,7 @@ The system uses **QR code scanning** for employee check-in/check-out, supports *
 
 1. Install dependencies: `npm install`
 2. Prepare database and client: `npx prisma generate` then `npx prisma db push`
+   Quick tip: install the auto start.bat and the install auto certificate.bat
 3. Start server: use `START-SERVER.bat` or run `npm run start:https`
 4. Open scanner page: `/scan`
 5. In Admin Settings, configure schedule and scan sound:
@@ -486,6 +487,38 @@ Or use the built-in WAN setup script:
    - PowerShell: `SETUP-WAN.bat`
 
 This script updates `.env.local`, regenerates certs via `generate-cert.js`, and creates firewall rules.
+
+Auto-generation of `.env.local`
+
+The project includes an automatic `.env.local` generator that runs before development and HTTPS starts. When you run `npm run dev`, `npm run start:https`, `START-SERVER.bat`, or `AUTO-START.bat`, the generator executes and:
+
+- Generates a secure `NEXTAUTH_SECRET` if one is missing.
+- Detects the machine's LAN IP and sets `NEXTAUTH_URL` to `http(s)://<ip>:3000` (it chooses `https` if `certs/cert.pem` and `certs/key.pem` exist).
+- Preserves admin-set URLs (`NEXTAUTH_URL`, `NEXTAUTH_VPN_URL`) and keeps legacy `VPN_URL` in sync for compatibility.
+
+You can override generated values by editing `.env.local` (recommended for portable deployments). To regenerate `.env.local` manually, run:
+
+```powershell
+node scripts/generate-env.js --no-prompt
+```
+
+Set custom URLs in one command:
+
+```powershell
+node scripts/generate-env.js --url https://192.168.1.100:3000 --vpn-url https://10.8.0.10:3000 --no-prompt
+```
+
+This helps when moving the project between devices — admins can just set/update URLs, while secrets and defaults are generated automatically.
+
+Interactive VPN prompt
+
+If you want an interactive prompt for VPN URL, run:
+
+```powershell
+node scripts/generate-env.js --interactive
+```
+
+The entered value is stored in `.env.local`.
 
 ### Step 5: Access from Other PCs
 
