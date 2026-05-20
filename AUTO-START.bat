@@ -18,10 +18,30 @@ if not exist "%STATUS_DIR%" mkdir "%STATUS_DIR%" >nul 2>&1
 >"%STATUS_FILE%" echo [%date% %time%] INITIALIZING - startup checks are running
 
 REM Prevent multiple AUTO-START instances from fighting over ports
-set "LOCK_ROOT=%ProgramData%\PPA-Attendance"
+REM Support three modes for the lock directory, in order of preference:
+REM 1) Portable mode: pass --portable when starting the script to keep lock files inside the project
+REM 2) Machine-wide ProgramData (requires privileges)
+REM 3) Per-user LocalAppData (fallback when ProgramData is not writable)
+set "PORTABLE_MODE=0"
+if /i "%~1"=="--portable" set "PORTABLE_MODE=1"
+
+if "%PORTABLE_MODE%"=="1" (
+    set "LOCK_ROOT=%~dp0.ppa-lock"
+    if not exist "%LOCK_ROOT%" mkdir "%LOCK_ROOT%" 2>nul
+) else (
+    set "LOCK_ROOT=%ProgramData%\PPA-Attendance"
+    if not exist "%LOCK_ROOT%" (
+        mkdir "%LOCK_ROOT%" >nul 2>&1
+        if errorlevel 1 (
+            REM ProgramData not writable; fall back to per-user LocalAppData
+            set "LOCK_ROOT=%LOCALAPPDATA%\PPA-Attendance"
+            mkdir "%LOCK_ROOT%" 2>nul
+        )
+    )
+)
+
 set "LOCK_DIR=%LOCK_ROOT%\auto-start.lock"
-if not exist "%LOCK_ROOT%" mkdir "%LOCK_ROOT%" >nul 2>&1
-2>nul mkdir "%LOCK_DIR%"
+mkdir "%LOCK_DIR%" 2>nul
 if errorlevel 1 (
     set "INFO_ONLY=1"
 )
@@ -33,7 +53,7 @@ if defined INFO_ONLY (
     if not defined ACTIVE_AUTO_START set "ACTIVE_AUTO_START=1"
     if !ACTIVE_AUTO_START! LEQ 1 (
         rmdir "%LOCK_DIR%" >nul 2>&1
-        2>nul mkdir "%LOCK_DIR%"
+        mkdir "%LOCK_DIR%" 2>nul
         if !errorlevel! equ 0 (
             set "INFO_ONLY="
             >"%STATUS_FILE%" echo [%date% %time%] STARTING - stale lock recovered automatically
@@ -75,6 +95,13 @@ if not exist ".next\BUILD_ID" (
 )
 
 REM Ensure SSL certificate exists and is trusted for current user
+node scripts\generate-env.js --no-prompt
+if %errorlevel% neq 0 (
+    >"%STATUS_FILE%" echo [%date% %time%] ERROR - failed to generate .env.local
+    echo ERROR: Failed to generate .env.local.
+    goto cleanup_error
+)
+
 node generate-cert.js
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\trust-cert.ps1" -CertPath "%~dp0certs\cert.pem"
 if %errorlevel% neq 0 (
@@ -128,8 +155,13 @@ if exist ".env.local" (
     for /f "tokens=1,* delims==" %%A in ('findstr /b /c:"NEXTAUTH_URL=" .env.local') do (
         set APP_URL=%%B
     )
-    for /f "tokens=1,* delims==" %%A in ('findstr /b /c:"VPN_URL=" .env.local') do (
+    for /f "tokens=1,* delims==" %%A in ('findstr /b /c:"NEXTAUTH_VPN_URL=" .env.local') do (
         set VPN_URL=%%B
+    )
+    if not defined VPN_URL (
+        for /f "tokens=1,* delims==" %%A in ('findstr /b /c:"VPN_URL=" .env.local') do (
+            set VPN_URL=%%B
+        )
     )
 )
 
@@ -148,7 +180,7 @@ echo   URL:      Set NEXTAUTH_URL in .env.local
 if defined VPN_URL (
 echo   VPN:      %VPN_URL%
 ) else (
-echo   VPN:      Set VPN_URL in .env.local if using VPN access
+echo   VPN:      Set NEXTAUTH_VPN_URL in .env.local if using VPN access
 )
 echo.
 echo   Share the Network URL with employees.

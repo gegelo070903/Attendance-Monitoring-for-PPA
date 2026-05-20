@@ -27,6 +27,15 @@ if not exist ".next\BUILD_ID" (
 echo Starting server (HTTPS for camera support)...
 echo.
 
+REM Auto-generate portable env file (.env.local) for this machine
+node scripts\generate-env.js --no-prompt
+if %errorlevel% neq 0 (
+    echo.
+    echo ERROR: Failed to generate .env.local.
+    pause
+    exit /b 1
+)
+
 REM Generate SSL certificate if needed
 node generate-cert.js
 
@@ -82,8 +91,13 @@ if exist ".env.local" (
     for /f "tokens=1,* delims==" %%A in ('findstr /b /c:"NEXTAUTH_URL=" .env.local') do (
         set APP_URL=%%B
     )
-    for /f "tokens=1,* delims==" %%A in ('findstr /b /c:"VPN_URL=" .env.local') do (
+    for /f "tokens=1,* delims==" %%A in ('findstr /b /c:"NEXTAUTH_VPN_URL=" .env.local') do (
         set VPN_URL=%%B
+    )
+    if not defined VPN_URL (
+        for /f "tokens=1,* delims==" %%A in ('findstr /b /c:"VPN_URL=" .env.local') do (
+            set VPN_URL=%%B
+        )
     )
 )
 
@@ -102,7 +116,7 @@ echo   URL:      Set NEXTAUTH_URL in .env.local
 if defined VPN_URL (
 echo   VPN:      %VPN_URL%
 ) else (
-echo   VPN:      Set VPN_URL in .env.local if using VPN access
+echo   VPN:      Set NEXTAUTH_VPN_URL in .env.local if using VPN access
 )
 echo.
 echo   Share the Network URL with employees

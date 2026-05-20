@@ -112,6 +112,15 @@ function getConfiguredHosts() {
     }
   }
 
+  if (process.env.NEXTAUTH_VPN_URL) {
+    try {
+      const parsedVpnUrl = new URL(process.env.NEXTAUTH_VPN_URL);
+      addHost(parsedVpnUrl.hostname);
+    } catch {
+      addHost(process.env.NEXTAUTH_VPN_URL);
+    }
+  }
+
   if (process.env.NEXTAUTH_URL) {
     try {
       const parsedUrl = new URL(process.env.NEXTAUTH_URL);
