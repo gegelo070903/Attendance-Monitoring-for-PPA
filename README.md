@@ -496,6 +496,46 @@ This script updates `.env.local`, regenerates certs via `generate-cert.js`, and 
 5. For scanner stations using camera, always use `https://` (not `http://`)
 6. If camera is still blocked on a client/scanner PC, run `INSTALL-TRUST-CERT.bat` once on that PC
 
+## Auto-start / Portable Deployment
+
+This project includes `AUTO-START.bat` which provides a 24/7 auto-restart loop and a portable workflow so the project can be transferred between machines easily.
+
+Portable mode (no admin required):
+
+- Start `AUTO-START.bat` in portable mode so it keeps lock files inside the project folder and avoids writing to `%ProgramData%`:
+
+  ```powershell
+  AUTO-START.bat --portable
+  ```
+
+- To create a per-user scheduled task that launches the project at user logon (no admin required when run as the target user):
+
+  ```powershell
+  schtasks /create /tn "PPA Attendance Auto-Start" /sc onlogon /tr "\"%CD%\AUTO-START.bat\" --portable" /f
+  ```
+
+  Run the above while signed in as the user who should auto-start the server — it creates a per-user task that does not require SYSTEM privileges.
+
+System-wide install (optional, requires admin):
+
+- If you want the server to start at boot for all users, run `INSTALL-AUTO-START.bat` as Administrator. That creates a system-level scheduled task and may require elevation.
+
+Files and locations to check after transfer:
+
+- `certs/` — contains `cert.pem` and `key.pem`. After moving the project, run `node generate-cert.js` then run `scripts\trust-cert.ps1` to trust the certificate for the current user.
+- `logs/auto-start-status.txt` — shows live startup status (useful for debugging transfer issues).
+- `.ppa-lock/` (portable) or `%LOCALAPPDATA%\PPA-Attendance` — lock folder used to prevent duplicate auto-start instances.
+
+Troubleshooting tips:
+
+- If you see `Access is denied.` when creating lock folders, run the script with `--portable` or run it as the intended user so it can create per-user folders in `%LOCALAPPDATA%`.
+- If ports are already in use, run `powershell -File scripts\free-ports.ps1 -Ports 3000,3001` to stop stray Node processes (you may need admin for processes owned by SYSTEM).
+- To trust the certificate manually, open `certs\cert.pem`, right-click → `Install Certificate` → `Current User` → `Trusted Root Certification Authorities`.
+
+Want an automated transfer helper?
+
+I can add a small portable installer script that copies the project to a target folder, regenerates certs, and registers the per-user scheduled task automatically. Tell me if you want that and which target folder you prefer.
+
 ### Step 5A: Make VPN/LAN URL Show as Secure (Lock Icon)
 
 If a client opens the VPN URL (example: `https://100.90.x.x:3000`) and still sees **Not secure**, follow this checklist.
